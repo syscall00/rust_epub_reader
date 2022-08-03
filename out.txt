@@ -1,0 +1,1012 @@
+Token: Declaration { version: StrSpan("1.0" 15..18), encoding: Some(StrSpan("utf-8" 30..35)), standalone: None, span: StrSpan("<?xml version='1.0' encoding='utf-8'?>" 0..38) }
+Declaration: StrSpan("<?xml version='1.0' encoding='utf-8'?>" 0..38)
+
+
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("html" 40..44), span: StrSpan("<html" 39..44) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("xmlns" 45..50), value: StrSpan("http://www.w3.org/1999/xhtml" 52..80), span: StrSpan("xmlns=\"http://www.w3.org/1999/xhtml\"" 45..81) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("xml" 82..85), local: StrSpan("lang" 86..90), value: StrSpan("it-IT" 92..97), span: StrSpan("xml:lang=\"it-IT\"" 82..98) }
+ATTRIBUTE: StrSpan("xml" 82..85)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 98..99) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("\n\n" 99..101) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("head" 102..106), span: StrSpan("<head" 101..106) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 106..107) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("\n  " 107..110) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("title" 111..116), span: StrSpan("<title" 110..116) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 116..117) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("L’Attraversaspecchi" 117..138) }
+Text: StrSpan("L’Attraversaspecchi" 117..138)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("title" 140..145)), span: StrSpan("</title>" 138..146) }
+Element End: Close(StrSpan("" 0..0), StrSpan("title" 140..145))
+
+
+Token: Text { text: StrSpan("\n  " 146..149) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("link" 150..154), span: StrSpan("<link" 149..154) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("href" 155..159), value: StrSpan("../Styles/stylesheet.css" 161..185), span: StrSpan("href=\"../Styles/stylesheet.css\"" 155..186) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("rel" 187..190), value: StrSpan("stylesheet" 192..202), span: StrSpan("rel=\"stylesheet\"" 187..203) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("type" 204..208), value: StrSpan("text/css" 210..218), span: StrSpan("type=\"text/css\"" 204..219) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Empty, span: StrSpan("/>" 219..221) }
+Element End: Empty
+
+
+Token: Text { text: StrSpan("\n" 221..222) }
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("head" 224..228)), span: StrSpan("</head>" 222..229) }
+Element End: Close(StrSpan("" 0..0), StrSpan("head" 224..228))
+
+
+Token: Text { text: StrSpan("\n\n" 229..231) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("body" 232..236), span: StrSpan("<body" 231..236) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 237..242), value: StrSpan("calibre" 244..251), span: StrSpan("class=\"calibre\"" 237..252) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 252..253) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("\n\n  " 253..257) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("h2" 258..260), span: StrSpan("<h2" 257..260) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 261..266), value: StrSpan("heading" 268..275), span: StrSpan("class=\"heading\"" 261..276) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("id" 277..279), value: StrSpan("ujMsLfZBvJHg3iAoEbLHpFG" 281..304), span: StrSpan("id=\"ujMsLfZBvJHg3iAoEbLHpFG\"" 277..305) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 305..306) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("L’Attraversaspecchi" 306..327) }
+Text: StrSpan("L’Attraversaspecchi" 306..327)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("h2" 329..331)), span: StrSpan("</h2>" 327..332) }
+Element End: Close(StrSpan("" 0..0), StrSpan("h2" 329..331))
+
+
+Token: Text { text: StrSpan("\n\n  " 332..336) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 337..338), span: StrSpan("<p" 336..338) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 339..344), value: StrSpan("basic-paragraph" 346..361), span: StrSpan("class=\"basic-paragraph\"" 339..362) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 362..363) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("«Tenete sempre gli occhi bassi alla presenza del sire Faruk»." 363..426) }
+Text: StrSpan("«Tenete sempre gli occhi bassi alla presenza del sire Faruk»." 363..426)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 428..429)), span: StrSpan("</p>" 426..430) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 428..429))
+
+
+Token: Text { text: StrSpan("\n\n  " 430..434) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 435..436), span: StrSpan("<p" 434..436) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 437..442), value: StrSpan("basic-paragraph" 444..459), span: StrSpan("class=\"basic-paragraph\"" 437..460) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 460..461) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("«Il che non deve impedirti di stare dritta»." 461..507) }
+Text: StrSpan("«Il che non deve impedirti di stare dritta»." 461..507)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 509..510)), span: StrSpan("</p>" 507..511) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 509..510))
+
+
+Token: Text { text: StrSpan("\n\n  " 511..515) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 516..517), span: StrSpan("<p" 515..517) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 518..523), value: StrSpan("basic-paragraph" 525..540), span: StrSpan("class=\"basic-paragraph\"" 518..541) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 541..542) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("«Parlate solo se siete espressamente invitata a farlo»." 542..599) }
+Text: StrSpan("«Parlate solo se siete espressamente invitata a farlo»." 542..599)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 601..602)), span: StrSpan("</p>" 599..603) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 601..602))
+
+
+Token: Text { text: StrSpan("\n\n  " 603..607) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 608..609), span: StrSpan("<p" 607..609) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 610..615), value: StrSpan("basic-paragraph" 617..632), span: StrSpan("class=\"basic-paragraph\"" 610..633) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 633..634) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("«E sii schietta come un fischietto»." 634..672) }
+Text: StrSpan("«E sii schietta come un fischietto»." 634..672)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 674..675)), span: StrSpan("</p>" 672..676) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 674..675))
+
+
+Token: Text { text: StrSpan("\n\n  " 676..680) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 681..682), span: StrSpan("<p" 680..682) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 683..688), value: StrSpan("basic-paragraph" 690..705), span: StrSpan("class=\"basic-paragraph\"" 683..706) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 706..707) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("«Dovete meritare la protezione che vi viene offerta, Ofelia, dare prova di umiltà e gratitudine»." 707..807) }
+Text: StrSpan("«Dovete meritare la protezione che vi viene offerta, Ofelia, dare prova di umiltà e gratitudine»." 707..807)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 809..810)), span: StrSpan("</p>" 807..811) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 809..810))
+
+
+Token: Text { text: StrSpan("\n\n  " 811..815) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 816..817), span: StrSpan("<p" 815..817) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 818..823), value: StrSpan("basic-paragraph" 825..840), span: StrSpan("class=\"basic-paragraph\"" 818..841) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 841..842) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("«Sei la rappresentante di Anima, figlia, non permettere a nessuno di mancarti di rispetto»." 842..935) }
+Text: StrSpan("«Sei la rappresentante di Anima, figlia, non permettere a nessuno di mancarti di rispetto»." 842..935)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 937..938)), span: StrSpan("</p>" 935..939) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 937..938))
+
+
+Token: Text { text: StrSpan("\n\n  " 939..943) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 944..945), span: StrSpan("<p" 943..945) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 946..951), value: StrSpan("basic-paragraph" 953..968), span: StrSpan("class=\"basic-paragraph\"" 946..969) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 969..970) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("Aggredita dalle raccomandazioni contraddittorie di Berenilde e della zia Roseline, Ofelia in realtà non ascoltava né l’una né l’altra. Cercava di tranquillizzare la sciarpa che, pazza sia di gioia che di rancore, le si arrotolava intorno al collo, alle braccia e alla vita per paura di essere di nuovo separata dalla sua padrona." 970..1306) }
+Text: StrSpan("Aggredita dalle raccomandazioni contraddittorie di Berenilde e della zia Roseline, Ofelia in realtà non ascoltava né l’una né l’altra. Cercava di tranquillizzare la sciarpa che, pazza sia di gioia che di rancore, le si arrotolava intorno al collo, alle braccia e alla vita per paura di essere di nuovo separata dalla sua padrona." 970..1306)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 1308..1309)), span: StrSpan("</p>" 1306..1310) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 1308..1309))
+
+
+Token: Text { text: StrSpan("\n\n  " 1310..1314) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 1315..1316), span: StrSpan("<p" 1314..1316) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 1317..1322), value: StrSpan("basic-paragraph" 1324..1339), span: StrSpan("class=\"basic-paragraph\"" 1317..1340) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 1340..1341) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("«Avrei dovuto bruciarla quando non c’eravate» sospirò Berenilde sventolando il ventaglio. «Non si fa il proprio ingresso alla corte del Polo con una sciarpa maleducata»." 1341..1517) }
+Text: StrSpan("«Avrei dovuto bruciarla quando non c’eravate» sospirò Berenilde sventolando il ventaglio. «Non si fa il proprio ingresso alla corte del Polo con una sciarpa maleducata»." 1341..1517)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 1519..1520)), span: StrSpan("</p>" 1517..1521) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 1519..1520))
+
+
+Token: Text { text: StrSpan("\n\n  " 1521..1525) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 1526..1527), span: StrSpan("<p" 1525..1527) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 1528..1533), value: StrSpan("basic-paragraph" 1535..1550), span: StrSpan("class=\"basic-paragraph\"" 1528..1551) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 1551..1552) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("Ofelia raccattò l’ombrello che aveva fatto cadere. Berenilde l’aveva agghindata con un cappello a veletta e un abito color vaniglia, leggero come panna montata, che le ricordava i vestiti di quand’era piccola, all’epoca in cui con tutta la famiglia facevano grandi picnic estivi. In un’arca su cui la primavera non superava mai i quindici gradi sottozero le sembrava molto più consona la sua sciarpa che non il vestitino fru-fru." 1552..1993) }
+Text: StrSpan("Ofelia raccattò l’ombrello che aveva fatto cadere. Berenilde l’aveva agghindata con un cappello a veletta e un abito color vaniglia, leggero come panna montata, che le ricordava i vestiti di quand’era piccola, all’epoca in cui con tutta la famiglia facevano grandi picnic estivi. In un’arca su cui la primavera non superava mai i quindici gradi sottozero le sembrava molto più consona la sua sciarpa che non il vestitino fru-fru." 1552..1993)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 1995..1996)), span: StrSpan("</p>" 1993..1997) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 1995..1996))
+
+
+Token: Text { text: StrSpan("\n\n  " 1997..2001) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 2002..2003), span: StrSpan("<p" 2001..2003) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 2004..2009), value: StrSpan("basic-paragraph" 2011..2026), span: StrSpan("class=\"basic-paragraph\"" 2004..2027) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 2027..2028) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("L’ascensore si fermò senza il minimo sussulto." 2028..2077) }
+Text: StrSpan("L’ascensore si fermò senza il minimo sussulto." 2028..2077)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 2079..2080)), span: StrSpan("</p>" 2077..2081) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 2079..2080))
+
+
+Token: Text { text: StrSpan("\n\n  " 2081..2085) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 2086..2087), span: StrSpan("<p" 2085..2087) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 2088..2093), value: StrSpan("basic-paragraph" 2095..2110), span: StrSpan("class=\"basic-paragraph\"" 2088..2111) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 2111..2112) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("«L’Opéra di famiglia!» annunciò il lift. «La Compagnia degli ascensori informa le signore che dall’altra parte della hall è in attesa la coincidenza»." 2112..2273) }
+Text: StrSpan("«L’Opéra di famiglia!» annunciò il lift. «La Compagnia degli ascensori informa le signore che dall’altra parte della hall è in attesa la coincidenza»." 2112..2273)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 2275..2276)), span: StrSpan("</p>" 2273..2277) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 2275..2276))
+
+
+Token: Text { text: StrSpan("\n\n  " 2277..2281) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 2282..2283), span: StrSpan("<p" 2281..2283) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 2284..2289), value: StrSpan("basic-paragraph" 2291..2306), span: StrSpan("class=\"basic-paragraph\"" 2284..2307) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 2307..2308) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("L’ultima volta che Ofelia aveva attraversato lo scintillante parquet del teatro dell’opera indossava una livrea da valletto e invece dell’ombrello portava un remo. La sensazione era quella di aver sostituito un travestimento con un altro. Una cosa però restava immutata: la costola le faceva sempre altrettanto male." 2308..2631) }
+Text: StrSpan("L’ultima volta che Ofelia aveva attraversato lo scintillante parquet del teatro dell’opera indossava una livrea da valletto e invece dell’ombrello portava un remo. La sensazione era quella di aver sostituito un travestimento con un altro. Una cosa però restava immutata: la costola le faceva sempre altrettanto male." 2308..2631)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 2633..2634)), span: StrSpan("</p>" 2631..2635) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 2633..2634))
+
+
+Token: Text { text: StrSpan("\n\n  " 2635..2639) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 2640..2641), span: StrSpan("<p" 2639..2641) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 2642..2647), value: StrSpan("basic-paragraph" 2649..2664), span: StrSpan("class=\"basic-paragraph\"" 2642..2665) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 2665..2666) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("Un altro lift andò loro incontro sollevandosi il cappello con l’elastico." 2666..2742) }
+Text: StrSpan("Un altro lift andò loro incontro sollevandosi il cappello con l’elastico." 2666..2742)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 2744..2745)), span: StrSpan("</p>" 2742..2746) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 2744..2745))
+
+
+Token: Text { text: StrSpan("\n\n  " 2746..2750) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 2751..2752), span: StrSpan("<p" 2750..2752) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 2753..2758), value: StrSpan("basic-paragraph" 2760..2775), span: StrSpan("class=\"basic-paragraph\"" 2753..2776) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 2776..2777) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("«L’ascensore è pronto! Il sire Faruk ha manifestato un ardente desiderio di ricevere le signore»." 2777..2879) }
+Text: StrSpan("«L’ascensore è pronto! Il sire Faruk ha manifestato un ardente desiderio di ricevere le signore»." 2777..2879)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 2881..2882)), span: StrSpan("</p>" 2879..2883) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 2881..2882))
+
+
+Token: Text { text: StrSpan("\n\n  " 2883..2887) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 2888..2889), span: StrSpan("<p" 2887..2889) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 2890..2895), value: StrSpan("basic-paragraph" 2897..2912), span: StrSpan("class=\"basic-paragraph\"" 2890..2913) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 2913..2914) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("In altre parole stava già perdendo la pazienza. Berenilde entrò nella cabina come se galleggiasse su una nuvola. Ofelia, invece, passando davanti al reggimento di gendarmi che facevano la guardia al cancello aveva l’impressione di camminare sulle uova. Tutta quella protezione per fare un solo piano non la tranquillizzava per niente." 2914..3252) }
+Text: StrSpan("In altre parole stava già perdendo la pazienza. Berenilde entrò nella cabina come se galleggiasse su una nuvola. Ofelia, invece, passando davanti al reggimento di gendarmi che facevano la guardia al cancello aveva l’impressione di camminare sulle uova. Tutta quella protezione per fare un solo piano non la tranquillizzava per niente." 2914..3252)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 3254..3255)), span: StrSpan("</p>" 3252..3256) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 3254..3255))
+
+
+Token: Text { text: StrSpan("\n\n  " 3256..3260) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 3261..3262), span: StrSpan("<p" 3260..3262) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 3263..3268), value: StrSpan("basic-paragraph" 3270..3285), span: StrSpan("class=\"basic-paragraph\"" 3263..3286) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 3286..3287) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("«Non siamo più all’ambasciata» le avvertì Berenilde mentre il lift chiudeva il cancello dorato. «A partire da ora non mangiate e non bevete niente, e non accettate regali senza la mia autorizzazione. E se tenete alla vostra salute o alla vostra virtù evitate le alcove e i corridoi poco frequentati»." 3287..3596) }
+Text: StrSpan("«Non siamo più all’ambasciata» le avvertì Berenilde mentre il lift chiudeva il cancello dorato. «A partire da ora non mangiate e non bevete niente, e non accettate regali senza la mia autorizzazione. E se tenete alla vostra salute o alla vostra virtù evitate le alcove e i corridoi poco frequentati»." 3287..3596)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 3598..3599)), span: StrSpan("</p>" 3596..3600) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 3598..3599))
+
+
+Token: Text { text: StrSpan("\n\n  " 3600..3604) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 3605..3606), span: StrSpan("<p" 3604..3606) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 3607..3612), value: StrSpan("basic-paragraph" 3614..3629), span: StrSpan("class=\"basic-paragraph\"" 3607..3630) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 3630..3631) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("La zia Roseline, che aveva preso un appetitoso bignè alla crema dal buffet dell’ascensore, lo rimise giù senza batter ciglio." 3631..3760) }
+Text: StrSpan("La zia Roseline, che aveva preso un appetitoso bignè alla crema dal buffet dell’ascensore, lo rimise giù senza batter ciglio." 3631..3760)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 3762..3763)), span: StrSpan("</p>" 3760..3764) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 3762..3763))
+
+
+Token: Text { text: StrSpan("\n\n  " 3764..3768) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 3769..3770), span: StrSpan("<p" 3768..3770) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 3771..3776), value: StrSpan("basic-paragraph" 3778..3793), span: StrSpan("class=\"basic-paragraph\"" 3771..3794) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 3794..3795) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("«Cosa contate di fare riguardo alla mia famiglia?» domandò Ofelia. «Farli venire qui è fuori discussione»." 3795..3907) }
+Text: StrSpan("«Cosa contate di fare riguardo alla mia famiglia?» domandò Ofelia. «Farli venire qui è fuori discussione»." 3795..3907)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 3909..3910)), span: StrSpan("</p>" 3907..3911) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 3909..3910))
+
+
+Token: Text { text: StrSpan("\n\n  " 3911..3915) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 3916..3917), span: StrSpan("<p" 3915..3917) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 3918..3923), value: StrSpan("basic-paragraph" 3925..3940), span: StrSpan("class=\"basic-paragraph\"" 3918..3941) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 3941..3942) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("Soltanto immaginare fratello, sorelle, nipoti e nipotine in quel nido di vipere la faceva sudare freddo." 3942..4046) }
+Text: StrSpan("Soltanto immaginare fratello, sorelle, nipoti e nipotine in quel nido di vipere la faceva sudare freddo." 3942..4046)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 4048..4049)), span: StrSpan("</p>" 4046..4050) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 4048..4049))
+
+
+Token: Text { text: StrSpan("\n\n  " 4050..4054) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 4055..4056), span: StrSpan("<p" 4054..4056) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 4057..4062), value: StrSpan("basic-paragraph" 4064..4079), span: StrSpan("class=\"basic-paragraph\"" 4057..4080) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 4080..4081) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("Berenilde sedette languidamente su un divanetto dell’ascensore." 4081..4146) }
+Text: StrSpan("Berenilde sedette languidamente su un divanetto dell’ascensore." 4081..4146)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 4148..4149)), span: StrSpan("</p>" 4146..4150) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 4148..4149))
+
+
+Token: Text { text: StrSpan("\n\n  " 4150..4154) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 4155..4156), span: StrSpan("<p" 4154..4156) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 4157..4162), value: StrSpan("basic-paragraph" 4164..4179), span: StrSpan("class=\"basic-paragraph\"" 4157..4180) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 4180..4181) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("«Fidatevi di Thorn, risolverà il problema con la consueta efficienza. Per il momento preoccupatevi soprattutto di non fare brutta figura col nostro spirito di famiglia. Il futuro di tutti noi a corte dipenderà in parte dall’opinione che Faruk si farà di voi»." 4181..4447) }
+Text: StrSpan("«Fidatevi di Thorn, risolverà il problema con la consueta efficienza. Per il momento preoccupatevi soprattutto di non fare brutta figura col nostro spirito di famiglia. Il futuro di tutti noi a corte dipenderà in parte dall’opinione che Faruk si farà di voi»." 4181..4447)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 4449..4450)), span: StrSpan("</p>" 4447..4451) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 4449..4450))
+
+
+Token: Text { text: StrSpan("\n\n  " 4451..4455) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 4456..4457), span: StrSpan("<p" 4455..4457) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 4458..4463), value: StrSpan("basic-paragraph" 4465..4480), span: StrSpan("class=\"basic-paragraph\"" 4458..4481) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 4481..4482) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("Berenilde e la zia Roseline ricominciarono a farle raccomandazioni, neanche se le fossero ripassate per tutto il giorno: una voleva correggerle l’accento, l’altra preservarlo; una le chiedeva di tenere per sé il proprio animismo, l’altra di farsene portabandiera." 4482..4752) }
+Text: StrSpan("Berenilde e la zia Roseline ricominciarono a farle raccomandazioni, neanche se le fossero ripassate per tutto il giorno: una voleva correggerle l’accento, l’altra preservarlo; una le chiedeva di tenere per sé il proprio animismo, l’altra di farsene portabandiera." 4482..4752)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 4754..4755)), span: StrSpan("</p>" 4752..4756) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 4754..4755))
+
+
+Token: Text { text: StrSpan("\n\n  " 4756..4760) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 4761..4762), span: StrSpan("<p" 4760..4762) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 4763..4768), value: StrSpan("basic-paragraph" 4770..4785), span: StrSpan("class=\"basic-paragraph\"" 4763..4786) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 4786..4787) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("Ofelia si mise a togliere i pelucchi dalla sciarpa, sia per calmarla che per calmarsi. Stava a labbra strette dietro la veletta, per contenere i pensieri. “Fiducia” e “Thorn”: due parole che non avrebbe fatto l’errore di accostare. La conversazione del giorno prima non aveva cambiato le cose, checché ne pensasse il signor intendente." 4787..5133) }
+Text: StrSpan("Ofelia si mise a togliere i pelucchi dalla sciarpa, sia per calmarla che per calmarsi. Stava a labbra strette dietro la veletta, per contenere i pensieri. “Fiducia” e “Thorn”: due parole che non avrebbe fatto l’errore di accostare. La conversazione del giorno prima non aveva cambiato le cose, checché ne pensasse il signor intendente." 4787..5133)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 5135..5136)), span: StrSpan("</p>" 5133..5137) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 5135..5136))
+
+
+Token: Text { text: StrSpan("\n\n  " 5137..5141) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 5142..5143), span: StrSpan("<p" 5141..5143) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 5144..5149), value: StrSpan("basic-paragraph" 5151..5166), span: StrSpan("class=\"basic-paragraph\"" 5144..5167) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 5167..5168) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("Tutti i mobili della cabina scricchiolavano come se l’ascensore fosse un piroscafo che solcava i mari, e Ofelia aveva l’impressione che a emettere quei rumori fosse il suo corpo. Si sentiva più fragile del giorno in cui aveva visto Anima sparire nella notte, più fragile di quando la sua famiglia acquisita si era affilata gli artigli su di lei, più fragile della volta in cui i gendarmi l’avevano picchiata e gettata nelle segrete di Chiardiluna. In realtà si sentiva così fragile da temere che alla prossima incrinatura sarebbe finita in frantumi." 5168..5728) }
+Text: StrSpan("Tutti i mobili della cabina scricchiolavano come se l’ascensore fosse un piroscafo che solcava i mari, e Ofelia aveva l’impressione che a emettere quei rumori fosse il suo corpo. Si sentiva più fragile del giorno in cui aveva visto Anima sparire nella notte, più fragile di quando la sua famiglia acquisita si era affilata gli artigli su di lei, più fragile della volta in cui i gendarmi l’avevano picchiata e gettata nelle segrete di Chiardiluna. In realtà si sentiva così fragile da temere che alla prossima incrinatura sarebbe finita in frantumi." 5168..5728)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 5730..5731)), span: StrSpan("</p>" 5728..5732) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 5730..5731))
+
+
+Token: Text { text: StrSpan("\n\n  " 5732..5736) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 5737..5738), span: StrSpan("<p" 5736..5738) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 5739..5744), value: StrSpan("basic-paragraph" 5746..5761), span: StrSpan("class=\"basic-paragraph\"" 5739..5762) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 5762..5763) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("“È colpa mia” pensò con amarezza. “Mi ero ripromessa di non aspettarmi niente da quell’uomo. Se avessi tenuto fede ai miei propositi non mi ritroverei in questo stato”." 5763..5943) }
+Text: StrSpan("“È colpa mia” pensò con amarezza. “Mi ero ripromessa di non aspettarmi niente da quell’uomo. Se avessi tenuto fede ai miei propositi non mi ritroverei in questo stato”." 5763..5943)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 5945..5946)), span: StrSpan("</p>" 5943..5947) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 5945..5946))
+
+
+Token: Text { text: StrSpan("\n\n  " 5947..5951) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 5952..5953), span: StrSpan("<p" 5951..5953) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 5954..5959), value: StrSpan("basic-paragraph" 5961..5976), span: StrSpan("class=\"basic-paragraph\"" 5954..5977) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 5977..5978) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("Mentre annuiva distrattamente ai consigli che le venivano forniti fissava con apprensione il cancello dorato dell’ascensore. Tra pochi secondi si sarebbe aperto su un mondo più ostile di tutti quelli che aveva conosciuto fino a quel momento. Non aveva nessuna voglia di sorridere a gente che la disprezzava senza sapere niente di lei, gente che vedeva in lei soltanto un paio di mani." 5978..6365) }
+Text: StrSpan("Mentre annuiva distrattamente ai consigli che le venivano forniti fissava con apprensione il cancello dorato dell’ascensore. Tra pochi secondi si sarebbe aperto su un mondo più ostile di tutti quelli che aveva conosciuto fino a quel momento. Non aveva nessuna voglia di sorridere a gente che la disprezzava senza sapere niente di lei, gente che vedeva in lei soltanto un paio di mani." 5978..6365)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 6367..6368)), span: StrSpan("</p>" 6365..6369) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 6367..6368))
+
+
+Token: Text { text: StrSpan("\n\n  " 6369..6373) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 6374..6375), span: StrSpan("<p" 6373..6375) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 6376..6381), value: StrSpan("basic-paragraph" 6383..6398), span: StrSpan("class=\"basic-paragraph\"" 6376..6399) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 6399..6400) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("Fece di nuovo cadere l’ombrello, ma stavolta non lo raccolse. Invece si guardò i guanti da " 6400..6494) }
+Text: StrSpan("Fece di nuovo cadere l’ombrello, ma stavolta non lo raccolse. Invece si guardò i guanti da " 6400..6494)
+
+
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("em" 6495..6497), span: StrSpan("<em" 6494..6497) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 6498..6503), value: StrSpan("calibre2" 6505..6513), span: StrSpan("class=\"calibre2\"" 6498..6514) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 6514..6515) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("lettrice" 6515..6523) }
+Text: StrSpan("lettrice" 6515..6523)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("em" 6525..6527)), span: StrSpan("</em>" 6523..6528) }
+Element End: Close(StrSpan("" 0..0), StrSpan("em" 6525..6527))
+
+
+Token: Text { text: StrSpan(". Quelle dieci dita erano esattamente come lei: non le appartenevano più. La sua famiglia l’aveva venduta a degli estranei. Ormai era proprietà di Thorn, di Berenilde e presto di Faruk, tre persone nelle quali non aveva la minima fiducia, ma alle quali avrebbe dovuto sottomettersi per il resto dei suoi giorni." 6528..6843) }
+Text: StrSpan(". Quelle dieci dita erano esattamente come lei: non le appartenevano più. La sua famiglia l’aveva venduta a degli estranei. Ormai era proprietà di Thorn, di Berenilde e presto di Faruk, tre persone nelle quali non aveva la minima fiducia, ma alle quali avrebbe dovuto sottomettersi per il resto dei suoi giorni." 6528..6843)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 6845..6846)), span: StrSpan("</p>" 6843..6847) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 6845..6846))
+
+
+Token: Text { text: StrSpan("\n\n  " 6847..6851) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 6852..6853), span: StrSpan("<p" 6851..6853) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 6854..6859), value: StrSpan("basic-paragraph" 6861..6876), span: StrSpan("class=\"basic-paragraph\"" 6854..6877) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 6877..6878) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("La cabina si arrestò così bruscamente che le stoviglie del buffet tintinnarono, lo champagne si rovesciò sulla tovaglia, Berenilde si mise le mani sulla pancia e la zia Roseline, corpo di mille scale, giurò che non sarebbe più montata su un ascensore." 6878..7134) }
+Text: StrSpan("La cabina si arrestò così bruscamente che le stoviglie del buffet tintinnarono, lo champagne si rovesciò sulla tovaglia, Berenilde si mise le mani sulla pancia e la zia Roseline, corpo di mille scale, giurò che non sarebbe più montata su un ascensore." 6878..7134)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 7136..7137)), span: StrSpan("</p>" 7134..7138) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 7136..7137))
+
+
+Token: Text { text: StrSpan("\n\n  " 7138..7142) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 7143..7144), span: StrSpan("<p" 7142..7144) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 7145..7150), value: StrSpan("basic-paragraph" 7152..7167), span: StrSpan("class=\"basic-paragraph\"" 7145..7168) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 7168..7169) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("«Le signore sono pregate di accettare le scuse della Compagnia» fece il lift, contrito. «C’è stato un piccolo problema meccanico, la salita riprenderà fra qualche istante»." 7169..7349) }
+Text: StrSpan("«Le signore sono pregate di accettare le scuse della Compagnia» fece il lift, contrito. «C’è stato un piccolo problema meccanico, la salita riprenderà fra qualche istante»." 7169..7349)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 7351..7352)), span: StrSpan("</p>" 7349..7353) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 7351..7352))
+
+
+Token: Text { text: StrSpan("\n\n  " 7353..7357) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 7358..7359), span: StrSpan("<p" 7357..7359) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 7360..7365), value: StrSpan("basic-paragraph" 7367..7382), span: StrSpan("class=\"basic-paragraph\"" 7360..7383) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 7383..7384) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("Ofelia non capiva perché il ragazzo si scusasse quando invece meritava tutta la sua riconoscenza. Il contraccolpo le aveva provocato un tale dolore alla costola da lasciarla senza fiato, ma era stato più efficace di uno schiaffo. Come le era venuto in mente di lasciarsi andare a rimuginare pensieri così disfattisti? Non erano stati soltanto gli altri, era stata lei, Ofelia, a costruirsi un’identità intorno alle proprie mani, era stata lei a decidere che non sarebbe mai stata altro che una " 7384..7884) }
+Text: StrSpan("Ofelia non capiva perché il ragazzo si scusasse quando invece meritava tutta la sua riconoscenza. Il contraccolpo le aveva provocato un tale dolore alla costola da lasciarla senza fiato, ma era stato più efficace di uno schiaffo. Come le era venuto in mente di lasciarsi andare a rimuginare pensieri così disfattisti? Non erano stati soltanto gli altri, era stata lei, Ofelia, a costruirsi un’identità intorno alle proprie mani, era stata lei a decidere che non sarebbe mai stata altro che una " 7384..7884)
+
+
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("em" 7885..7887), span: StrSpan("<em" 7884..7887) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 7888..7893), value: StrSpan("calibre2" 7895..7903), span: StrSpan("class=\"calibre2\"" 7888..7904) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 7904..7905) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("lettrice" 7905..7913) }
+Text: StrSpan("lettrice" 7905..7913)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("em" 7915..7917)), span: StrSpan("</em>" 7913..7918) }
+Element End: Close(StrSpan("" 0..0), StrSpan("em" 7915..7917))
+
+
+Token: Text { text: StrSpan(", una conservatrice museale, una creatura più adatta alla compagnia degli oggetti che a quella degli esseri umani. " 7918..8034) }
+Text: StrSpan(", una conservatrice museale, una creatura più adatta alla compagnia degli oggetti che a quella degli esseri umani. " 7918..8034)
+
+
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("em" 8035..8037), span: StrSpan("<em" 8034..8037) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 8038..8043), value: StrSpan("calibre2" 8045..8053), span: StrSpan("class=\"calibre2\"" 8038..8054) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 8054..8055) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("Leggere" 8055..8062) }
+Text: StrSpan("Leggere" 8055..8062)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("em" 8064..8066)), span: StrSpan("</em>" 8062..8067) }
+Element End: Close(StrSpan("" 0..0), StrSpan("em" 8064..8066))
+
+
+Token: Text { text: StrSpan(" era sempre stata una passione, ma da quando in qua una vita si fondava esclusivamente sulle passioni?" 8067..8169) }
+Text: StrSpan(" era sempre stata una passione, ma da quando in qua una vita si fondava esclusivamente sulle passioni?" 8067..8169)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 8171..8172)), span: StrSpan("</p>" 8169..8173) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 8171..8172))
+
+
+Token: Text { text: StrSpan("\n\n  " 8173..8177) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 8178..8179), span: StrSpan("<p" 8177..8179) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 8180..8185), value: StrSpan("basic-paragraph" 8187..8202), span: StrSpan("class=\"basic-paragraph\"" 8180..8203) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 8203..8204) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("Sollevò gli occhi dai guanti e si imbatté nel proprio riflesso. Tra due illusioni di affreschi in cui fauni e ninfe giocavano a nascondino uno specchio a parete rimandava un’eco di realtà: una donna minuta in vestito estivo intorno alla quale si attorcigliava amorevolmente la sciarpa a tre colori." 8204..8507) }
+Text: StrSpan("Sollevò gli occhi dai guanti e si imbatté nel proprio riflesso. Tra due illusioni di affreschi in cui fauni e ninfe giocavano a nascondino uno specchio a parete rimandava un’eco di realtà: una donna minuta in vestito estivo intorno alla quale si attorcigliava amorevolmente la sciarpa a tre colori." 8204..8507)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 8509..8510)), span: StrSpan("</p>" 8507..8511) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 8509..8510))
+
+
+Token: Text { text: StrSpan("\n\n  " 8511..8515) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 8516..8517), span: StrSpan("<p" 8515..8517) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 8518..8523), value: StrSpan("basic-paragraph" 8525..8540), span: StrSpan("class=\"basic-paragraph\"" 8518..8541) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 8541..8542) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("Mentre Berenilde minacciava il povero ragazzo di farlo impiccare se il contraccolpo di poco prima avesse avuto una qualche conseguenza sulla sua gravidanza, Ofelia si avvicinò lentamente allo specchio, sollevò la veletta e si osservò con attenzione, occhiali contro occhiali. Presto, quando gli ematomi si fossero riassorbiti e l’artigliata di Freya si fosse trasformata in cicatrice, Ofelia avrebbe rivisto il viso che conosceva. Lo sguardo, però, non sarebbe mai più stato come prima. A forza di vedere illusioni aveva perso le proprie, e andava bene così. Quando le illusioni spariscono rimane solo la verità. I suoi occhi si sarebbero rivolti meno verso l’interno e più sul mondo. Avevano ancora molto da vedere e da imparare." 8542..9284) }
+Text: StrSpan("Mentre Berenilde minacciava il povero ragazzo di farlo impiccare se il contraccolpo di poco prima avesse avuto una qualche conseguenza sulla sua gravidanza, Ofelia si avvicinò lentamente allo specchio, sollevò la veletta e si osservò con attenzione, occhiali contro occhiali. Presto, quando gli ematomi si fossero riassorbiti e l’artigliata di Freya si fosse trasformata in cicatrice, Ofelia avrebbe rivisto il viso che conosceva. Lo sguardo, però, non sarebbe mai più stato come prima. A forza di vedere illusioni aveva perso le proprie, e andava bene così. Quando le illusioni spariscono rimane solo la verità. I suoi occhi si sarebbero rivolti meno verso l’interno e più sul mondo. Avevano ancora molto da vedere e da imparare." 8542..9284)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 9286..9287)), span: StrSpan("</p>" 9284..9288) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 9286..9287))
+
+
+Token: Text { text: StrSpan("\n\n  " 9288..9292) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 9293..9294), span: StrSpan("<p" 9292..9294) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 9295..9300), value: StrSpan("basic-paragraph" 9302..9317), span: StrSpan("class=\"basic-paragraph\"" 9295..9318) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 9318..9319) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("Infilò la punta delle dita nella superficie liquida dello specchio, e le tornò in mente il giorno in cui la sorella le aveva fatto la lezione. Erano dal parrucchiere, poche ore prima che arrivasse Thorn. Cos’è che le aveva detto?" 9319..9553) }
+Text: StrSpan("Infilò la punta delle dita nella superficie liquida dello specchio, e le tornò in mente il giorno in cui la sorella le aveva fatto la lezione. Erano dal parrucchiere, poche ore prima che arrivasse Thorn. Cos’è che le aveva detto?" 9319..9553)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 9555..9556)), span: StrSpan("</p>" 9553..9557) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 9555..9556))
+
+
+Token: Text { text: StrSpan("\n\n  " 9557..9561) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 9562..9563), span: StrSpan("<p" 9561..9563) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 9564..9569), value: StrSpan("basic-paragraph" 9571..9586), span: StrSpan("class=\"basic-paragraph\"" 9564..9587) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 9587..9588) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("«Il fascino è l’arma migliore che hanno le donne, devi servirtene senza scrupoli»." 9588..9675) }
+Text: StrSpan("«Il fascino è l’arma migliore che hanno le donne, devi servirtene senza scrupoli»." 9588..9675)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 9677..9678)), span: StrSpan("</p>" 9675..9679) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 9677..9678))
+
+
+Token: Text { text: StrSpan("\n\n  " 9679..9683) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 9684..9685), span: StrSpan("<p" 9683..9685) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 9686..9691), value: StrSpan("basic-paragraph" 9693..9708), span: StrSpan("class=\"basic-paragraph\"" 9686..9709) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 9709..9710) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("Mentre l’ascensore, risolto il guasto, ricominciava a salire si ripromise di non seguire mai il consiglio di Agata. Gli scrupoli erano importanti, anche più importanti delle sue mani. «Attraversare gli specchi significa affrontare se stessi» aveva detto il prozio al momento degli addii. Finché avesse avuto scrupoli, finché avesse agito d’accordo con la propria coscienza, finché fosse stata capace di guardarsi allo specchio ogni mattina, Ofelia non sarebbe appartenuta ad altri che a se stessa." 9710..10217) }
+Text: StrSpan("Mentre l’ascensore, risolto il guasto, ricominciava a salire si ripromise di non seguire mai il consiglio di Agata. Gli scrupoli erano importanti, anche più importanti delle sue mani. «Attraversare gli specchi significa affrontare se stessi» aveva detto il prozio al momento degli addii. Finché avesse avuto scrupoli, finché avesse agito d’accordo con la propria coscienza, finché fosse stata capace di guardarsi allo specchio ogni mattina, Ofelia non sarebbe appartenuta ad altri che a se stessa." 9710..10217)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 10219..10220)), span: StrSpan("</p>" 10217..10221) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 10219..10220))
+
+
+Token: Text { text: StrSpan("\n\n  " 10221..10225) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 10226..10227), span: StrSpan("<p" 10225..10227) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 10228..10233), value: StrSpan("basic-paragraph" 10235..10250), span: StrSpan("class=\"basic-paragraph\"" 10228..10251) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 10251..10252) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("“Ecco cosa sono, prima di essere un paio di mani” concluse ritirando le dita. “Sono un’Attraversaspecchi”." 10252..10368) }
+Text: StrSpan("“Ecco cosa sono, prima di essere un paio di mani” concluse ritirando le dita. “Sono un’Attraversaspecchi”." 10252..10368)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 10370..10371)), span: StrSpan("</p>" 10368..10372) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 10370..10371))
+
+
+Token: Text { text: StrSpan("\n\n  " 10372..10376) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 10377..10378), span: StrSpan("<p" 10376..10378) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 10379..10384), value: StrSpan("basic-paragraph" 10386..10401), span: StrSpan("class=\"basic-paragraph\"" 10379..10402) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 10402..10403) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("«La corte!» annunciò il lift abbassando la leva del freno. «La Compagnia degli ascensori si augura che la salita sia stata gradevole e si scusa ancora per il ritardo»." 10403..10575) }
+Text: StrSpan("«La corte!» annunciò il lift abbassando la leva del freno. «La Compagnia degli ascensori si augura che la salita sia stata gradevole e si scusa ancora per il ritardo»." 10403..10575)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 10577..10578)), span: StrSpan("</p>" 10575..10579) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 10577..10578))
+
+
+Token: Text { text: StrSpan("\n\n  " 10579..10583) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 10584..10585), span: StrSpan("<p" 10583..10585) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 10586..10591), value: StrSpan("basic-paragraph" 10593..10608), span: StrSpan("class=\"basic-paragraph\"" 10586..10609) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 10609..10610) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("Ofelia raccattò l’ombrello piena di una determinazione nuova. Era pronta a sfidare le ipocrisie di quel mondo e ben decisa a non perdersi più nel labirinto delle illusioni." 10610..10786) }
+Text: StrSpan("Ofelia raccattò l’ombrello piena di una determinazione nuova. Era pronta a sfidare le ipocrisie di quel mondo e ben decisa a non perdersi più nel labirinto delle illusioni." 10610..10786)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 10788..10789)), span: StrSpan("</p>" 10786..10790) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 10788..10789))
+
+
+Token: Text { text: StrSpan("\n\n  " 10790..10794) }
+Token: ElementStart { prefix: StrSpan("" 0..0), local: StrSpan("p" 10795..10796), span: StrSpan("<p" 10794..10796) }
+Element Start: StrSpan("" 0..0)
+
+
+Token: Attribute { prefix: StrSpan("" 0..0), local: StrSpan("class" 10797..10802), value: StrSpan("basic-paragraph" 10804..10819), span: StrSpan("class=\"basic-paragraph\"" 10797..10820) }
+ATTRIBUTE: StrSpan("" 0..0)
+
+
+Token: ElementEnd { end: Open, span: StrSpan(">" 10820..10821) }
+Element End: Open
+
+
+Token: Text { text: StrSpan("Il cancello dorato si aprì su una luce accecante." 10821..10871) }
+Text: StrSpan("Il cancello dorato si aprì su una luce accecante." 10821..10871)
+
+
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("p" 10873..10874)), span: StrSpan("</p>" 10871..10875) }
+Element End: Close(StrSpan("" 0..0), StrSpan("p" 10873..10874))
+
+
+Token: Text { text: StrSpan("\n\n" 10875..10877) }
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("body" 10879..10883)), span: StrSpan("</body>" 10877..10884) }
+Element End: Close(StrSpan("" 0..0), StrSpan("body" 10879..10883))
+
+
+Token: Text { text: StrSpan("\n\n" 10884..10886) }
+Token: ElementEnd { end: Close(StrSpan("" 0..0), StrSpan("html" 10888..10892)), span: StrSpan("</html>" 10886..10893) }
+Element End: Close(StrSpan("" 0..0), StrSpan("html" 10888..10892))
+
+
+Length: 0
