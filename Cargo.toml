@@ -2,14 +2,16 @@
 name = "rust_druid_epub_reader"
 version = "0.1.0"
 edition = "2021"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-druid = { git = "https://github.com/linebender/druid.git" }
+
+druid = { git = "https://github.com/linebender/druid.git", features=["im"] }
+druid-shell = { git = "https://github.com/linebender/druid.git" }
 pulldown-cmark = { version = "0.9.2", default-features = false }
 open = "1.6"
 html_parser = "0.6.3"
-tl = "0.7.5"
 logos = "0.12.1"
 xmlparser = "0.13.3"
+tracing = "0.1.36"
+epub = "1.2.3"
