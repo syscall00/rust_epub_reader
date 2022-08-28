@@ -104,7 +104,6 @@ fn build_toolbar() -> impl Widget<AppState> {
         data.pop_view();
     });
 
-
     let icon = Icon::new(ALARM_ADD);
     Flex::row()
     .with_child(bt1)
@@ -118,7 +117,6 @@ fn build_toolbar() -> impl Widget<AppState> {
 
     
 }
-
 use druid_widget_nursery::material_icons::{Icon, normal::action::ALARM_ADD};
 
 // Here you define Viewcontroller for your application_state::AppState. The navigator widget will

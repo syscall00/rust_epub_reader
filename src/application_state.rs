@@ -117,7 +117,7 @@ impl AppState {
 #[derive(Clone, Lens, Data)]
 pub struct PageItem {
     pub page_number: u32,
-    plain_text: ArcStr,
+    pub plain_text: ArcStr,
     pub page_text: RichText,
 }
 

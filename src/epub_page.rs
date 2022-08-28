@@ -1,4 +1,5 @@
-use std::borrow::Borrow;
+
+use std::ops::Range;
 
 use druid::{
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
@@ -20,10 +21,26 @@ pub struct EpubPage {
     font_size : u32,
     first_text : usize,
     second_text : usize,
-    set2 : bool
+    set2 : bool,
+    selection : Selection
 
 }
-
+/// When a drag follows a double- or triple-click, the behaviour of
+/// drag changes to only select whole words or whole paragraphs.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum DragGranularity {
+    Grapheme,
+    /// Start and end are the start/end bounds of the initial selection.
+    Word {
+        start: usize,
+        end: usize,
+    },
+    /// Start and end are the start/end bounds of the initial selection.
+    Paragraph {
+        start: usize,
+        end: usize,
+    },
+}
 impl EpubPage {
     pub fn new() -> Self {
         EpubPage {
@@ -34,17 +51,55 @@ impl EpubPage {
             font_size: 18,
             first_text: 0,
             second_text: 0,
-            set2: false
+            set2: false,
+            selection : Selection::default()
         }
     }
+
 }
 
 impl Widget<PageItem> for EpubPage {
+    
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut PageItem, env: &Env) {
         
         let selected_tool : Tool = env.get(SELECTED_TOOL).into();
         
         match event {
+
+            Event::MouseDown(mouse) 
+            if !ctx.is_disabled() => {
+                ctx.set_active(true);
+                // ensure data is up to date before a click
+                //let needs_rebuild = self
+                //    .layout
+                //    .text()
+                //    .map(|old| !old.same(_data))
+                //    .unwrap_or(true);
+                //if needs_rebuild {
+                //    self.borrow_mut().layout.set_text(data.clone());
+                //    self.borrow_mut().layout.rebuild_if_needed(ctx.text(), env);
+                //    self.borrow_mut()
+                //        .update_pending_invalidation(ImeInvalidation::Reset);
+                //}
+                
+                //self.do_mouse_down(mouse.pos, mouse.mods, mouse.count);
+                //self.update_pending_invalidation(druid::text::ImeInvalidation::SelectionChanged);
+                let text_position = self.layout.text_position_for_point(mouse.pos);
+                self.selection = Selection::new(text_position, text_position);
+                ctx.request_update();
+                ctx.request_paint();
+            }
+            Event::MouseMove(mouse) => {
+                if selected_tool.should_be_written() && mouse.buttons.contains(MouseButton::Left) {
+
+                    let text_position = self.layout.text_position_for_point(mouse.pos);
+
+                    self.selection.anchor = text_position;
+                    ctx.request_paint();
+
+                }
+            }
+            /*
             Event::MouseDown(e) => {
 
                 if selected_tool.should_be_written() && e.buttons.contains(MouseButton::Left) {
@@ -117,6 +172,7 @@ impl Widget<PageItem> for EpubPage {
                     ctx.clear_cursor();
                 }
             }
+            */
             _ => {
                 //println!("Unhandled event: {:?}", event);
             }
@@ -176,12 +232,18 @@ impl Widget<PageItem> for EpubPage {
         ctx.fill(rect, &Color::WHITE); // bck
         
         let text_offset = druid::Vec2::new(0.0, 0.0);
-        let sl = Selection::new(self.first_text, self.second_text);
-        let sel_rects = self.layout.rects_for_range(sl.range());
+
+        let sel_rects = self.layout.rects_for_range(self.selection.range());
         for region in sel_rects {
             let y = region.max_y().floor();
             let line = druid::kurbo::Line::new((region.min_x(), y), (region.max_x(), y)) + text_offset;
-            ctx.stroke(line, &Color::OLIVE, 10.0);
+            ctx.stroke(line, &Color::YELLOW, self.font_size as f64);
+            let t = &(*_data.plain_text)[self.selection.anchor.. self.selection.active];
+            
+            //slice_mut_unchecked(self.selection.anchor, self.selection.active);
+            println!("Text: {:?}", t);
+
+
                 }
         if false && !self.set2 {
             self.set2 = true;

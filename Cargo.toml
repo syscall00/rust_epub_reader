@@ -7,9 +7,16 @@ edition = "2021"
 
 
 [dependencies]
-druid = { git = "https://github.com/linebender/druid.git", features=["im", "svg", "image", "png", "jpeg"] }
+#druid = { git = "https://github.com/linebender/druid.git", features=["im", "svg", "image", "png", "jpeg"] }
 open = "1.6"
 xmlparser = "0.13.3"
 tracing = "0.1.36"
 epub = "1.2.3"
 # leptess = "0.11.0" 
+
+druid-widget-nursery = { git = "https://github.com/linebender/druid-widget-nursery", features = ["material-icons"]}
+[dependencies.druid]
+git = "https://github.com/linebender/druid"
+rev = "fc05e965c85fced8720c655685e02478e0530e94" # update this when upgrading to newer druid
+# path = "../../projects/druid/druid"
+features = ["im","svg", "image", "png", "jpeg"]
