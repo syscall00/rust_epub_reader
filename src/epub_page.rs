@@ -1,40 +1,46 @@
+use std::borrow::Borrow;
+
 use druid::{
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
     LifeCycleCtx, MouseButton, PaintCtx, Point, Rect, RenderContext, Size, TextLayout, UpdateCtx,
-    Widget, widget::{RawLabel, Label}, WidgetExt,
+    Widget, widget::{RawLabel, Label}, WidgetExt, text::Selection,
 };
-
-use crate::commands::SCROLL_TO_VIEW;
+use druid::commands::SCROLL_TO_VIEW;
+use crate::PageItem;
 
 use crate::tool::Tool;
 
 const SELECTED_TOOL: druid::Key<u64> = druid::Key::new("org.linebender.example.important-label-color");
 
-pub struct EpubPage<T: druid::text::TextStorage> {
+pub struct EpubPage {
     page_num: u32,
-    layout: TextLayout<T>,
+    layout: TextLayout<druid::text::RichText>,
     mark_points: Vec<(Point, Point)>,
     pen_points: Vec<(Point, Point)>,
-    set : bool,
+    font_size : u32,
+    first_text : usize,
+    second_text : usize,
     set2 : bool
 
 }
 
-impl<T: druid::text::TextStorage> EpubPage<T> {
-    pub fn new(page_num: u32) -> Self {
+impl EpubPage {
+    pub fn new() -> Self {
         EpubPage {
-            page_num,
+            page_num : 0,
             layout: TextLayout::new(),
             mark_points: Vec::new(),
             pen_points: Vec::new(),
-            set: false,
+            font_size: 18,
+            first_text: 0,
+            second_text: 0,
             set2: false
         }
     }
 }
 
-impl<T: druid::text::TextStorage> Widget<T> for EpubPage<T> {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut T, env: &Env) {
+impl Widget<PageItem> for EpubPage {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut PageItem, env: &Env) {
         
         let selected_tool : Tool = env.get(SELECTED_TOOL).into();
         
@@ -42,7 +48,15 @@ impl<T: druid::text::TextStorage> Widget<T> for EpubPage<T> {
             Event::MouseDown(e) => {
 
                 if selected_tool.should_be_written() && e.buttons.contains(MouseButton::Left) {
+                    if(self.first_text == 0) {
+                        self.first_text = self.layout.text_position_for_point(Point::new(e.pos.x, e.pos.y));
+                    }
+                    else {
+                        self.second_text = self.layout.text_position_for_point(Point::new(e.pos.x, e.pos.y));
 
+                        
+                    }
+                    println!("Text position for point: {}", self.layout.text_position_for_point(Point::new(e.pos.x, e.pos.y)));
                     match selected_tool {
                         Tool::Pen | Tool::Marker => self.mark_points.push((e.pos, e.pos)),
                         _ => {}
@@ -114,46 +128,64 @@ impl<T: druid::text::TextStorage> Widget<T> for EpubPage<T> {
         // }
     }
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, _env: &Env) {
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &PageItem, _env: &Env) {
         match event {
             LifeCycle::WidgetAdded => {
-                self.layout.set_text(data.clone());
+                self.layout.set_text(data.page_text.clone());
+                self.layout.set_text_size(self.font_size as f64);
+                self.layout.set_text_color(Color::BLACK);
+                self.page_num = data.page_number;
                 
             }
             _ => {} 
         }
     }
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &T, _data: &T, _env: &Env) {
+    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &PageItem, _data: &PageItem, _env: &Env) {
         //println!("Update???");
         // TODO Check the data has changed and rebuild the rendered text if it has changed
         //if _old_data != _data {
-        if !self.set {
-            self.layout.set_text(_data.clone());
-            self.set = true;
-        }
+        //if !self.set {
+        //    self.layout.set_text(_data.page_text.clone());
+        //    self.set = true;
         //}
+        //}
+
     }
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, env: &Env) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &PageItem, env: &Env) -> Size {
+        
 
-        self.layout.set_wrap_width(bc.max().width-150.);
-        self.layout.set_text_color(Color::BLACK);
-        self.layout.layout();
+        //if self.layout.needs_rebuild() {
+            
+            self.layout.set_wrap_width(bc.max().width-150.);
+
+            self.layout.layout();
+
         self.layout.rebuild_if_needed(ctx.text(), env);
 
+        //}
+
         Size::new(bc.max().width, self.layout.size().height)
+
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, _env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &PageItem, _env: &Env) {
         let size = Size::new(ctx.size().width, ctx.size().height);
         let rect = size.to_rect();
         ctx.fill(rect, &Color::WHITE); // bck
         
-        let mut ep = epub::doc::EpubDoc::new("/home/drivesec/Downloads/I sette mariti.epub".to_string()).unwrap();
-
+        let text_offset = druid::Vec2::new(0.0, 0.0);
+        let sl = Selection::new(self.first_text, self.second_text);
+        let sel_rects = self.layout.rects_for_range(sl.range());
+        for region in sel_rects {
+            let y = region.max_y().floor();
+            let line = druid::kurbo::Line::new((region.min_x(), y), (region.max_x(), y)) + text_offset;
+            ctx.stroke(line, &Color::OLIVE, 10.0);
+                }
         if false && !self.set2 {
             self.set2 = true;
+        let mut ep = epub::doc::EpubDoc::new("/home/drivesec/Downloads/I sette mariti.epub".to_string()).unwrap();
         let image_data = druid::ImageBuf::from_data(&ep.get_cover().unwrap()).unwrap();
         let image = image_data.to_image(ctx.render_ctx);
         ctx.draw_image(&image, image_data.size().to_rect(), druid::piet::InterpolationMode::Bilinear);
