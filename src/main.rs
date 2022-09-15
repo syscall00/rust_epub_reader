@@ -1,12 +1,12 @@
-use std::sync::Arc;
+use std::{sync::Arc, path::PathBuf};
 
-use application_state::{AppState, PageItem};
+use application_state::{AppState, PageItem, HomePageData, Recent};
 use druid::{
     widget::{
         Button, Container, Flex, List, Scroll,
     },
     AppLauncher, Color, Selector, WidgetExt,
-    WindowDesc, Key,
+    WindowDesc, Key, EventCtx, FileInfo, RenderContext,
 };
 use druid::{
     Data
@@ -39,17 +39,19 @@ fn main() {
 
 // creates the navigator widget responsible for changing views
 pub fn navigator() -> impl Widget<application_state::AppState> {
-    Navigator::new(nav_uiview::UiView::new("home_page".to_string()), home_page)
+    //druid::widget::ViewSwitcher::new()
+    Navigator::new(nav_uiview::UiView::new("home_page".to_string()), || {Box::new(home_page().lens(AppState::home_page_data)) })
         .with_view_builder(nav_uiview::UiView::new("read_ebook".to_string()), read_ebook)
-        
+         
         .controller(nav_controller::NavigatorController)
 }
 
 pub fn read_ebook() -> Box<dyn Widget<application_state::AppState>> {
- 
+ //druid::widget::Label
 
     let ll = Scroll::new(
-                List::new(page_ui).lens(AppState::pages))
+                List::new(|| Flex::row().with_flex_child(crate::epub_page::EpubPage::new(), 1.))
+                .lens(AppState::pages))
                .vertical();//.controller(ScrollController);
        
            
@@ -63,7 +65,6 @@ pub fn read_ebook() -> Box<dyn Widget<application_state::AppState>> {
            });
 
     Box::new(ex)
-
        
                
 /*
@@ -75,10 +76,6 @@ pub fn read_ebook() -> Box<dyn Widget<application_state::AppState>> {
 
 
 
-fn page_ui() -> impl Widget<PageItem> {
-    // Change lens from RichText to PageItem in order to access both to richtext and page number
-    Flex::row().with_flex_child(crate::epub_page::EpubPage::new(), 1.)    
-}
 fn build_toolbar() -> impl Widget<AppState> {
 
     let bt1 = Button::new("Arrow")
@@ -151,68 +148,113 @@ impl ViewController<nav_uiview::UiView> for application_state::AppState {
     }
 }
 
-// main page and contains list view of contacts
+struct ListItems {
+
+    layout: druid::TextLayout<String>,
+    image : druid::WidgetPod<druid::ImageBuf, druid::widget::Image>
+
+
+} 
+impl ListItems {
+    pub fn new() -> Self {
+        let layout = druid::TextLayout::default();
+        let image = druid::widget::Image::new(druid::ImageBuf::empty());
+        ListItems{ layout, image: druid::WidgetPod::new(image) }
+    }
+}
+
+impl Widget<Recent> for ListItems {
+    fn event(&mut self, ctx: &mut EventCtx, event: &druid::Event, data: &mut Recent, _env: &druid::Env) {
+        match event {
+            //druid::Event::WindowSize(_) => todo!(),
+            druid::Event::MouseDown(_) => {
+                let cmd = druid::commands::OPEN_FILE;
+                let f : FileInfo = FileInfo { path: PathBuf::from(data.path.clone()), format: None };
+                ctx.submit_command(druid::Command::new(cmd, f, druid::Target::Auto));
+            }
+            //druid::Event::MouseUp(_) => todo!(),
+            druid::Event::MouseMove(_) => {
+                //if self.layout.link_for_pos(pos).is_some() {
+                    ctx.set_cursor(&druid::Cursor::Pointer);
+                //} else {
+                //    ctx.clear_cursor();
+                //}
+
+            },
+            //druid::Event::Wheel(_) => todo!(),
+            _ => {}
+        
+        }
+    }
+
+    fn lifecycle(&mut self, ctx: &mut druid::LifeCycleCtx, event: &druid::LifeCycle, data: &Recent, env: &druid::Env) {
+            match event {
+                druid::LifeCycle::WidgetAdded => {
+                    self.layout.set_text(data.name.clone());
+                    //self.layout.set_text_size(self.font_size as f64);
+                    self.layout.set_text_color(Color::BLACK);
+                    //self.page_num = data.page_number;
+                    let mut a = druid::widget::Image::new(data.image_data.clone());
+                    a.set_fill_mode(druid::widget::FillStrat::Contain);
+                    self.image = druid::WidgetPod::new(a);
+                }
+                _ => {} 
+            }
+            
+            self.image.lifecycle(ctx, event, &data.image_data, env)
+    }
+
+    fn update(&mut self, _ctx: &mut druid::UpdateCtx, _old_data: &Recent, _data: &Recent, _env: &druid::Env) {
+
+        
+    }
+
+    fn layout(&mut self, ctx: &mut druid::LayoutCtx, bc: &druid::BoxConstraints, data: &Recent, env: &druid::Env) -> druid::Size {
+        //if self.layout.needs_rebuild() {
+            
+            self.layout.set_wrap_width(bc.max().width);
+
+            self.layout.layout();
+
+        self.layout.rebuild_if_needed(ctx.text(), env);
+
+        //}
+        //self.image.layout(ctx, bc, &data.image_data, env);
+
+        druid::Size::new(self.layout.size().width, self.layout.size().height)    }
+
+    fn paint(&mut self, ctx: &mut druid::PaintCtx, data: &Recent, env: &druid::Env) {
+        let origin = druid::Point::new(0., 0.0);
+
+        // This is the builder-style way of drawing text.
+        self.layout.draw(ctx, origin);
+        //let ret  = druid::Rect::new(20., 20., 150. , 200.);
+        //let image = data.image_data.to_image(ctx.render_ctx);
+        //druid::widget::Image::new().set_fill_mode();
+        //ctx.draw_image(&image, ret, druid::piet::InterpolationMode::Bilinear);
+        //self.image.paint(ctx, &data.image_data, env);
+    }
+}
+    // main page and contains list view of contacts
 // notice that this must return Box<dyn Widget<YourState>> instead of impl Widget<YourState>
 // navigator needs Boxed widgets in order to store the widgets
-pub fn home_page() -> Box<dyn Widget<application_state::AppState>> {
-    /*
-    let list = List::new(|| {
-        let name_text = Label::new(
-            |(_views, contact, _selection, _idx): &(
-                Arc<Vec<nav_uiview::UiView>>,
-                Contact,
-                Option<usize>,
-                usize,
-            ),
-             _env: &_| { contact.name.clone() },
-        )
-        .with_text_color(Color::BLACK)
-        .with_text_size(20.);
-        let email_text = Label::new(
-            |(_views, contact, _selected, _idx): &(
-                Arc<Vec<nav_uiview::UiView>>,
-                Contact,
-                Option<usize>,
-                usize,
-            ),
-             _env: &_| contact.email.clone(),
-        )
-        .with_text_color(Color::BLACK)
-        .with_text_size(20.);
-
-        let details = Flex::column().with_child(name_text).with_child(email_text);
-        let layout = Flex::row().with_child(details);
-        let layout = layout.on_click(|event, data, _env| {
-            let new_views = Arc::make_mut(&mut data.0);
-            new_views.push(nav_uiview::UiView::new("contact details".to_string()));
-            data.0 = Arc::new(new_views.to_owned());
-            data.2 = Some(data.3);
-            event.submit_command(Command::new(CONTACT_DETAIL, data.3, Target::Auto));
-        });
-
-        layout.background(Painter::new(|ctx, _data, _env| {
-            let is_hot = ctx.is_hot();
-            let is_active = ctx.is_active();
-            let rect = ctx.size().to_rect();
-            let background_color = if is_active {
-                Color::rgb8(0x88, 0x88, 0x88)
-            } else if is_hot {
-                Color::rgb8(0xdd, 0xdd, 0xdd)
-            } else {
-                Color::WHITE
-            };
-            ctx.stroke(rect, &background_color, 0.);
-            ctx.fill(rect, &background_color);
-        }))
-    });*/
-
-    //let layout = Flex::row()
-    //    .with_flex_child(Scroll::new(list.with_spacing(20.)).center(), 1.)
-    //    .must_fill_main_axis(true)
-    //    .expand_width();
-
-
+pub fn home_page() -> impl Widget<HomePageData> {
     
+    let list = Scroll::new(List::new(|| {
+        
+    
+         ListItems::new()
+         .align_vertical(druid::UnitPoint::LEFT)
+         .padding(10.0)
+         //.expand()
+         
+         .background(Color::rgb(0.5, 0.5, 0.5))
+         //Button::new(|data: &String, _: &_| format!("{}", data)).on_click(|_event, _, _env| {
+         //.height(50.0)
+
+    })).vertical().lens(HomePageData::recents);
+
+
     let open_epub = Button::new("Open new epub".to_string())
             .on_click(|event, _, _env| {
                 let filedialog = druid::FileDialogOptions::new();
@@ -228,9 +270,10 @@ pub fn home_page() -> Box<dyn Widget<application_state::AppState>> {
     
                
 
-    let layout = Flex::row()
-        .with_flex_child(open_epub, 1.);
-    Box::new(Container::new(layout).background(Color::WHITE))
+    let layout = Flex::column()
+        .with_flex_child(open_epub, 1.)
+        .with_flex_child(list, 1.);//.lens(AppState::home_page_data);
+    Container::new(layout).background(Color::WHITE)
 }
 
 // details views - this is the second view after clicking on a contact

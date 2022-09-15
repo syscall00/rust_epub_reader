@@ -1,14 +1,13 @@
 
-use std::ops::Range;
 
+use druid::Data;
 use druid::{
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
     LifeCycleCtx, MouseButton, PaintCtx, Point, Rect, RenderContext, Size, TextLayout, UpdateCtx,
-    Widget, widget::{RawLabel, Label}, WidgetExt, text::Selection,
+    Widget, text::Selection,
 };
-use druid::commands::SCROLL_TO_VIEW;
-use crate::PageItem;
 
+use crate::PageItem;
 use crate::tool::Tool;
 
 const SELECTED_TOOL: druid::Key<u64> = druid::Key::new("org.linebender.example.important-label-color");
@@ -17,29 +16,11 @@ pub struct EpubPage {
     page_num: u32,
     layout: TextLayout<druid::text::RichText>,
     mark_points: Vec<(Point, Point)>,
-    pen_points: Vec<(Point, Point)>,
+    //pen_points: Vec<(Point, Point)>,
     font_size : u32,
-    first_text : usize,
-    second_text : usize,
     set2 : bool,
     selection : Selection
 
-}
-/// When a drag follows a double- or triple-click, the behaviour of
-/// drag changes to only select whole words or whole paragraphs.
-#[derive(Debug, Clone, Copy, PartialEq)]
-enum DragGranularity {
-    Grapheme,
-    /// Start and end are the start/end bounds of the initial selection.
-    Word {
-        start: usize,
-        end: usize,
-    },
-    /// Start and end are the start/end bounds of the initial selection.
-    Paragraph {
-        start: usize,
-        end: usize,
-    },
 }
 impl EpubPage {
     pub fn new() -> Self {
@@ -47,10 +28,8 @@ impl EpubPage {
             page_num : 0,
             layout: TextLayout::new(),
             mark_points: Vec::new(),
-            pen_points: Vec::new(),
-            font_size: 18,
-            first_text: 0,
-            second_text: 0,
+            //pen_points: Vec::new(),
+            font_size: 14,
             set2: false,
             selection : Selection::default()
         }
@@ -99,6 +78,7 @@ impl Widget<PageItem> for EpubPage {
 
                 }
             }
+            
             /*
             Event::MouseDown(e) => {
 
@@ -190,6 +170,8 @@ impl Widget<PageItem> for EpubPage {
                 self.layout.set_text(data.page_text.clone());
                 self.layout.set_text_size(self.font_size as f64);
                 self.layout.set_text_color(Color::BLACK);
+                self.layout.set_text_alignment(druid::TextAlignment::Start);
+
                 self.page_num = data.page_number;
                 
             }
@@ -197,60 +179,73 @@ impl Widget<PageItem> for EpubPage {
         }
     }
 
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &PageItem, _data: &PageItem, _env: &Env) {
-        //println!("Update???");
-        // TODO Check the data has changed and rebuild the rendered text if it has changed
-        //if _old_data != _data {
-        //if !self.set {
-        //    self.layout.set_text(_data.page_text.clone());
-        //    self.set = true;
-        //}
-        //}
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &PageItem, data: &PageItem, _env: &Env) {
+
+        if !old_data.same(data) {
+            self.layout.set_text(data.page_text.clone());
+            ctx.request_layout();
+        }
+        if self.layout.needs_rebuild_after_update(ctx) {
+            ctx.request_layout();
+        }
 
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &PageItem, env: &Env) -> Size {
-        
-
-        //if self.layout.needs_rebuild() {
-            
-            self.layout.set_wrap_width(bc.max().width-150.);
-
-            self.layout.layout();
-
+        let LABEL_X_PADDING = 150.;
+        let width = bc.max().width - LABEL_X_PADDING * 2.0;
+        self.layout.set_wrap_width(500.);
         self.layout.rebuild_if_needed(ctx.text(), env);
 
-        //}
-
-        Size::new(bc.max().width, self.layout.size().height)
+        let text_metrics = self.layout.layout_metrics();
+        ctx.set_baseline_offset(text_metrics.size.height - text_metrics.first_baseline);
+        let size = bc.constrain(Size::new(
+            text_metrics.size.width + 2. * LABEL_X_PADDING,
+            text_metrics.size.height,
+        ));
+        size
 
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &PageItem, _env: &Env) {
-        let size = Size::new(ctx.size().width, ctx.size().height);
-        let rect = size.to_rect();
-        ctx.fill(rect, &Color::WHITE); // bck
         
-        let text_offset = druid::Vec2::new(0.0, 0.0);
+        let origin = Point::new(150., 0.0);
+
+        
+        let size = Size::new(650., 1000.);
+        let rect = size.to_rect();
+        
+        //ctx.fill(rect, &Color::WHITE); 
+
+        
+        let text_offset = druid::Vec2::new(150., 0.0);
 
         let sel_rects = self.layout.rects_for_range(self.selection.range());
         for region in sel_rects {
-            let y = region.max_y().floor();
-            let line = druid::kurbo::Line::new((region.min_x(), y), (region.max_x(), y)) + text_offset;
-            ctx.stroke(line, &Color::YELLOW, self.font_size as f64);
-            let t = &(*_data.plain_text)[self.selection.anchor.. self.selection.active];
+            let rounded = (region + text_offset).to_rounded_rect(1.0);
+            ctx.fill(rounded, &Color::YELLOW);
+
+            //let y = region.max_y().floor();
+            //let line = druid::kurbo::Line::new((region.min_x(), y), (region.max_x(), y)) + text_offset;
+            //ctx.stroke(line, &Color::YELLOW, self.font_size as f64);
+            
+            // TESTO SOTTOLINEATO
+            //let t = &(*_data.plain_text)[self.selection.range()];
             
             //slice_mut_unchecked(self.selection.anchor, self.selection.active);
-            println!("Text: {:?}", t);
+            //println!("Region: {}{:?}", &sel_rects.len(), &region);
 
 
                 }
-        if false && !self.set2 {
+        /*
+        if  !self.set2 {
             self.set2 = true;
-        let mut ep = epub::doc::EpubDoc::new("/home/drivesec/Downloads/I sette mariti.epub".to_string()).unwrap();
-        let image_data = druid::ImageBuf::from_data(&ep.get_cover().unwrap()).unwrap();
-        let image = image_data.to_image(ctx.render_ctx);
-        ctx.draw_image(&image, image_data.size().to_rect(), druid::piet::InterpolationMode::Bilinear);
+
+            // DRAW IMAGE 
+        //let mut ep = epub::doc::EpubDoc::new("/home/syscall/Downloads/1.epub".to_string()).unwrap();
+        //let image_data = druid::ImageBuf::from_data(&ep.get_cover().unwrap()).unwrap();
+        //let image = image_data.to_image(ctx.render_ctx);
+        //ctx.draw_image(&image, image_data.size().to_rect(), druid::piet::InterpolationMode::Bilinear);
 
         
         for (start_point, end_point) in &self.mark_points {
@@ -263,23 +258,13 @@ impl Widget<PageItem> for EpubPage {
             ctx.fill(rect, &fill_color);
         }
     }
-
-        // Text is easy; in real use TextLayout should either be stored in the
-        // widget and reused, or a label child widget to manage it all.
-        // This is one way of doing it, you can also use a builder-style way.
-        // When we exit with_save, the original context's rotation is restored
-        let origin = Point::new(10.+15.0, 10.0);
-
-        // This is the builder-style way of drawing text.
-        self.layout.draw(ctx, origin);
-        /*let text = ctx.text();
-
-        let layout = text.new_text_layout(rebuild_rendered_text(&data.raw))
-        .max_width(ctx.size().width - 45.0)
-        .build().unwrap();
-
-        self.layout.draw(ctx, origin);
         */
+        let label_size = ctx.size();
+        //self.layout.text_position_for_point(point)
+        //ctx.clip(rect);
+        
+        self.layout.draw(ctx, origin)
+
     }
 
 
