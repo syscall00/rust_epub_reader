@@ -3,12 +3,13 @@ use druid::text::RichText;
 use druid::{
     commands, AppDelegate, ArcStr, Command, Data, DelegateCtx, Env, Handled, Lens, Target,
 };
+use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 
 use crate::tool::Tool;
 use crate::widgets::navigator::uiview::{self as nav_uiview, UiView};
 use epub::doc::EpubDoc;
-
+use rand::Rng;
 #[derive(Clone, Data, Lens)]
 pub struct AppState {
     pub nav_state: Arc<Vec<nav_uiview::UiView>>,
@@ -18,7 +19,10 @@ pub struct AppState {
     file_opened: String,
     scroll_position: u64,
     pub selected_tool: Tool,
+    pub current_page : PageItem,
     pub home_page_data: HomePageData,
+
+    my_tree : Vector<HtmlTag>
 }
 
 #[derive(Clone, Data, Lens)]
@@ -28,18 +32,18 @@ pub struct HomePageData {
     pub recents: Vector<Recent>,
 }
 
-#[derive(Clone, Data, Lens)]
+#[derive(Clone, Data, Lens, Serialize, Deserialize, Debug)]
 pub struct Recent {
     pub name: String,
     pub path: String,
-    pub image_data: druid::ImageBuf,
+    //pub image_data: Vector<u8>,
 }
 impl Recent {
-    pub fn new(name: String, path: String, image_data: druid::ImageBuf) -> Self {
+    pub fn new(name: String, path: String) -> Self {
         Recent {
             name,
             path,
-            image_data,
+            //image_data,
         }
     }
 }
@@ -51,20 +55,21 @@ impl HomePageData {
     }
 
     fn load_from_state_file() -> Vector<Recent> {
-        let mut recents: Vector<Recent> = Vector::new();
-        let stub_path = "/home/syscall/Downloads/pavese_dialoghi_con_leuco.epub";
-        for _i in 0..1 {
-            let mut ep = epub::doc::EpubDoc::new(stub_path.to_string()).unwrap();
-            let image_data = druid::ImageBuf::from_data(&ep.get_cover().unwrap()).unwrap();
+        let recents_fname = ".recents";
+        let md = std::fs::metadata(recents_fname);
+        // file does not exists!!!
+        let recents_string = if md.is_err() {
+            std::fs::File::create(recents_fname).unwrap();
+            return Vector::default();
 
-            recents.push_back(Recent::new(
-                "Dialoghi con Leuco".to_owned(),
-                "/home/syscall/Downloads/pavese_dialoghi_con_leuco.epub".to_owned(),
-                image_data,
-            ));
-        }
+        } else {
+          std::fs::read_to_string(recents_fname).unwrap()
 
-        recents
+        };
+        
+
+        let recents : Vec<Recent> = serde_json::from_str(&recents_string).unwrap();
+        recents.into()
     }
 
     pub fn with_recents(mut self, recents: Vector<Recent>) -> Self {
@@ -111,6 +116,7 @@ const CONTACT_DETAIL: druid::Selector<usize> = druid::Selector::new("contact det
 impl AppState {
     pub fn new() -> Self {
         let pages = Vector::new(); // AppState::load_file(&file_opened);
+        let clone = PageItem { page_number: 1, plain_text: ArcStr::from("".to_owned()), html_text: ArcStr::from("".to_owned()), page_text: RichText::new(ArcStr::from("".to_owned())) };
         AppState {
             nav_state: Arc::new(vec![nav_uiview::UiView::new("home_page".to_string())]),
             selected: false,
@@ -118,9 +124,30 @@ impl AppState {
             file_opened: "".to_string(),
             scroll_position: 0,
             selected_tool: Tool::default(),
+            current_page : clone,
             home_page_data: HomePageData::new(),
+            my_tree : Vector::new()
         }
     }
+
+    pub fn load_stubbed() -> Vector<PageItem> {
+        let mut rng = rand::thread_rng();
+        let mut pages = Vector::new();
+        for i in 0..10 {
+            let lorem_text = ArcStr::from(lipsum::lipsum(rng.gen_range(500..1800)));
+            let pi = PageItem {
+                page_number: i,
+                html_text: lorem_text.clone(),
+                plain_text: lorem_text.clone(),
+                page_text: RichText::new(lorem_text),
+            };
+            pages.push_back(pi);
+        }
+        pages
+
+
+    }
+
 
     fn load_file(file_path: &str) -> Vector<PageItem> {
         let mut pages = Vector::new();
@@ -128,28 +155,17 @@ impl AppState {
         assert!(doc.is_ok());
         let mut doc = doc.unwrap();
         let mut m = 0;
-        //let asd = generate_pages(doc);
-        //asd
-        let asd = 2500;
             while doc.go_next().is_ok() {
         
-                let t = &doc.get_current_str().unwrap();
-                let mut i = 0;
-                loop  {
-                    let ot = if i+1*asd < t.len() { t.len() } else { i+1 };
-                    let (plain_text, page_text) = rebuild_rendered_text(&t[i..ot]);
-                    m += 1;
-                    pages.push_back(PageItem {
-                        page_number: doc.get_current_page() as u32,
-                        plain_text,
-                        page_text
-                    });
-                    i+=1;
-                    if i < t.len()/asd { break; }
-                    
-                }
-        
-        
+                let page_text = rebuild_rendered_text(&doc.get_current_str().unwrap());
+                let pi = PageItem {
+                    page_number: m,
+                    html_text: ArcStr::from(doc.get_current_str().unwrap().clone()),
+                    plain_text: page_text.0,
+                    page_text: page_text.1,
+                };
+                pages.push_back(pi);
+                m += 1;
             }
             println!("Numero di pagine totali: {}", m);
          pages
@@ -157,6 +173,10 @@ impl AppState {
 
     pub fn open_file(&mut self, file_path: String) {
         self.pages = AppState::load_file(&file_path);
+        let cl = self.pages.get(5).clone().unwrap().to_owned();
+        self.current_page = cl;
+        self.pages.clear();
+        //self.pages = AppState::load_file(&file_path);
     }
 }
 
@@ -164,6 +184,7 @@ impl AppState {
 pub struct PageItem {
     pub page_number: u32,
     pub plain_text: ArcStr,
+    pub html_text: ArcStr,
     pub page_text: RichText,
 }
 
@@ -173,7 +194,7 @@ impl Data for PageItem {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Data, Clone)]
 enum HtmlTag {
     Header(u8),
     Link(i32),
@@ -209,156 +230,7 @@ impl From<&str> for HtmlTag {
     }
 }
 
-fn generate_pages(mut doc: epub::doc::EpubDoc<std::fs::File>) -> Vector<PageItem> {
-    let mut current_pos = 0;
-    let mut builder = druid::text::RichTextBuilder::new();
-    let mut str = String::new();
-    let mut token_stack: Vec<(usize, HtmlTag)> = Vec::new();
-
-    let mut pages: Vector<PageItem> = Vector::new();
-    let mut cpos = 0;
-
-    let mut pg_num: u32 = 1;
-
-    let mut page_fin : bool = false;
-    let mut page_split : bool = false;
-
-    doc.go_next().unwrap();
-
-    loop {
-
-        let mut exited: bool = false;
-        let mut panik: bool = false;
-
-        let curr_page = doc.get_current_str().unwrap();
-        let mut tokenizer = xmlparser::Tokenizer::from(&curr_page[cpos..]);
-
-        while !exited {
-            let tok_option = tokenizer.next();
-            if tok_option.is_none() {
-                page_fin = true;
-                exited = true;
-                continue;
-            }
-            let tok_result = tok_option.unwrap();
-
-            if tok_result.is_err() {
-                // handle error
-                println!("Errore!!!");
-                exited = true;
-                panik = true;
-                continue;
-            }
-            let token = tok_result.unwrap();
-            let t_clone = token.clone();
-            match token {
-                xmlparser::Token::ElementStart {
-                    prefix: _,
-                    local,
-                    span: _,
-                } => {
-                    token_stack.push((current_pos, HtmlTag::from(local.as_str())));
-                }
-                xmlparser::Token::ElementEnd { end, span: _ } => match end {
-                    xmlparser::ElementEnd::Open => {
-                        continue;
-                    }
-                    xmlparser::ElementEnd::Close(_, closed_token) => {
-                        let (pos, tk) = token_stack.pop().expect("No token on stack");
-                        if tk != HtmlTag::from(closed_token.as_str()) {
-                            println!(
-                                "ERROR: closing tag {:?} does not match started tag {:?}",
-                                closed_token.as_str(),
-                                tk
-                            );
-                            continue;
-                        }
-                        add_attribute_for_token(
-                            &tk,
-                            builder.add_attributes_for_range(pos..current_pos),
-                        );
-
-                        if tk != HtmlTag::Unhandled && add_newline_after_tag(&tk) {
-                            builder.push("\n\n");
-                            str.push_str("\n\n");
-                            current_pos += 2;
-                        }
-                    }
-                    xmlparser::ElementEnd::Empty => {
-                        token_stack.pop().expect("No token on stack");
-                    }
-                },
-
-                xmlparser::Token::Text { text } => {
-                    // TODO: Handle case of no tags, text only
-                    let (_, inner_tag) = token_stack.last().unwrap();
-
-                    if !should_tag_be_written(inner_tag) || text.trim().is_empty() {
-                        continue;
-                    } else {
-                        let t = text.as_str().replace("\n", "");
-                        builder.push(&t);
-                        str.push_str(&t);
-                        current_pos = current_pos + t.len();
-                    }
-                }
-                _ => continue,
-            }
-            
-            match t_clone {
-    //xmlparser::Token::Declaration { version : _, encoding : _, standalone: _, span } => cpos = span.end(),
-    //xmlparser::Token::ElementStart { prefix: _, local: _, span } => cpos = span.end(),
-    //xmlparser::Token::EmptyDtd { name:_, external_id:_, span } => cpos = span.end(),
-    //xmlparser::Token::Comment { text:_, span } => cpos = span.end(),
-    //xmlparser::Token::ProcessingInstruction { target:_, content:_, span } => cpos = span.end(),
-    //xmlparser::Token::DtdStart { name:_, external_id:_, span } => cpos = span.end(),
-    //xmlparser::Token::EntityDeclaration { name:_, definition:_, span } => cpos = span.end(),
-    //xmlparser::Token::DtdEnd { span } => cpos = span.end(),
-    //xmlparser::Token::Attribute { prefix:_, local:_, value:_, span } => cpos = span.end(),
-    xmlparser::Token::ElementEnd { end:_, span } => cpos = span.end(),
-    //xmlparser::Token::Text { text } => cpos = text.end(),
-    //xmlparser::Token::Cdata { text:_, span } => cpos = span.end(),
-    _ => {}
-            }
-            if  str.len() >= 1800 {
-                    page_split = true;
-                    exited = true;
-                    println!("Cpos:{} ", cpos);
-
-            }
-
-        }
-
-        if page_split || page_fin {
-            pages.push_back(PageItem {
-                page_number: pg_num,
-                plain_text: druid::ArcStr::from(str),
-                page_text: builder.build()
-            });
-
-            str = String::new();
-            builder = druid::text::RichTextBuilder::new();
-
-            pg_num += 1;
-        }
-        if page_fin {
-            let nexx = doc.go_next();
-            if nexx.is_err() {
-                break;
-            }
-            page_fin = false;
-            cpos = 0;
-        }
-        if panik {
-            break;
-        }
-    }
-    println!("Length: {:?}", current_pos);
-    pages
-    //(druid::ArcStr::from(str), builder.build())
-}
-
-fn rebuild_rendered_text(text: &str) -> (druid::ArcStr, RichText) {
+pub fn rebuild_rendered_text(text: &str) -> (druid::ArcStr, RichText) {
     let mut current_pos = 0;
     let mut builder = druid::text::RichTextBuilder::new();
     let mut str = String::new();

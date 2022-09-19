@@ -1,6 +1,6 @@
 
 
-use druid::Data;
+use druid::{Data};
 use druid::{
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
     LifeCycleCtx, MouseButton, PaintCtx, Point, Rect, RenderContext, Size, TextLayout, UpdateCtx,
@@ -15,10 +15,10 @@ const SELECTED_TOOL: druid::Key<u64> = druid::Key::new("org.linebender.example.i
 pub struct EpubPage {
     page_num: u32,
     layout: TextLayout<druid::text::RichText>,
-    mark_points: Vec<(Point, Point)>,
+    //mark_points: Vec<(Point, Point)>,
     //pen_points: Vec<(Point, Point)>,
     font_size : u32,
-    set2 : bool,
+    until_pos: usize,
     selection : Selection
 
 }
@@ -27,10 +27,10 @@ impl EpubPage {
         EpubPage {
             page_num : 0,
             layout: TextLayout::new(),
-            mark_points: Vec::new(),
+            //mark_points: Vec::new(),
             //pen_points: Vec::new(),
             font_size: 14,
-            set2: false,
+            until_pos: 0,
             selection : Selection::default()
         }
     }
@@ -39,7 +39,7 @@ impl EpubPage {
 
 impl Widget<PageItem> for EpubPage {
     
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut PageItem, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut PageItem, env: &Env) {
         
         let selected_tool : Tool = env.get(SELECTED_TOOL).into();
         
@@ -65,6 +65,14 @@ impl Widget<PageItem> for EpubPage {
                 //self.update_pending_invalidation(druid::text::ImeInvalidation::SelectionChanged);
                 let text_position = self.layout.text_position_for_point(mouse.pos);
                 self.selection = Selection::new(text_position, text_position);
+
+                println!("{:?}",&*data.html_text[self.until_pos..self.until_pos+100].to_string());
+                
+                let asasd = crate::application_state::rebuild_rendered_text(&*data.html_text[self.until_pos..].to_string());
+                //println!("*data.html_text[asdad..] {:}", &*data.html_text[pos_text..].to_string());
+
+                self.layout.set_text(asasd.1);
+
                 ctx.request_update();
                 ctx.request_paint();
             }
@@ -192,33 +200,62 @@ impl Widget<PageItem> for EpubPage {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &PageItem, env: &Env) -> Size {
-        let LABEL_X_PADDING = 150.;
-        let width = bc.max().width - LABEL_X_PADDING * 2.0;
-        self.layout.set_wrap_width(500.);
+
+
+        /*                        X
+         ______________      X    |
+        |              |  X  |    |
+        |  text like   |  |  |    |
+        |  this        |  |  |    |
+        |              |  |  |    |
+        |  New chap-   |  |  |    |
+        |  ter         |  |  |    |
+        |              |  |  |    |
+        |              |  |  |    |    
+        |              |  |  |    |   bc.max().height
+        |______________|  X  |    |     
+           <------->         X    |
+           page_size              X
+        <-------------->
+      25 max - 50 * 2  25
+      <-------------------->
+            bc.max().width  
+      
+      
+      */
+
+
+      let label_x_padding = 125.;
+                                                                        // SUBSTITUTE WITH FIXED WINDOWS SIZE!!!
+        let size = bc.constrain(Size::new( bc.max().width,  bc.max().height));//bc.max().height));
+        
+        self.layout.set_wrap_width(bc.max().width - label_x_padding);
         self.layout.rebuild_if_needed(ctx.text(), env);
 
-        let text_metrics = self.layout.layout_metrics();
-        ctx.set_baseline_offset(text_metrics.size.height - text_metrics.first_baseline);
-        let size = bc.constrain(Size::new(
-            text_metrics.size.width + 2. * LABEL_X_PADDING,
-            text_metrics.size.height,
-        ));
+        //let text_metrics = self.layout.layout_metrics();
+        //ctx.set_baseline_offset(text_metrics.size.height - text_metrics.first_baseline);
+        //let size = bc.constrain(Size::new(
+        //    text_metrics.size.width + 2. * label_x_padding,
+        //    text_metrics.size.height, 
+        //));
         size
 
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &PageItem, _env: &Env) {
         
-        let origin = Point::new(150., 0.0);
+        let origin = Point::new(75., 0.0);
 
         
-        let size = Size::new(650., 1000.);
-        let rect = size.to_rect();
+        let size = ctx.size();
+        let rect = Rect::new(50., 0., size.width-50., size.height);
         
+        ctx.fill(rect, &Color::WHITE);
+
         //ctx.fill(rect, &Color::WHITE); 
 
         
-        let text_offset = druid::Vec2::new(150., 0.0);
+        let text_offset = druid::Vec2::new(50.+10., 0.0);
 
         let sel_rects = self.layout.rects_for_range(self.selection.range());
         for region in sel_rects {
@@ -260,10 +297,22 @@ impl Widget<PageItem> for EpubPage {
     }
         */
         let label_size = ctx.size();
+        self.until_pos = self.layout.text_position_for_point(Point::new(label_size.width, label_size.height));
+    
+        //let asasd = crate::application_state::rebuild_rendered_text(&*data.html_text[pos_text..].to_string());
+        //println!("*data.html_text[asdad..] {:}", &*data.html_text[pos_text..].to_string());
+
         //self.layout.text_position_for_point(point)
-        //ctx.clip(rect);
-        
-        self.layout.draw(ctx, origin)
+        if label_size.height > self.layout.size().height {
+            println!("Can load other page");
+        }
+        else {
+            println!("Text should go away");
+        }
+        self.layout.draw(ctx, origin);
+
+        ctx.clip(label_size.to_rect());
+
 
     }
 

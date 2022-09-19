@@ -3,8 +3,8 @@ use druid::Data;
 #[derive(Clone, PartialEq, Data)]
 pub enum Tool {
     Arrow, 
-    Pen,
     Marker,
+    Note,
     Eraser
 }
 
@@ -22,7 +22,7 @@ impl Into<u64> for Tool {
     fn into(self) -> u64 {
         match self {
             Tool::Arrow => 0,
-            Tool::Pen => 1,
+            Tool::Note => 1,
             Tool::Marker => 2, 
             Tool::Eraser => 3,
         }
@@ -32,7 +32,7 @@ impl Into<u64> for Tool {
 impl From<u64> for Tool {
     fn from(v: u64) -> Self {
         match v {
-            1 => Tool::Pen,
+            1 => Tool::Note,
             2 => Tool::Marker,
             3 => Tool::Eraser,
             0 | _ => Tool::Arrow

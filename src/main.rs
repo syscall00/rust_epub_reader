@@ -3,8 +3,7 @@ use std::{sync::Arc, path::PathBuf};
 use application_state::{AppState, PageItem, HomePageData, Recent};
 use druid::{
     widget::{
-        Button, Container, Flex, List, Scroll,
-    },
+        Button, Container, Flex, List, Scroll},
     AppLauncher, Color, Selector, WidgetExt,
     WindowDesc, Key, EventCtx, FileInfo, RenderContext,
 };
@@ -14,6 +13,7 @@ use druid::{
 use druid::{Lens, Widget};
 
 use druid_widget_nursery::{navigator::{Navigator, ViewController}, Wedge};
+use epub_page::EpubPage;
 use tool::Tool;
 mod widgets;
 mod tool;
@@ -30,10 +30,11 @@ fn main() {
 
     let _contacts = get_data();
 
+    
     AppLauncher::with_window(window)
         .log_to_console()
         .delegate(application_state::Delegate)
-        .launch(application_state::AppState::new())
+        .launch(AppState::new())
         .unwrap();
 }
 
@@ -47,15 +48,21 @@ pub fn navigator() -> impl Widget<application_state::AppState> {
 }
 
 pub fn read_ebook() -> Box<dyn Widget<application_state::AppState>> {
- //druid::widget::Label
 
-    let ll = Scroll::new(
-                List::new(|| Flex::row().with_flex_child(crate::epub_page::EpubPage::new(), 1.))
-                .lens(AppState::pages))
-               .vertical();//.controller(ScrollController);
+    let epub_page = EpubPage::new().lens(AppState::current_page);
+    let ll = epub_page;
+    
+    //let ll = Split::columns(epub_page, 
+        //EpubPage::new().lens(AppState::current_page));
+        //List::new(|| Flex::row()
+        //    .with_flex_child(
+        //        crate::epub_page::EpubPage::new(), 1.)
+        //    )
+        //.lens(AppState::pages);//)
+        //.vertical();//.controller(ScrollController);
        
            
-           let ex = Flex::column()
+        let ex = Flex::column()
            .with_default_spacer()
            .with_child(build_toolbar())
            .with_default_spacer()
@@ -83,9 +90,9 @@ fn build_toolbar() -> impl Widget<AppState> {
         data.selected_tool = Tool::Arrow;
     });
 
-    let bt2 = Button::new("Pen")
+    let bt2 = Button::new("Note")
     .on_click(|_ctx, data: &mut AppState, _env | {
-        data.selected_tool = Tool::Pen;
+        data.selected_tool = Tool::Note;
     });
 
     let bt3 = Button::new("Marker")
@@ -151,15 +158,13 @@ impl ViewController<nav_uiview::UiView> for application_state::AppState {
 struct ListItems {
 
     layout: druid::TextLayout<String>,
-    image : druid::WidgetPod<druid::ImageBuf, druid::widget::Image>
 
 
 } 
 impl ListItems {
     pub fn new() -> Self {
         let layout = druid::TextLayout::default();
-        let image = druid::widget::Image::new(druid::ImageBuf::empty());
-        ListItems{ layout, image: druid::WidgetPod::new(image) }
+        ListItems{ layout }
     }
 }
 
@@ -191,17 +196,11 @@ impl Widget<Recent> for ListItems {
             match event {
                 druid::LifeCycle::WidgetAdded => {
                     self.layout.set_text(data.name.clone());
-                    //self.layout.set_text_size(self.font_size as f64);
                     self.layout.set_text_color(Color::BLACK);
-                    //self.page_num = data.page_number;
-                    let mut a = druid::widget::Image::new(data.image_data.clone());
-                    a.set_fill_mode(druid::widget::FillStrat::Contain);
-                    self.image = druid::WidgetPod::new(a);
+
                 }
                 _ => {} 
             }
-            
-            self.image.lifecycle(ctx, event, &data.image_data, env)
     }
 
     fn update(&mut self, _ctx: &mut druid::UpdateCtx, _old_data: &Recent, _data: &Recent, _env: &druid::Env) {
@@ -209,7 +208,7 @@ impl Widget<Recent> for ListItems {
         
     }
 
-    fn layout(&mut self, ctx: &mut druid::LayoutCtx, bc: &druid::BoxConstraints, data: &Recent, env: &druid::Env) -> druid::Size {
+    fn layout(&mut self, ctx: &mut druid::LayoutCtx, bc: &druid::BoxConstraints, _data: &Recent, env: &druid::Env) -> druid::Size {
         //if self.layout.needs_rebuild() {
             
             self.layout.set_wrap_width(bc.max().width);
@@ -221,18 +220,41 @@ impl Widget<Recent> for ListItems {
         //}
         //self.image.layout(ctx, bc, &data.image_data, env);
 
-        druid::Size::new(self.layout.size().width, self.layout.size().height)    }
+                // If either the width or height is constrained calculate a value so that the image fits
+        // in the size exactly. If it is unconstrained by both width and height take the size of
+        // the image.
+        let max = bc.max();
+        let image_size = druid::Size::new(30., 55.);
+        let size = if bc.is_width_bounded() && !bc.is_height_bounded() {
+            let ratio = max.width / image_size.width;
+            druid::Size::new(image_size.width, ratio * image_size.height)
+        } else if bc.is_height_bounded() && !bc.is_width_bounded() {
+            let ratio = max.height / image_size.height;
+            druid::Size::new(ratio * image_size.width, max.height)
+        } else {
+            bc.constrain(image_size)
+        };
+        size
 
-    fn paint(&mut self, ctx: &mut druid::PaintCtx, data: &Recent, env: &druid::Env) {
+
+
+        //druid::Size::new(self.layout.size().width, self.layout.size().height+ 180.)    
+    }
+
+    fn paint(&mut self, ctx: &mut druid::PaintCtx, _data: &Recent, _env: &druid::Env) {
         let origin = druid::Point::new(0., 0.0);
 
         // This is the builder-style way of drawing text.
         self.layout.draw(ctx, origin);
-        //let ret  = druid::Rect::new(20., 20., 150. , 200.);
-        //let image = data.image_data.to_image(ctx.render_ctx);
-        //druid::widget::Image::new().set_fill_mode();
-        //ctx.draw_image(&image, ret, druid::piet::InterpolationMode::Bilinear);
-        //self.image.paint(ctx, &data.image_data, env);
+        let ret  = druid::Rect::new(20., 20., 150. , 200.);
+        let img_data = epub::doc::EpubDoc::new(_data.path.to_string()).unwrap().get_cover().unwrap();
+
+        let a = druid::ImageBuf::from_data(&img_data).unwrap();
+        
+
+
+        let image = a.to_image(ctx.render_ctx);
+        ctx.draw_image(&image, ret, druid::piet::InterpolationMode::Bilinear);
     }
 }
     // main page and contains list view of contacts
@@ -240,11 +262,11 @@ impl Widget<Recent> for ListItems {
 // navigator needs Boxed widgets in order to store the widgets
 pub fn home_page() -> impl Widget<HomePageData> {
     
-    let list = Scroll::new(List::new(|| {
+    let list = List::new(|| {
         
     
          ListItems::new()
-         .align_vertical(druid::UnitPoint::LEFT)
+         //.align_vertical(druid::UnitPoint::LEFT)
          .padding(10.0)
          //.expand()
          
@@ -252,7 +274,7 @@ pub fn home_page() -> impl Widget<HomePageData> {
          //Button::new(|data: &String, _: &_| format!("{}", data)).on_click(|_event, _, _env| {
          //.height(50.0)
 
-    })).vertical().lens(HomePageData::recents);
+    }).lens(HomePageData::recents);
 
 
     let open_epub = Button::new("Open new epub".to_string())
@@ -269,7 +291,7 @@ pub fn home_page() -> impl Widget<HomePageData> {
             });
     
                
-
+           // druid::widget::Label::new();
     let layout = Flex::column()
         .with_flex_child(open_epub, 1.)
         .with_flex_child(list, 1.);//.lens(AppState::home_page_data);
