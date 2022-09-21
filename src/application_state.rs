@@ -251,41 +251,31 @@ pub struct EpubData {
 
     // Plain text of all book 
     pub chapters: Vector<ArcStr>,
-    // Plain text of current page
-    pub pages : ArcStr,
-
 
     pub visualized_page : RichText,
 }
 
 impl EpubData {
     pub fn new(chapters: Vector<ArcStr>) -> Self {
-        let pages =  chapters[0].clone();
-
-        let (_, visualized_page) = rebuild_rendered_text(&pages, 0);
+        let (_, visualized_page) = rebuild_rendered_text(&chapters[0], 0);
 
         let epub_metrics = EpubMetrics::new(&chapters, visualized_page.len());
 
         EpubData { 
             current_chapter: 0, 
             chapters, 
-            pages ,
             visualized_page,
             epub_metrics
         }
         
     }
 
-    pub fn next_page(&mut self, current_page : usize) {
-        let (_, rich) = rebuild_rendered_text(&self.pages, current_page);
-        self.visualized_page = rich;
-
-
-        self.epub_metrics.change_page(current_page);
-
-    }
-
-    pub fn search_in_book(&mut self, search_string : &str) {
+    /*
+    Should return a list with
+    - chapter number
+    - page position in chapter
+    */
+    pub fn search_in_book(&mut self, search_string : &str, index: usize) {
         let mut search_results = Vector::new();
         for (i, chapter) in self.chapters.iter().enumerate() {
             let mut chapter_results = Vector::new();
@@ -300,19 +290,37 @@ impl EpubData {
             }
         }
         search_results.iter().for_each(|(i, v)| println!("Chapter {} has {} results", i, v.len()));
-        self.epub_metrics.change_chapter(search_results[0].0, search_results[0].1.len());
+        self.move_to_pos(search_results[0].0, search_results[0].1[index-1].len());
     }
 
-    fn move_to_pos(&mut self, chapter : usize, pos : usize) {
+    pub fn move_to_pos(&mut self, chapter : usize, pos : usize) {
         self.current_chapter = chapter;
-        self.pages = self.chapters[chapter].clone();
-        self.next_page(pos);
+        self.epub_metrics.change_chapter(chapter, self.get_current_chapter().len());
+
+
+        let (_, rich) = rebuild_rendered_text(self.get_current_chapter(), pos);
+        self.visualized_page = rich;
+        self.epub_metrics.change_page(pos);
+
     }
+
+    fn get_current_chapter(&self) -> &ArcStr {
+        &self.chapters[self.current_chapter]
+    }
+    
+
+    pub fn next_page(&mut self, current_page : usize) {
+        let (_, rich) = rebuild_rendered_text(self.get_current_chapter(), current_page);
+        self.visualized_page = rich;
+        self.epub_metrics.change_page(current_page);
+    
+    }
+
 
     pub fn next_chapter(&mut self) {
         self.current_chapter+=1;
-        self.pages = self.chapters[self.current_chapter].clone();
-        let (_, rich) = rebuild_rendered_text(&self.pages, 0);
+        //self.pages = self.chapters[self.current_chapter].clone();
+        let (_, rich) = rebuild_rendered_text(self.get_current_chapter(), 0);
         self.epub_metrics.change_chapter(self.current_chapter, rich.len());
 
         self.visualized_page = rich;
@@ -327,7 +335,7 @@ impl EpubData {
 impl Default for EpubData {
     fn default() -> Self {
         Self { current_chapter: Default::default(), chapters: Default::default(), 
-            pages: ArcStr::from("".clone()), visualized_page: RichText::new(ArcStr::from("".clone())), epub_metrics: Default::default() }
+            visualized_page: RichText::new(ArcStr::from("".clone())), epub_metrics: Default::default() }
     }
 }
 

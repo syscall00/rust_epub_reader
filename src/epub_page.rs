@@ -65,32 +65,23 @@ impl Widget<EpubData> for EpubPage {
                 //self.update_pending_invalidation(druid::text::ImeInvalidation::SelectionChanged);
                 let label_size = ctx.size();
                 self.until_pos += self.layout.text_position_for_point(Point::new(label_size.width, label_size.height));
-                println!("until pos:{}.\npage_text {}", self.until_pos, data.epub_metrics.chapter_length);
-                data.search_in_book("Nube");
-                return;
+                ////println!("until pos:{}.\npage_text {}", self.until_pos, data.epub_metrics.chapter_length);
+                //if data.epub_metrics.position_in_chapter >= 46000 && data.epub_metrics.position_in_chapter  <= 47000 {
+                //    data.search_in_book("BEOWULF", 1);
+                //}
+                //else { 
+                //    data.search_in_book("BEOWULF", 2);
+                //}
+//
+                //return;
                 if self.until_pos >= data.epub_metrics.chapter_length {
-                    println!("Devo caricare un nuovo capitolo!");
                     self.until_pos = 0;
                     
                     data.next_chapter();
-                    //let asasd = crate::application_state::rebuild_rendered_text(&*data.html_text.to_string(), self.until_pos);
-                    ////println!("*data.html_text[asdad..] {:}", &*data.html_text[pos_text..].to_string());
-                    //    self.layout.set_text(asasd.1);
-                    //    ctx.request_update();
-                    //    ctx.request_paint();
-    
+                    //let asasd = crate::application_state::rebuild_rendered_text(&*data.html_text.to_string(), self.until_pos);    
                 }
                 else {
-                    println!("Loading Page!!!!");
-
                     data.next_page(self.until_pos);
-                    //self.layout.set_text(data.visualized_page.clone());
-
-                    data.search_in_book("Nube");
-
-
-                    //ctx.request_update();
-                    //ctx.request_paint();
                 }
             }
             Event::MouseMove(mouse) => {
