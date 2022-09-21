@@ -8,6 +8,7 @@ use druid::{
 };
 
 use crate::PageItem;
+use crate::application_state::EpubData;
 use crate::tool::Tool;
 
 const SELECTED_TOOL: druid::Key<u64> = druid::Key::new("org.linebender.example.important-label-color");
@@ -37,15 +38,14 @@ impl EpubPage {
 
 }
 
-impl Widget<PageItem> for EpubPage {
+impl Widget<EpubData> for EpubPage {
     
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut PageItem, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
         
         let selected_tool : Tool = env.get(SELECTED_TOOL).into();
-        
+        //println!("event: {:?}", event);
         match event {
-
-            Event::MouseDown(mouse) 
+            Event::MouseDown(_mouse) 
             if !ctx.is_disabled() => {
                 ctx.set_active(true);
                 // ensure data is up to date before a click
@@ -63,18 +63,35 @@ impl Widget<PageItem> for EpubPage {
                 
                 //self.do_mouse_down(mouse.pos, mouse.mods, mouse.count);
                 //self.update_pending_invalidation(druid::text::ImeInvalidation::SelectionChanged);
-                let text_position = self.layout.text_position_for_point(mouse.pos);
-                self.selection = Selection::new(text_position, text_position);
+                let label_size = ctx.size();
+                self.until_pos += self.layout.text_position_for_point(Point::new(label_size.width, label_size.height));
+                println!("until pos:{}.\npage_text {}", self.until_pos, data.epub_metrics.chapter_length);
+                data.search_in_book("Nube");
+                return;
+                if self.until_pos >= data.epub_metrics.chapter_length {
+                    println!("Devo caricare un nuovo capitolo!");
+                    self.until_pos = 0;
+                    
+                    data.next_chapter();
+                    //let asasd = crate::application_state::rebuild_rendered_text(&*data.html_text.to_string(), self.until_pos);
+                    ////println!("*data.html_text[asdad..] {:}", &*data.html_text[pos_text..].to_string());
+                    //    self.layout.set_text(asasd.1);
+                    //    ctx.request_update();
+                    //    ctx.request_paint();
+    
+                }
+                else {
+                    println!("Loading Page!!!!");
 
-                println!("{:?}",&*data.html_text[self.until_pos..self.until_pos+100].to_string());
-                
-                let asasd = crate::application_state::rebuild_rendered_text(&*data.html_text[self.until_pos..].to_string());
-                //println!("*data.html_text[asdad..] {:}", &*data.html_text[pos_text..].to_string());
+                    data.next_page(self.until_pos);
+                    //self.layout.set_text(data.visualized_page.clone());
 
-                self.layout.set_text(asasd.1);
+                    data.search_in_book("Nube");
 
-                ctx.request_update();
-                ctx.request_paint();
+
+                    //ctx.request_update();
+                    //ctx.request_paint();
+                }
             }
             Event::MouseMove(mouse) => {
                 if selected_tool.should_be_written() && mouse.buttons.contains(MouseButton::Left) {
@@ -172,25 +189,25 @@ impl Widget<PageItem> for EpubPage {
         // }
     }
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &PageItem, _env: &Env) {
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, _env: &Env) {
         match event {
             LifeCycle::WidgetAdded => {
-                self.layout.set_text(data.page_text.clone());
+                self.layout.set_text(data.visualized_page.clone());
                 self.layout.set_text_size(self.font_size as f64);
                 self.layout.set_text_color(Color::BLACK);
                 self.layout.set_text_alignment(druid::TextAlignment::Start);
 
-                self.page_num = data.page_number;
+                //self.page_num = data.page_number;
                 
             }
             _ => {} 
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &PageItem, data: &PageItem, _env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, _env: &Env) {
 
         if !old_data.same(data) {
-            self.layout.set_text(data.page_text.clone());
+            self.layout.set_text(data.visualized_page.clone());
             ctx.request_layout();
         }
         if self.layout.needs_rebuild_after_update(ctx) {
@@ -199,7 +216,7 @@ impl Widget<PageItem> for EpubPage {
 
     }
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &PageItem, env: &Env) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &EpubData, env: &Env) -> Size {
 
 
         /*                        X
@@ -242,7 +259,7 @@ impl Widget<PageItem> for EpubPage {
 
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, _data: &PageItem, _env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, _data: &EpubData, _env: &Env) {
         
         let origin = Point::new(75., 0.0);
 
@@ -297,21 +314,15 @@ impl Widget<PageItem> for EpubPage {
     }
         */
         let label_size = ctx.size();
-        self.until_pos = self.layout.text_position_for_point(Point::new(label_size.width, label_size.height));
     
         //let asasd = crate::application_state::rebuild_rendered_text(&*data.html_text[pos_text..].to_string());
         //println!("*data.html_text[asdad..] {:}", &*data.html_text[pos_text..].to_string());
 
         //self.layout.text_position_for_point(point)
-        if label_size.height > self.layout.size().height {
-            println!("Can load other page");
-        }
-        else {
-            println!("Text should go away");
-        }
+
         self.layout.draw(ctx, origin);
 
-        ctx.clip(label_size.to_rect());
+        //ctx.clip(label_size.to_rect());
 
 
     }
@@ -337,3 +348,5 @@ impl Widget<PageItem> for EpubPage {
         }
     }
 }*/
+
+

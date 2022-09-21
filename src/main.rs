@@ -41,15 +41,16 @@ fn main() {
 // creates the navigator widget responsible for changing views
 pub fn navigator() -> impl Widget<application_state::AppState> {
     //druid::widget::ViewSwitcher::new()
-    Navigator::new(nav_uiview::UiView::new("home_page".to_string()), || {Box::new(home_page().lens(AppState::home_page_data)) })
+    Navigator::new(nav_uiview::UiView::new("home_page".to_string()), || 
+    {Box::new(home_page().lens(AppState::home_page_data)) })
         .with_view_builder(nav_uiview::UiView::new("read_ebook".to_string()), read_ebook)
          
-        .controller(nav_controller::NavigatorController)
+        //.controller(nav_controller::NavigatorController)
 }
 
 pub fn read_ebook() -> Box<dyn Widget<application_state::AppState>> {
 
-    let epub_page = EpubPage::new().lens(AppState::current_page);
+    let epub_page = EpubPage::new().lens(AppState::epub_data);
     let ll = epub_page;
     
     //let ll = Split::columns(epub_page, 
@@ -85,6 +86,10 @@ pub fn read_ebook() -> Box<dyn Widget<application_state::AppState>> {
 
 fn build_toolbar() -> impl Widget<AppState> {
 
+
+    let slider = druid::widget::Slider::new()
+        .with_range(0.0, 100.0)
+        .lens(AppState::slider_value);
     let bt1 = Button::new("Arrow")
     .on_click(|_ctx, data: &mut AppState, _env| {
         data.selected_tool = Tool::Arrow;
@@ -115,8 +120,9 @@ fn build_toolbar() -> impl Widget<AppState> {
     .with_child(bt3)
     .with_child(bt4)
     .with_child(bt5)
-    .with_child(Wedge::new().lens(AppState::selected))
-    .with_child(icon)
+    .with_child(slider)
+    //.with_child(Wedge::new().lens(AppState::selected))
+    //.with_child(icon)
 
 
     
@@ -223,18 +229,19 @@ impl Widget<Recent> for ListItems {
                 // If either the width or height is constrained calculate a value so that the image fits
         // in the size exactly. If it is unconstrained by both width and height take the size of
         // the image.
-        let max = bc.max();
-        let image_size = druid::Size::new(30., 55.);
-        let size = if bc.is_width_bounded() && !bc.is_height_bounded() {
-            let ratio = max.width / image_size.width;
-            druid::Size::new(image_size.width, ratio * image_size.height)
-        } else if bc.is_height_bounded() && !bc.is_width_bounded() {
-            let ratio = max.height / image_size.height;
-            druid::Size::new(ratio * image_size.width, max.height)
-        } else {
-            bc.constrain(image_size)
-        };
-        size
+        //let max = bc.max();
+        //let image_size = druid::Size::new(30., 55.);
+        //let size = if bc.is_width_bounded() && !bc.is_height_bounded() {
+        //    let ratio = max.width / image_size.width;
+        //    druid::Size::new(image_size.width, ratio * image_size.height)
+        //} else if bc.is_height_bounded() && !bc.is_width_bounded() {
+        //    let ratio = max.height / image_size.height;
+        //    druid::Size::new(ratio * image_size.width, max.height)
+        //} else {
+        //    bc.constrain(image_size)
+        //};
+        //size
+        self.layout.size()
 
 
 
@@ -246,15 +253,15 @@ impl Widget<Recent> for ListItems {
 
         // This is the builder-style way of drawing text.
         self.layout.draw(ctx, origin);
-        let ret  = druid::Rect::new(20., 20., 150. , 200.);
-        let img_data = epub::doc::EpubDoc::new(_data.path.to_string()).unwrap().get_cover().unwrap();
+        //let ret  = druid::Rect::new(20., 20., 150. , 200.);
+        //let img_data = epub::doc::EpubDoc::new(_data.path.to_string()).unwrap().get_cover().unwrap();
 
-        let a = druid::ImageBuf::from_data(&img_data).unwrap();
+        //let a = druid::ImageBuf::from_data(&img_data).unwrap();
         
 
 
-        let image = a.to_image(ctx.render_ctx);
-        ctx.draw_image(&image, ret, druid::piet::InterpolationMode::Bilinear);
+        //let image = a.to_image(ctx.render_ctx);
+        //ctx.draw_image(&image, ret, druid::piet::InterpolationMode::Bilinear);
     }
 }
     // main page and contains list view of contacts
