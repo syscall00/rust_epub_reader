@@ -1,4 +1,5 @@
 use druid::im::Vector;
+use druid::piet::TextStorage;
 use druid::text::RichText;
 use druid::{
     commands, AppDelegate, ArcStr, Command, Data, DelegateCtx, Env, Handled, Lens, Target,
@@ -9,24 +10,21 @@ use std::sync::Arc;
 use crate::tool::Tool;
 use crate::widgets::navigator::uiview::{self as nav_uiview, UiView};
 use epub::doc::EpubDoc;
-use rand::Rng;
 
-use self::epub_data_derived_lenses::current_chapter;
+
+
 #[derive(Clone, Data, Lens)]
 pub struct AppState {
     pub nav_state: Arc<Vec<nav_uiview::UiView>>,
-    //contacts: Arc<Vec<Contact>>,
+
     pub selected: bool,
-    pages: Vector<PageItem>,
-    file_opened: String,
     pub selected_tool: Tool,
-    //pub current_page : PageItem,
     pub epub_data : EpubData,
     pub home_page_data: HomePageData,
-    pub slider_value : f64,
-
-    my_tree : Vector<HtmlTag>
 }
+
+
+
 const LINK_COLOR: druid::Color = druid::Color::rgb8(0, 0, 0xEE);
 const SCROLL_TO: druid::Selector<u64> = druid::Selector::new("scroll-view.goto");
 
@@ -118,63 +116,49 @@ const CONTACT_DETAIL: druid::Selector<usize> = druid::Selector::new("contact det
 
 impl AppState {
     pub fn new() -> Self {
-        let pages = Vector::new(); // AppState::load_file(&file_opened);
+
         AppState {
             nav_state: Arc::new(vec![nav_uiview::UiView::new("home_page".to_string())]),
             selected: false,
-            pages,
-            file_opened: "".to_string(),
+
             selected_tool: Tool::default(),
-            //current_page : clone,
             home_page_data: HomePageData::new(),
-            my_tree : Vector::new(),
-            slider_value : 0.,
             epub_data: EpubData::default(),
         }
     }
 
-    fn load_file(file_path: &str) -> Vector<PageItem> {
+    fn load_file(file_path: &str) -> Vector<ArcStr> {
         let mut pages = Vector::new();
         let doc = EpubDoc::new(&file_path);
         assert!(doc.is_ok());
         let mut doc = doc.unwrap();
         let mut m = 0;
             while doc.go_next().is_ok() {
-        
-                let page_text = rebuild_rendered_text(&doc.get_current_str().unwrap(), 0);
-                let pi = PageItem {
-                    page_number: m,
-                    html_text: ArcStr::from(doc.get_current_str().unwrap().clone()),
-                    plain_text: page_text.0,
-                    page_text: page_text.1,
-                };
-                pages.push_back(pi);
-                m += 1;
+    
+                pages.push_back(ArcStr::from(doc.get_current_str().unwrap().clone()));
+                //let page_text = rebuild_rendered_text(&doc.get_current_str().unwrap(), 0);
+                //let pi = PageItem {
+                //    page_number: m,
+                //    html_text: ArcStr::from(doc.get_current_str().unwrap().clone()),
+                //    plain_text: page_text.0,
+                //    page_text: page_text.1,
+                //};
+                //pages.push_back(pi);
+                //m += 1;
             }
-            println!("Numero di pagine totali: {}", m);
+            //println!("Numero di pagine totali: {}", m);
          pages
     }
 
     pub fn open_file(&mut self, file_path: String) {
-        self.pages = AppState::load_file(&file_path);
-        //let cl = self.pages.get(0).clone().unwrap().to_owned();
-        //self.current_page = cl;
-        self.epub_data = EpubData::new(self.pages.iter().map(|p| p.html_text.clone()).collect());
+        let pages = AppState::load_file(&file_path);
+        self.epub_data = EpubData::new(pages);
 
-        
-        //self.pages.clear();
-        //self.pages = AppState::load_file(&file_path);
     }
 
 }
 
-#[derive(Clone, Lens, Data)]
-pub struct PageItem {
-    pub page_number: u32,
-    pub plain_text: ArcStr,
-    pub html_text: ArcStr,
-    pub page_text: RichText,
-}
+
 
 
 #[derive(Clone, Lens, Data, Default, Debug)]
@@ -237,9 +221,27 @@ impl EpubMetrics {
         self.percentage_page_in_chapter = self.position_in_chapter as f64 / self.chapter_length as f64 * 100.;
         self.percentage_page_in_book = self.position_in_chapter as f64 / self.book_length as f64 * 100.;
 
-        println!("EpubMetrics: {:?}", self);
+        //println!("EpubMetrics: {:?}", self);
     }
 
+}
+
+
+#[derive(Clone, Lens, Data)]
+pub struct TableOfContentsItem {
+    pub title: String,
+    level: usize,
+    page: usize,
+}
+
+impl TableOfContentsItem {
+    pub fn new(title: String, level: usize, page: usize) -> Self {
+        TableOfContentsItem {
+            title,
+            level,
+            page,
+        }
+    }
 }
 
 #[derive(Clone, Lens, Data)]
@@ -252,7 +254,25 @@ pub struct EpubData {
     // Plain text of all book 
     pub chapters: Vector<ArcStr>,
 
-    pub visualized_page : RichText,
+    pub visualized_page : ArcRichText,
+
+    pub table_of_contents : Vector<TableOfContentsItem>,
+}
+#[derive (Clone, Data, Lens)]
+pub struct ArcRichText {
+    pub text: Arc<RichText>,
+}
+impl ArcRichText {
+    pub fn new(text: RichText) -> Self {
+        ArcRichText {
+            text: Arc::new(text),
+        }
+    }
+}
+impl TextStorage for ArcRichText {
+    fn as_str(&self) -> &str {
+        self.text.as_str()
+    }
 }
 
 impl EpubData {
@@ -261,11 +281,18 @@ impl EpubData {
 
         let epub_metrics = EpubMetrics::new(&chapters, visualized_page.len());
 
+        let table_of_contents = chapters.iter().enumerate().map(|(i, c)| {
+            let title = c.split_whitespace().take(5).collect::<Vec<&str>>().join(" ");
+            TableOfContentsItem::new(title, 0, i)
+        }).collect();
+
+        
         EpubData { 
             current_chapter: 0, 
             chapters, 
-            visualized_page,
-            epub_metrics
+            visualized_page: ArcRichText::new(visualized_page),
+            epub_metrics,
+            table_of_contents,
         }
         
     }
@@ -299,7 +326,7 @@ impl EpubData {
 
 
         let (_, rich) = rebuild_rendered_text(self.get_current_chapter(), pos);
-        self.visualized_page = rich;
+        self.visualized_page = ArcRichText::new(rich);
         self.epub_metrics.change_page(pos);
 
     }
@@ -311,7 +338,7 @@ impl EpubData {
 
     pub fn next_page(&mut self, current_page : usize) {
         let (_, rich) = rebuild_rendered_text(self.get_current_chapter(), current_page);
-        self.visualized_page = rich;
+        self.visualized_page = ArcRichText::new(rich);
         self.epub_metrics.change_page(current_page);
     
     }
@@ -323,7 +350,7 @@ impl EpubData {
         let (_, rich) = rebuild_rendered_text(self.get_current_chapter(), 0);
         self.epub_metrics.change_chapter(self.current_chapter, rich.len());
 
-        self.visualized_page = rich;
+        self.visualized_page = ArcRichText::new(rich);
 
 
     }
@@ -335,7 +362,7 @@ impl EpubData {
 impl Default for EpubData {
     fn default() -> Self {
         Self { current_chapter: Default::default(), chapters: Default::default(), 
-            visualized_page: RichText::new(ArcStr::from("".clone())), epub_metrics: Default::default() }
+            visualized_page: ArcRichText::new(RichText::new(ArcStr::from("".clone()))), table_of_contents: Default::default(), epub_metrics: Default::default() }
     }
 }
 
@@ -517,3 +544,12 @@ pub fn rebuild_rendered_text(text: &str, len : usize) -> (druid::ArcStr, RichTex
     }
     (druid::ArcStr::from(str), builder.build())
 }
+
+
+//#[derive(Clone, Lens, Data)]
+//pub struct PageItem {
+//    pub page_number: u32,
+//    pub plain_text: ArcStr,
+//    pub html_text: ArcStr,
+//    pub page_text: RichText,
+//}

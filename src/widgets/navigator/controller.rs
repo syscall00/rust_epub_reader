@@ -1,4 +1,4 @@
-use druid::{widget::Controller, Event, Env, Widget, Selector};
+/*use druid::{widget::Controller, Event, Env, Widget, Selector};
 use druid_widget_nursery::navigator::{Navigator, ViewController};
 
 use crate::application_state::AppState;
@@ -11,7 +11,7 @@ const POP_VIEW: Selector<()> = Selector::new("navigator.pop-view");
 // have access to AppState
 pub struct NavigatorController;
 
-/*
+
 impl Controller<AppState, Navigator<AppState, UiView>> for NavigatorController {
     fn event(
         &mut self,

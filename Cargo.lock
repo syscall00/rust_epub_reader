@@ -1412,6 +1412,7 @@ dependencies = [
  "rand",
  "serde",
  "serde_json",
+ "strum 0.24.1",
  "tracing",
  "xmlparser",
 ]
@@ -1570,6 +1571,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aaf86bbcfd1fa9670b7a129f64fc0c9fcbbfe4f1bc4210e9e98fe71ffc12cde2"
 
 [[package]]
+name = "strum"
+version = "0.24.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "063e6045c0e62079840579a7e47a355ae92f60eb74daaf156fb1e84ba164e63f"
+
+[[package]]
 name = "strum_macros"
 version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1613,7 +1620,7 @@ dependencies = [
  "heck",
  "itertools",
  "pkg-config",
- "strum",
+ "strum 0.21.0",
  "strum_macros",
  "thiserror",
  "toml",

@@ -1,68 +1,65 @@
 
 
-use druid::{Data};
+use druid::piet::{Text, TextLayoutBuilder, TextLayout as a};
+use druid::{Data, WidgetPod, WidgetExt};
 use druid::{
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
     LifeCycleCtx, MouseButton, PaintCtx, Point, Rect, RenderContext, Size, TextLayout, UpdateCtx,
     Widget, text::Selection,
 };
 
-use crate::PageItem;
 use crate::application_state::EpubData;
 use crate::tool::Tool;
 
+
+use crate::widgets::epub_page::navbar::NavigationBar;
+use crate::widgets::epub_page::textcontainer::TextContainer;
+
 const SELECTED_TOOL: druid::Key<u64> = druid::Key::new("org.linebender.example.important-label-color");
 
+
+
 pub struct EpubPage {
-    page_num: u32,
-    layout: TextLayout<druid::text::RichText>,
+    layout: druid::TextLayout<druid::text::RichText>,
     //mark_points: Vec<(Point, Point)>,
     //pen_points: Vec<(Point, Point)>,
     font_size : u32,
     until_pos: usize,
-    selection : Selection
+    selection : Selection,
 
+    text_container : WidgetPod<EpubData, Box<dyn Widget<EpubData>>>,
+    navigation_bar : WidgetPod<EpubData, Box<dyn Widget<EpubData>>>,
+    
 }
+
 impl EpubPage {
     pub fn new() -> Self {
+
+        let text_container = WidgetPod::new(TextContainer::new().boxed());
+        let navigation_bar = WidgetPod::new(NavigationBar::new().boxed());
         EpubPage {
-            page_num : 0,
-            layout: TextLayout::new(),
+            layout: druid::TextLayout::new(),
             //mark_points: Vec::new(),
             //pen_points: Vec::new(),
             font_size: 14,
             until_pos: 0,
-            selection : Selection::default()
+            selection : Selection::default(),
+            text_container,
+            navigation_bar
         }
     }
-
 }
 
 impl Widget<EpubData> for EpubPage {
     
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
-        
+
         let selected_tool : Tool = env.get(SELECTED_TOOL).into();
         //println!("event: {:?}", event);
         match event {
-            Event::MouseDown(_mouse) 
-            if !ctx.is_disabled() => {
-                ctx.set_active(true);
-                // ensure data is up to date before a click
-                //let needs_rebuild = self
-                //    .layout
-                //    .text()
-                //    .map(|old| !old.same(_data))
-                //    .unwrap_or(true);
-                //if needs_rebuild {
-                //    self.borrow_mut().layout.set_text(data.clone());
-                //    self.borrow_mut().layout.rebuild_if_needed(ctx.text(), env);
-                //    self.borrow_mut()
-                //        .update_pending_invalidation(ImeInvalidation::Reset);
-                //}
-                
-                //self.do_mouse_down(mouse.pos, mouse.mods, mouse.count);
-                //self.update_pending_invalidation(druid::text::ImeInvalidation::SelectionChanged);
+            Event::MouseDown(_mouse) => {
+
+
                 let label_size = ctx.size();
                 self.until_pos += self.layout.text_position_for_point(Point::new(label_size.width, label_size.height));
                 ////println!("until pos:{}.\npage_text {}", self.until_pos, data.epub_metrics.chapter_length);
@@ -84,6 +81,7 @@ impl Widget<EpubData> for EpubPage {
                     data.next_page(self.until_pos);
                 }
             }
+            
             Event::MouseMove(mouse) => {
                 if selected_tool.should_be_written() && mouse.buttons.contains(MouseButton::Left) {
 
@@ -178,12 +176,17 @@ impl Widget<EpubData> for EpubPage {
         // if !data.raw.same(&pre_data) {
         //     data.rendered = rebuild_rendered_text(&data.raw);
         // }
-    }
+        self.text_container.event(ctx, event, data, env);
+        self.navigation_bar.event(ctx, event, data, env);
 
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, _env: &Env) {
+
+
+   }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, env: &Env) {
         match event {
             LifeCycle::WidgetAdded => {
-                self.layout.set_text(data.visualized_page.clone());
+                //self.layout.set_text(data.visualized_page.clone());
                 self.layout.set_text_size(self.font_size as f64);
                 self.layout.set_text_color(Color::BLACK);
                 self.layout.set_text_alignment(druid::TextAlignment::Start);
@@ -193,23 +196,34 @@ impl Widget<EpubData> for EpubPage {
             }
             _ => {} 
         }
+        self.text_container.lifecycle(ctx, event, data, env);
+        self.navigation_bar.lifecycle(ctx, event, data, env);
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, _env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, env: &Env) {
 
-        if !old_data.same(data) {
-            self.layout.set_text(data.visualized_page.clone());
-            ctx.request_layout();
-        }
-        if self.layout.needs_rebuild_after_update(ctx) {
-            ctx.request_layout();
-        }
+        //if !old_data.same(data) {
+        //    self.layout.set_text(data.visualized_page.clone());
+        //    ctx.request_layout();
+        //}
+        //if self.layout.needs_rebuild_after_update(ctx) {
+        //    ctx.request_layout();
+        //}
+        self.text_container.update(ctx, data, env);
+        self.navigation_bar.update(ctx, data, env);
 
     }
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &EpubData, env: &Env) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &EpubData, env: &Env) -> Size {
 
+        let navigation_bar_height = 50.0;
+        self.text_container.layout(ctx, &BoxConstraints::tight(Size::new(bc.max().width-50., bc.max().height-50.)), data, env);
+        self.text_container.set_origin(ctx, data, env, Point::new(25.0, 25.0));
 
+        self.navigation_bar.layout(ctx, &BoxConstraints::tight(Size::new(bc.max().width - 50., 50.)), data, env);
+        self.navigation_bar.set_origin(ctx, data, env, Point::new(25.0, bc.max().height  - navigation_bar_height));
+
+        return bc.max();
         /*                        X
          ______________      X    |
         |              |  X  |    |
@@ -235,8 +249,8 @@ impl Widget<EpubData> for EpubPage {
 
       let label_x_padding = 125.;
                                                                         // SUBSTITUTE WITH FIXED WINDOWS SIZE!!!
-        let size = bc.constrain(Size::new( bc.max().width,  bc.max().height));//bc.max().height));
-        
+        //let size = bc.constrain(Size::new( bc.max().width,  bc.max().height));//bc.max().height));
+        let size = bc.max();
         self.layout.set_wrap_width(bc.max().width - label_x_padding);
         self.layout.rebuild_if_needed(ctx.text(), env);
 
@@ -250,15 +264,34 @@ impl Widget<EpubData> for EpubPage {
 
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, _data: &EpubData, _env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
         
-        let origin = Point::new(75., 0.0);
+
+        let size = ctx.size();
+        let rect = size.to_rect();
+        ctx.fill(rect, &Color::WHITE);
+
+
+
+        self.text_container.paint(ctx, data, env);
+        self.navigation_bar.paint(ctx, data, env);
+        
+        return;
+
+
+
+
+
+
+
+
+        let origin = Point::new(0., 0.0);
 
         
         let size = ctx.size();
         let rect = Rect::new(50., 0., size.width-50., size.height);
         
-        ctx.fill(rect, &Color::WHITE);
+        ctx.fill(size.to_rect(), &Color::WHITE);
 
         //ctx.fill(rect, &Color::WHITE); 
 
@@ -321,23 +354,3 @@ impl Widget<EpubData> for EpubPage {
 
 
 }
-
-/*impl<W: Widget<AppState>> Controller<AppState, W> for EpubPage<T: TextStorage + druid::text::TextStorage> {
-    fn event(
-        &mut self,
-        child: &mut W,
-        ctx: &mut EventCtx,
-        event: &Event,
-        data: &mut AppState,
-        env: &Env,
-    ) {
-        println!("{:?}", event);
-        let pre_data = data.raw.to_owned();
-        child.event(ctx, event, data, env);
-        if !data.raw.same(&pre_data) {
-            data.rendered = rebuild_rendered_text(&data.raw);
-        }
-    }
-}*/
-
-

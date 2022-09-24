@@ -1,34 +1,33 @@
 use std::{sync::Arc, path::PathBuf};
 
-use application_state::{AppState, PageItem, HomePageData, Recent};
+use application_state::{AppState, HomePageData, Recent, EpubData, EpubMetrics};
 use druid::{
     widget::{
-        Button, Container, Flex, List, Scroll},
+        Button, Container, Flex, List},
     AppLauncher, Color, Selector, WidgetExt,
-    WindowDesc, Key, EventCtx, FileInfo, RenderContext,
+    WindowDesc, Key, EventCtx, FileInfo, LensExt,
 };
-use druid::{
-    Data
-};
-use druid::{Lens, Widget};
 
-use druid_widget_nursery::{navigator::{Navigator, ViewController}, Wedge};
+use druid::Widget;
+use druid_widget_nursery::material_icons::{Icon, normal::action::ALARM_ADD};
+
+use druid_widget_nursery::navigator::{Navigator, ViewController};
 use epub_page::EpubPage;
+use sidebar::Sidebar;
 use tool::Tool;
+use widgets::epub_page::toolbar;
 mod widgets;
 mod tool;
 mod epub_page;
 mod application_state;
+mod sidebar;
 
 use crate::widgets::navigator::uiview as nav_uiview;
-use crate::widgets::navigator::controller as nav_controller;
 const _CONTACT_DETAIL: Selector<usize> = Selector::new("contact detail");
 const SELECTED_TOOL: Key<u64> = Key::new("org.linebender.example.important-label-color");
 
 fn main() {
-    let window = WindowDesc::new(navigator()).title("Navigation");
-
-    let _contacts = get_data();
+    let window = WindowDesc::new(navigator()).title("Navigation").window_size((1000.0, 800.0));
 
     
     AppLauncher::with_window(window)
@@ -38,36 +37,32 @@ fn main() {
         .unwrap();
 }
 
-// creates the navigator widget responsible for changing views
-pub fn navigator() -> impl Widget<application_state::AppState> {
-    //druid::widget::ViewSwitcher::new()
+
+pub fn navigator() -> impl Widget<AppState> {
+
     Navigator::new(nav_uiview::UiView::new("home_page".to_string()), || 
     {Box::new(home_page().lens(AppState::home_page_data)) })
         .with_view_builder(nav_uiview::UiView::new("read_ebook".to_string()), read_ebook)
          
-        //.controller(nav_controller::NavigatorController)
 }
 
-pub fn read_ebook() -> Box<dyn Widget<application_state::AppState>> {
+pub fn read_ebook() -> Box<dyn Widget<AppState>> {
 
     let epub_page = EpubPage::new().lens(AppState::epub_data);
-    let ll = epub_page;
-    
-    //let ll = Split::columns(epub_page, 
-        //EpubPage::new().lens(AppState::current_page));
-        //List::new(|| Flex::row()
-        //    .with_flex_child(
-        //        crate::epub_page::EpubPage::new(), 1.)
-        //    )
-        //.lens(AppState::pages);//)
-        //.vertical();//.controller(ScrollController);
+
        
+
+        let toolbar = toolbar::Toolbar::new().lens(AppState::epub_data);
+        let row = Flex::row()
+        .with_flex_child(Sidebar::new(), 0.3)
+        .with_default_spacer()
+        .with_flex_child(epub_page, 1.);
            
         let ex = Flex::column()
            .with_default_spacer()
-           .with_child(build_toolbar())
+           .with_child(toolbar)//build_toolbar())
            .with_default_spacer()
-           .with_flex_child(ll, 1.0)
+           .with_flex_child(row, 1.0)
            .env_scope(|env: &mut druid::Env, data: &AppState| {
                env.set(SELECTED_TOOL, data.selected_tool.clone());
            });
@@ -84,12 +79,12 @@ pub fn read_ebook() -> Box<dyn Widget<application_state::AppState>> {
 
 
 
-fn build_toolbar() -> impl Widget<AppState> {
+fn _build_toolbar() -> impl Widget<AppState> {
 
 
     let slider = druid::widget::Slider::new()
         .with_range(0.0, 100.0)
-        .lens(AppState::slider_value);
+        .lens(AppState::epub_data.then(EpubData::epub_metrics.then(EpubMetrics::percentage_page_in_book)));
     let bt1 = Button::new("Arrow")
     .on_click(|_ctx, data: &mut AppState, _env| {
         data.selected_tool = Tool::Arrow;
@@ -113,7 +108,7 @@ fn build_toolbar() -> impl Widget<AppState> {
         data.pop_view();
     });
 
-    let icon = Icon::new(ALARM_ADD);
+    let _icon = Icon::new(ALARM_ADD);
     Flex::row()
     .with_child(bt1)
     .with_child(bt2)
@@ -127,13 +122,12 @@ fn build_toolbar() -> impl Widget<AppState> {
 
     
 }
-use druid_widget_nursery::material_icons::{Icon, normal::action::ALARM_ADD};
 
 // Here you define Viewcontroller for your application_state::AppState. The navigator widget will
 // only accept application_state::AppStates that implement this trait. The methods here are used
 // handle modifying your navigation state without manually doing that with your
 // own methods. Look at the docs to see what each method is useful for.
-impl ViewController<nav_uiview::UiView> for application_state::AppState {
+impl ViewController<nav_uiview::UiView> for AppState {
     fn add_view(&mut self, view: nav_uiview::UiView) {
         let views: &mut Vec<nav_uiview::UiView> = Arc::make_mut(&mut self.nav_state);
         views.push(view);
@@ -198,7 +192,7 @@ impl Widget<Recent> for ListItems {
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut druid::LifeCycleCtx, event: &druid::LifeCycle, data: &Recent, env: &druid::Env) {
+    fn lifecycle(&mut self, _ctx: &mut druid::LifeCycleCtx, event: &druid::LifeCycle, data: &Recent, _env: &druid::Env) {
             match event {
                 druid::LifeCycle::WidgetAdded => {
                     self.layout.set_text(data.name.clone());
@@ -305,146 +299,9 @@ pub fn home_page() -> impl Widget<HomePageData> {
     Container::new(layout).background(Color::WHITE)
 }
 
-// details views - this is the second view after clicking on a contact
-/*pub fn contact_details() -> Box<dyn Widget<application_state::AppState>> {
-    let name = Label::dynamic(|data: &application_state::AppState, _env: &Env| {
-        if let Some(idx) = data.selected {
-            format!("Name: {}", data.contacts[idx].name)
-        } else {
-            "".to_string()
-        }
-    })
-    .with_text_size(20.);
-
-    let email = Label::new(|data: &application_state::AppState, _env: &Env| {
-        if let Some(idx) = data.selected {
-            format!("Email: {}", data.contacts[idx].email)
-        } else {
-            "".to_string()
-        }
-    })
-    .with_text_size(20.);
-
-    let age = Label::new(|data: &application_state::AppState, _env: &Env| {
-        if let Some(idx) = data.selected {
-            format!("Age: {}", data.contacts[idx].age)
-        } else {
-            "".to_string()
-        }
-    })
-    .with_text_size(20.);
-
-    let favorite_food = Label::new(|data: &application_state::AppState, _env: &Env| {
-        if let Some(idx) = data.selected {
-            format!("Favorite food: {}", data.contacts[idx].favorite_food)
-        } else {
-            "".to_string()
-        }
-    })
-    .with_text_size(20.);
-
-    // you might want to define a command that pops a view so that you may scope down your application_state::AppState
-    let back_button = Button::new("Back").on_click(|_event, data: &mut application_state::AppState, _env| {
-        data.pop_view();
-    });
-
-    let layout = Flex::column()
-        .with_child(name)
-        .with_child(email)
-        .with_child(age)
-        .with_child(favorite_food)
-        .cross_axis_alignment(CrossAxisAlignment::Start);
-    let layout = Flex::column()
-        .with_child(back_button)
-        .with_child(layout)
-        //.with_child(edit_button)
-        .must_fill_main_axis(true)
-        .main_axis_alignment(MainAxisAlignment::SpaceAround);
-
-    let container = Container::new(layout.center()).background(Color::GRAY);
-
-    Box::new(container)
-}
-*/
 
 
 
-
-// a little special implementation to give the list view all that it needs
-/*impl ListIter<(Arc<Vec<nav_uiview::UiView>>, Contact, Option<usize>, usize)> for application_state::AppState {
-    fn for_each(
-        &self,
-        mut cb: impl FnMut(&(Arc<Vec<nav_uiview::UiView>>, Contact, Option<usize>, usize), usize),
-    ) {
-        for (idx, contact) in self.contacts.iter().enumerate() {
-            let nav_state = self.nav_state.clone();
-            cb(&(nav_state, contact.clone(), self.selected, idx), idx);
-        }
-    }
-
-    fn for_each_mut(
-        &mut self,
-        mut cb: impl FnMut(&mut (Arc<Vec<nav_uiview::UiView>>, Contact, Option<usize>, usize), usize),
-    ) {
-        let mut any_shared_changed = false;
-        for (idx, contact) in self.contacts.iter().enumerate() {
-            let mut d = (self.nav_state.clone(), contact.clone(), self.selected, idx);
-
-            cb(&mut d, idx);
-            if !any_shared_changed && !self.nav_state.same(&d.0) {
-                any_shared_changed = true;
-            }
-            if any_shared_changed {
-                self.nav_state = d.0;
-                self.selected = d.2;
-            }
-        }
-    }
-
-    fn data_len(&self) -> usize {
-        self.contacts.len()
-    }
-}
-*/
-
-
-
-#[derive(Clone, Data, Lens, Debug)]
-pub struct Contact {
-    name: String,
-    email: String,
-    favorite_food: String,
-    age: u32,
-}
-
-impl Contact {
-    pub fn new(
-        name: impl Into<String>,
-        email: impl Into<String>,
-        age: u32,
-        favorite_food: impl Into<String>,
-    ) -> Self {
-        let name = name.into();
-        let email = email.into();
-        let favorite_food = favorite_food.into();
-        Self {
-            name,
-            email,
-            favorite_food,
-            age,
-        }
-    }
-}
-pub fn get_data() -> Vec<Contact> {
-    vec![
-        Contact {
-            name: "Billy Bob".to_string(),
-            email: "Billybob@gmail.com".to_string(),
-            favorite_food: "Curry".to_string(),
-            age: 39,
-        },
-    ]
-}
 
 
 // this holds state that will be used when on the edit page
