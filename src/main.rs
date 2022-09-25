@@ -3,15 +3,16 @@ use std::{sync::Arc, path::PathBuf};
 use application_state::{AppState, HomePageData, Recent, EpubData, EpubMetrics};
 use druid::{
     widget::{
-        Button, Container, Flex, List},
+        Button, Container, Flex, List, Image, FillStrat},
     AppLauncher, Color, Selector, WidgetExt,
-    WindowDesc, Key, EventCtx, FileInfo, LensExt,
+    WindowDesc, Key, EventCtx, FileInfo, LensExt, WidgetPod, Event, Env, LifeCycleCtx, LifeCycle, UpdateCtx, BoxConstraints, LayoutCtx, PaintCtx, Size, Point,
 };
 
 use druid::Widget;
 use druid_widget_nursery::material_icons::{Icon, normal::action::ALARM_ADD};
 
 use druid_widget_nursery::navigator::{Navigator, ViewController};
+use epub::doc::EpubDoc;
 use epub_page::EpubPage;
 use sidebar::Sidebar;
 use tool::Tool;
@@ -23,32 +24,38 @@ mod application_state;
 mod sidebar;
 
 use crate::widgets::navigator::uiview as nav_uiview;
-const _CONTACT_DETAIL: Selector<usize> = Selector::new("contact detail");
 const SELECTED_TOOL: Key<u64> = Key::new("org.linebender.example.important-label-color");
+const NAVIGATE_TO: Selector<usize> = Selector::new("navigate_to");
 
 fn main() {
-    let window = WindowDesc::new(navigator()).title("Navigation").window_size((1000.0, 800.0));
+
+    let data = AppState::new();
+    let window = WindowDesc::new(navigator(data.clone())).title("Navigation").window_size((1000.0, 800.0));
 
     
     AppLauncher::with_window(window)
         .log_to_console()
         .delegate(application_state::Delegate)
-        .launch(AppState::new())
+        .launch(data)
         .unwrap();
 }
 
 
-pub fn navigator() -> impl Widget<AppState> {
-
-    Navigator::new(nav_uiview::UiView::new("home_page".to_string()), || 
-    {Box::new(home_page().lens(AppState::home_page_data)) })
-        .with_view_builder(nav_uiview::UiView::new("read_ebook".to_string()), read_ebook)
+pub fn navigator(data : AppState) -> impl Widget<AppState> {
+    // druid::widget::TextBox::new().lens(AppState::text)
+    let topbar = crate::widgets::home_page::topbar::Topbar::new();
+    Loader::new()
+    .with_page(home_page(data.clone()).lens(AppState::home_page_data))
+    .with_page(read_ebook(data.epub_data.clone()))
+    //Navigator::new(nav_uiview::UiView::new("home_page".to_string()), || 
+    //{Box::new(home_page().lens(AppState::home_page_data)) })
+    //    .with_view_builder(nav_uiview::UiView::new("read_ebook".to_string()), read_ebook)
          
 }
 
-pub fn read_ebook() -> Box<dyn Widget<AppState>> {
+pub fn read_ebook(data : EpubData) -> Box<dyn Widget<AppState>> {
 
-    let epub_page = EpubPage::new().lens(AppState::epub_data);
+    let epub_page = EpubPage::new(data).lens(AppState::epub_data);
 
        
 
@@ -158,13 +165,21 @@ impl ViewController<nav_uiview::UiView> for AppState {
 struct ListItems {
 
     layout: druid::TextLayout<String>,
+    image : WidgetPod<Recent, Image>,
 
 
 } 
 impl ListItems {
     pub fn new() -> Self {
         let layout = druid::TextLayout::default();
-        ListItems{ layout }
+        let mut ep = EpubDoc::new("/home/syscall/Desktop/Wolves of the Calla - Stephen King.epub").unwrap();
+        
+        let binding = ep.get_cover();
+        let img_data = binding.as_ref().unwrap();
+        let img_buf = druid::ImageBuf::from_data(&img_data).unwrap();
+        let image = WidgetPod::new(Image::new(img_buf)
+            .fill_mode(FillStrat::Fill));
+        ListItems{ layout, image }
     }
 }
 
@@ -176,20 +191,19 @@ impl Widget<Recent> for ListItems {
                 let cmd = druid::commands::OPEN_FILE;
                 let f : FileInfo = FileInfo { path: PathBuf::from(data.path.clone()), format: None };
                 ctx.submit_command(druid::Command::new(cmd, f, druid::Target::Auto));
+
+
+                ctx.submit_command(NAVIGATE_TO.with(1));
             }
             //druid::Event::MouseUp(_) => todo!(),
             druid::Event::MouseMove(_) => {
-                //if self.layout.link_for_pos(pos).is_some() {
-                    ctx.set_cursor(&druid::Cursor::Pointer);
-                //} else {
-                //    ctx.clear_cursor();
-                //}
-
+                ctx.set_cursor(&druid::Cursor::Pointer);
             },
             //druid::Event::Wheel(_) => todo!(),
             _ => {}
         
         }
+        self.image.event(ctx, event, data, _env);
     }
 
     fn lifecycle(&mut self, _ctx: &mut druid::LifeCycleCtx, event: &druid::LifeCycle, data: &Recent, _env: &druid::Env) {
@@ -201,11 +215,12 @@ impl Widget<Recent> for ListItems {
                 }
                 _ => {} 
             }
+            self.image.lifecycle(_ctx, event, data, _env);
     }
 
     fn update(&mut self, _ctx: &mut druid::UpdateCtx, _old_data: &Recent, _data: &Recent, _env: &druid::Env) {
 
-        
+        self.image.update(_ctx, _data, _env)
     }
 
     fn layout(&mut self, ctx: &mut druid::LayoutCtx, bc: &druid::BoxConstraints, _data: &Recent, env: &druid::Env) -> druid::Size {
@@ -217,24 +232,7 @@ impl Widget<Recent> for ListItems {
 
         self.layout.rebuild_if_needed(ctx.text(), env);
 
-        //}
-        //self.image.layout(ctx, bc, &data.image_data, env);
-
-                // If either the width or height is constrained calculate a value so that the image fits
-        // in the size exactly. If it is unconstrained by both width and height take the size of
-        // the image.
-        //let max = bc.max();
-        //let image_size = druid::Size::new(30., 55.);
-        //let size = if bc.is_width_bounded() && !bc.is_height_bounded() {
-        //    let ratio = max.width / image_size.width;
-        //    druid::Size::new(image_size.width, ratio * image_size.height)
-        //} else if bc.is_height_bounded() && !bc.is_width_bounded() {
-        //    let ratio = max.height / image_size.height;
-        //    druid::Size::new(ratio * image_size.width, max.height)
-        //} else {
-        //    bc.constrain(image_size)
-        //};
-        //size
+        self.image.layout(ctx, &BoxConstraints::tight(Size::new(130., 180.)), _data, env);
         self.layout.size()
 
 
@@ -251,7 +249,7 @@ impl Widget<Recent> for ListItems {
         //let img_data = epub::doc::EpubDoc::new(_data.path.to_string()).unwrap().get_cover().unwrap();
 
         //let a = druid::ImageBuf::from_data(&img_data).unwrap();
-        
+        self.image.paint(ctx, _data, _env);
 
 
         //let image = a.to_image(ctx.render_ctx);
@@ -261,7 +259,7 @@ impl Widget<Recent> for ListItems {
     // main page and contains list view of contacts
 // notice that this must return Box<dyn Widget<YourState>> instead of impl Widget<YourState>
 // navigator needs Boxed widgets in order to store the widgets
-pub fn home_page() -> impl Widget<HomePageData> {
+pub fn home_page(data : AppState) -> impl Widget<HomePageData> {
     
     let list = List::new(|| {
         
@@ -301,6 +299,69 @@ pub fn home_page() -> impl Widget<HomePageData> {
 
 
 
+// Create a main widget able to switch between the different pages
+//pub struct MainWidget {
+//    navigator: Navigator<AppState>,
+//
+//}
+
+
+
+pub struct Loader {
+    pages : Vec<WidgetPod<AppState, Box<dyn Widget<AppState>>>>,
+    current_page : usize,
+}
+
+impl Loader {
+    pub fn new() -> Self {
+        let pages = Vec::new();
+        Self { pages, current_page: 0 }
+    }
+
+    pub fn with_page(mut self, page: impl Widget<AppState> + 'static) -> Self {
+        self.pages.push(WidgetPod::new(Box::new(page)));
+        self
+    }
+}
+
+// Create a widtget that can switch between the different pages
+impl Widget<AppState> for Loader {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppState, env: &Env) {
+
+        // Switch page through a command 
+        match event {
+            Event::Command(cmd) if cmd.is(NAVIGATE_TO) => {
+                let page = cmd.get_unchecked(NAVIGATE_TO).clone();
+                self.current_page = page;
+                ctx.children_changed();
+            }
+            _ => {}
+        }
+
+        self.pages[self.current_page].event(ctx, event, data, env);
+    }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &AppState, env: &Env) {
+        //self.pages[self.current_page].lifecycle(ctx, event, data, env);
+        for child in self.pages.iter_mut() {
+            child.lifecycle(ctx, event, data, env);
+        }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &AppState, data: &AppState, env: &Env) {
+        self.pages[self.current_page].update(ctx, data, env);
+    }
+
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &AppState, env: &Env) -> Size {
+        let size = self.pages[self.current_page].layout(ctx, bc, data, env);
+        self.pages[self.current_page].set_origin(ctx, data, env, Point::ORIGIN);
+        size
+    }
+
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &AppState, env: &Env) {
+        self.pages[self.current_page].paint(ctx, data, env);
+    }
+}
 
 
 

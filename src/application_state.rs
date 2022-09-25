@@ -132,21 +132,11 @@ impl AppState {
         let doc = EpubDoc::new(&file_path);
         assert!(doc.is_ok());
         let mut doc = doc.unwrap();
-        let mut m = 0;
+        let _m = 0;
             while doc.go_next().is_ok() {
-    
                 pages.push_back(ArcStr::from(doc.get_current_str().unwrap().clone()));
-                //let page_text = rebuild_rendered_text(&doc.get_current_str().unwrap(), 0);
-                //let pi = PageItem {
-                //    page_number: m,
-                //    html_text: ArcStr::from(doc.get_current_str().unwrap().clone()),
-                //    plain_text: page_text.0,
-                //    page_text: page_text.1,
-                //};
-                //pages.push_back(pi);
-                //m += 1;
+                
             }
-            //println!("Numero di pagine totali: {}", m);
          pages
     }
 
@@ -161,7 +151,7 @@ impl AppState {
 
 
 
-#[derive(Clone, Lens, Data, Default, Debug)]
+#[derive(Clone, Lens, Default, Debug)]
 pub struct EpubMetrics {
     /*
     Metric for book position:
@@ -187,6 +177,15 @@ pub struct EpubMetrics {
     pub percentage_page_in_chapter: f64,
     pub percentage_page_in_book: f64,
     // pub position_in_book: u32,
+}
+
+impl Data for EpubMetrics {
+    fn same(&self, other: &Self) -> bool {
+        self.book_length == other.book_length
+        && self.current_chapter == other.current_chapter
+        && self.position_in_chapter == other.position_in_chapter
+        
+    }
 }
 
 impl EpubMetrics {
@@ -254,30 +253,18 @@ pub struct EpubData {
     // Plain text of all book 
     pub chapters: Vector<ArcStr>,
 
-    pub visualized_page : ArcRichText,
+    pub visualized_page : RichText,
+    pub visualized_page_position : usize,
 
     pub table_of_contents : Vector<TableOfContentsItem>,
-}
-#[derive (Clone, Data, Lens)]
-pub struct ArcRichText {
-    pub text: Arc<RichText>,
-}
-impl ArcRichText {
-    pub fn new(text: RichText) -> Self {
-        ArcRichText {
-            text: Arc::new(text),
-        }
-    }
-}
-impl TextStorage for ArcRichText {
-    fn as_str(&self) -> &str {
-        self.text.as_str()
-    }
+    
+    // maintain font size
+    pub font_size : f64,
 }
 
 impl EpubData {
     pub fn new(chapters: Vector<ArcStr>) -> Self {
-        let (_, visualized_page) = rebuild_rendered_text(&chapters[0], 0);
+        let (_, visualized_page) = rebuild_rendered_text(&chapters[0]);
 
         let epub_metrics = EpubMetrics::new(&chapters, visualized_page.len());
 
@@ -290,9 +277,11 @@ impl EpubData {
         EpubData { 
             current_chapter: 0, 
             chapters, 
-            visualized_page: ArcRichText::new(visualized_page),
+            visualized_page: visualized_page,
+            visualized_page_position : 0,
             epub_metrics,
             table_of_contents,
+            font_size: 14.,
         }
         
     }
@@ -308,7 +297,7 @@ impl EpubData {
             let mut chapter_results = Vector::new();
             let mut current_position = 0;
             while let Some(pos) = chapter[  current_position..].find(search_string) {
-                let (_, rich) = rebuild_rendered_text(&chapter, current_position + pos);
+                let (_, rich) = rebuild_rendered_text(&chapter);
                 chapter_results.push_back(rich);
                 current_position += pos + search_string.len();
             }
@@ -325,8 +314,8 @@ impl EpubData {
         self.epub_metrics.change_chapter(chapter, self.get_current_chapter().len());
 
 
-        let (_, rich) = rebuild_rendered_text(self.get_current_chapter(), pos);
-        self.visualized_page = ArcRichText::new(rich);
+        let (_, rich) = rebuild_rendered_text(self.get_current_chapter());
+        self.visualized_page = rich;
         self.epub_metrics.change_page(pos);
 
     }
@@ -336,33 +325,42 @@ impl EpubData {
     }
     
 
-    pub fn next_page(&mut self, current_page : usize) {
-        let (_, rich) = rebuild_rendered_text(self.get_current_chapter(), current_page);
-        self.visualized_page = ArcRichText::new(rich);
-        self.epub_metrics.change_page(current_page);
-    
-    }
+    //pub fn next_page(&mut self, current_page : usize) {
+    //    let (_, rich) = rebuild_rendered_text(self.get_current_chapter(), current_page);
+    //    self.visualized_page = rich;
+    //    self.epub_metrics.change_page(current_page);
+    //
+    //}
 
 
     pub fn next_chapter(&mut self) {
         self.current_chapter+=1;
         //self.pages = self.chapters[self.current_chapter].clone();
-        let (_, rich) = rebuild_rendered_text(self.get_current_chapter(), 0);
+        //self.visualized_page.as_str()[0..10];
+        let (_, rich) = rebuild_rendered_text(self.get_current_chapter());
         self.epub_metrics.change_chapter(self.current_chapter, rich.len());
 
-        self.visualized_page = ArcRichText::new(rich);
+        self.visualized_page = rich;
 
 
     }
-    pub fn previous_chapter() {
+    pub fn previous_chapter(&mut self) {
+        self.current_chapter-=1;
+
+        let (_, rich) = rebuild_rendered_text(self.get_current_chapter());
+        self.epub_metrics.change_chapter(self.current_chapter, rich.len());
+
+        self.visualized_page = rich;
+        // go to last position in chapter
+
 
     }
 }
 
 impl Default for EpubData {
     fn default() -> Self {
-        Self { current_chapter: Default::default(), chapters: Default::default(), 
-            visualized_page: ArcRichText::new(RichText::new(ArcStr::from("".clone()))), table_of_contents: Default::default(), epub_metrics: Default::default() }
+        Self { current_chapter: Default::default(), chapters: Default::default(), font_size: 14., visualized_page_position: 0,
+            visualized_page: RichText::new(ArcStr::from("".clone())), table_of_contents: Default::default(), epub_metrics: Default::default() }
     }
 }
 
@@ -451,7 +449,7 @@ impl HtmlTag {
 }
 
 
-pub fn rebuild_rendered_text(text: &str, len : usize) -> (druid::ArcStr, RichText) {
+pub fn rebuild_rendered_text(text: &str) -> (druid::ArcStr, RichText) {
     let mut current_pos = 0;
     let mut builder = druid::text::RichTextBuilder::new();
     let mut str = String::new();
@@ -492,10 +490,9 @@ pub fn rebuild_rendered_text(text: &str, len : usize) -> (druid::ArcStr, RichTex
                     if tk != HtmlTag::Unhandled && tk.add_newline_after_tag() {
                         current_pos += 2;
 
-                        if current_pos > len {
                         builder.push("\n\n");
                         str.push_str("\n\n");
-                        }
+                        
                     }
                 }
                 xmlparser::ElementEnd::Empty => {
@@ -513,10 +510,9 @@ pub fn rebuild_rendered_text(text: &str, len : usize) -> (druid::ArcStr, RichTex
                     let t = text.as_str().replace("\n", "");
                     current_pos = current_pos + t.len();
 
-                    if current_pos > len {
                     builder.push(&t);
                     str.push_str(&t);
-                    }
+                    
                 }
             }
             _ => continue,

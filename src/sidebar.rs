@@ -1,4 +1,4 @@
-use druid::{Widget, Color, RenderContext, WidgetPod, widget::{Scroll}, LayoutCtx, UpdateCtx, LifeCycle, LifeCycleCtx, Env, Size, BoxConstraints, PaintCtx, EventCtx, Event, WidgetExt, Point, Selector, piet::{Text, TextLayoutBuilder}};
+use druid::{Widget, Color, RenderContext, WidgetPod, widget::Scroll, LayoutCtx, UpdateCtx, LifeCycle, LifeCycleCtx, Env, Size, BoxConstraints, PaintCtx, EventCtx, Event, WidgetExt, Point, Selector, piet::{Text, TextLayoutBuilder}};
 
 use crate::application_state::{AppState, EpubData};
 
@@ -9,9 +9,9 @@ pub const INTERNAL_COMMAND: Selector<InternalUICommand> =
 
 
 
-    const PRIMARY_COLOR : Result<Color, druid::piet::ColorParseError> = Color::from_hex_str("#374863");
+    const BAR_COLOR : Result<Color, druid::piet::ColorParseError> = Color::from_hex_str("#7EA0B7");
     const _PRIMARY_LIGHT : Result<Color, druid::piet::ColorParseError> = Color::from_hex_str("#637391");
-    const PRIMARY_DARK : Result<Color, druid::piet::ColorParseError> = Color::from_hex_str("#0c2139");
+    const CONTENT_COLOR : Result<Color, druid::piet::ColorParseError> = Color::from_hex_str("#597081");
     pub enum InternalUICommand {
     SwitchTab(TabKind),
 }
@@ -232,7 +232,7 @@ impl Widget<AppState> for Panel {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &AppState, env: &Env) {
         // draw a background                
         let rect = ctx.size().to_rect();
-        ctx.fill(rect, &PRIMARY_DARK.unwrap());
+        ctx.fill(rect, &CONTENT_COLOR.unwrap());
         self.content.paint(ctx, data, env);
     }
 }
@@ -341,7 +341,7 @@ impl Widget<AppState> for Sidebar {
     fn paint(&mut self, ctx: &mut druid::PaintCtx, data: &AppState, env: &druid::Env) {
         
         let rect = Size::new(ICON_SIZE, ctx.size().height).to_rect();
-        ctx.fill(rect, &PRIMARY_COLOR.unwrap());
+        ctx.fill(rect, &BAR_COLOR.unwrap());
 
 
 

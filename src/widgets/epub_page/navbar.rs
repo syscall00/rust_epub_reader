@@ -2,7 +2,7 @@
 use druid::{
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
     LifeCycleCtx, PaintCtx, RenderContext, Size, UpdateCtx,
-    Widget, Rect, Point, WidgetPod, widget::Slider, piet::{Text, TextLayoutBuilder, TextLayout},
+    Widget, Rect, Point, WidgetPod, widget::Slider, piet::{Text, TextLayoutBuilder, TextLayout}, Selector,
 };
 
 use crate::application_state::{EpubData, AppState};
@@ -66,7 +66,7 @@ impl Widget<EpubData> for NavigationBar {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
-
+        let COLOR_DARK_BACKG = Color::from_hex_str("#36494e").unwrap();
         let mut is_hot = false;
         for button in self.navigation_buttons.iter_mut() {
             button.paint(ctx, data, env);
@@ -75,7 +75,7 @@ impl Widget<EpubData> for NavigationBar {
 
         if is_hot || ctx.is_hot() {
             let size = ctx.size();
-            ctx.fill(size.to_rect(), &Color::BLUE.with_alpha(0.3));
+            ctx.fill(size.to_rect(), &COLOR_DARK_BACKG.with_alpha(0.3));
 
             let vec = vec!["Reading percentage", "Page number", "Page pos"];
             for (i, s) in vec.iter().enumerate() {
@@ -118,14 +118,16 @@ impl NavigationButton {
         }
     }
 }
+const CHANGE_PAGE: Selector<bool> = Selector::new("change_page");
 
 impl Widget<EpubData> for NavigationButton {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
         match event {
             Event::MouseDown(_mouse) => {
-                if self.direction {
-                    data.next_chapter();
-                }
+                ctx.submit_command(CHANGE_PAGE.with(self.direction));
+                //if self.direction {
+                //    data.next_chapter();
+                //}
                 //else {
                 //    data.previous_chapter();
                 //}

@@ -1,10 +1,9 @@
 
 
-use druid::piet::{Text, TextLayoutBuilder, TextLayout as a};
-use druid::{Data, WidgetPod, WidgetExt};
+use druid::{WidgetPod};
 use druid::{
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
-    LifeCycleCtx, MouseButton, PaintCtx, Point, Rect, RenderContext, Size, TextLayout, UpdateCtx,
+    LifeCycleCtx, PaintCtx, Point, RenderContext, Size, UpdateCtx,
     Widget, text::Selection,
 };
 
@@ -20,30 +19,24 @@ const SELECTED_TOOL: druid::Key<u64> = druid::Key::new("org.linebender.example.i
 
 
 pub struct EpubPage {
-    layout: druid::TextLayout<druid::text::RichText>,
     //mark_points: Vec<(Point, Point)>,
     //pen_points: Vec<(Point, Point)>,
-    font_size : u32,
-    until_pos: usize,
-    selection : Selection,
+    //selection : Selection,
 
-    text_container : WidgetPod<EpubData, Box<dyn Widget<EpubData>>>,
-    navigation_bar : WidgetPod<EpubData, Box<dyn Widget<EpubData>>>,
+    text_container : WidgetPod<EpubData, TextContainer>,
+    navigation_bar : WidgetPod<EpubData, NavigationBar>,
     
 }
 
 impl EpubPage {
-    pub fn new() -> Self {
+    pub fn new(data : EpubData) -> Self {
 
-        let text_container = WidgetPod::new(TextContainer::new().boxed());
-        let navigation_bar = WidgetPod::new(NavigationBar::new().boxed());
+        let text_container = WidgetPod::new(TextContainer::new(data));
+        let navigation_bar = WidgetPod::new(NavigationBar::new());
         EpubPage {
-            layout: druid::TextLayout::new(),
             //mark_points: Vec::new(),
             //pen_points: Vec::new(),
-            font_size: 14,
-            until_pos: 0,
-            selection : Selection::default(),
+            //selection : Selection::default(),
             text_container,
             navigation_bar
         }
@@ -57,41 +50,17 @@ impl Widget<EpubData> for EpubPage {
         let selected_tool : Tool = env.get(SELECTED_TOOL).into();
         //println!("event: {:?}", event);
         match event {
-            Event::MouseDown(_mouse) => {
-
-
-                let label_size = ctx.size();
-                self.until_pos += self.layout.text_position_for_point(Point::new(label_size.width, label_size.height));
-                ////println!("until pos:{}.\npage_text {}", self.until_pos, data.epub_metrics.chapter_length);
-                //if data.epub_metrics.position_in_chapter >= 46000 && data.epub_metrics.position_in_chapter  <= 47000 {
-                //    data.search_in_book("BEOWULF", 1);
-                //}
-                //else { 
-                //    data.search_in_book("BEOWULF", 2);
-                //}
-//
-                //return;
-                if self.until_pos >= data.epub_metrics.chapter_length {
-                    self.until_pos = 0;
-                    
-                    data.next_chapter();
-                    //let asasd = crate::application_state::rebuild_rendered_text(&*data.html_text.to_string(), self.until_pos);    
-                }
-                else {
-                    data.next_page(self.until_pos);
-                }
-            }
             
-            Event::MouseMove(mouse) => {
-                if selected_tool.should_be_written() && mouse.buttons.contains(MouseButton::Left) {
-
-                    let text_position = self.layout.text_position_for_point(mouse.pos);
-
-                    self.selection.anchor = text_position;
-                    ctx.request_paint();
-
-                }
-            }
+            //Event::MouseMove(mouse) => {
+            //    if selected_tool.should_be_written() && mouse.buttons.contains(MouseButton::Left) {
+//
+            //        let text_position = self.layout.text_position_for_point(mouse.pos);
+//
+            //        self.selection.anchor = text_position;
+            //        ctx.request_paint();
+//
+            //    }
+            //}
             
             /*
             Event::MouseDown(e) => {
@@ -171,13 +140,9 @@ impl Widget<EpubData> for EpubPage {
                 //println!("Unhandled event: {:?}", event);
             }
         }
-        // let pre_data = data.raw.to_owned();
-        // child.event(ctx, event, data, env);
-        // if !data.raw.same(&pre_data) {
-        //     data.rendered = rebuild_rendered_text(&data.raw);
-        // }
-        self.text_container.event(ctx, event, data, env);
+
         self.navigation_bar.event(ctx, event, data, env);
+        self.text_container.event(ctx, event, data, env);
 
 
 
@@ -186,31 +151,21 @@ impl Widget<EpubData> for EpubPage {
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, env: &Env) {
         match event {
             LifeCycle::WidgetAdded => {
-                //self.layout.set_text(data.visualized_page.clone());
-                self.layout.set_text_size(self.font_size as f64);
-                self.layout.set_text_color(Color::BLACK);
-                self.layout.set_text_alignment(druid::TextAlignment::Start);
 
-                //self.page_num = data.page_number;
-                
             }
             _ => {} 
         }
-        self.text_container.lifecycle(ctx, event, data, env);
         self.navigation_bar.lifecycle(ctx, event, data, env);
+        self.text_container.lifecycle(ctx, event, data, env);
+
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &EpubData, data: &EpubData, env: &Env) {
 
-        //if !old_data.same(data) {
-        //    self.layout.set_text(data.visualized_page.clone());
-        //    ctx.request_layout();
-        //}
-        //if self.layout.needs_rebuild_after_update(ctx) {
-        //    ctx.request_layout();
-        //}
-        self.text_container.update(ctx, data, env);
+
         self.navigation_bar.update(ctx, data, env);
+        self.text_container.update(ctx, data, env);
+
 
     }
 
@@ -224,43 +179,7 @@ impl Widget<EpubData> for EpubPage {
         self.navigation_bar.set_origin(ctx, data, env, Point::new(25.0, bc.max().height  - navigation_bar_height));
 
         return bc.max();
-        /*                        X
-         ______________      X    |
-        |              |  X  |    |
-        |  text like   |  |  |    |
-        |  this        |  |  |    |
-        |              |  |  |    |
-        |  New chap-   |  |  |    |
-        |  ter         |  |  |    |
-        |              |  |  |    |
-        |              |  |  |    |    
-        |              |  |  |    |   bc.max().height
-        |______________|  X  |    |     
-           <------->         X    |
-           page_size              X
-        <-------------->
-      25 max - 50 * 2  25
-      <-------------------->
-            bc.max().width  
-      
-      
-      */
 
-
-      let label_x_padding = 125.;
-                                                                        // SUBSTITUTE WITH FIXED WINDOWS SIZE!!!
-        //let size = bc.constrain(Size::new( bc.max().width,  bc.max().height));//bc.max().height));
-        let size = bc.max();
-        self.layout.set_wrap_width(bc.max().width - label_x_padding);
-        self.layout.rebuild_if_needed(ctx.text(), env);
-
-        //let text_metrics = self.layout.layout_metrics();
-        //ctx.set_baseline_offset(text_metrics.size.height - text_metrics.first_baseline);
-        //let size = bc.constrain(Size::new(
-        //    text_metrics.size.width + 2. * label_x_padding,
-        //    text_metrics.size.height, 
-        //));
-        size
 
     }
 
@@ -279,12 +198,7 @@ impl Widget<EpubData> for EpubPage {
         return;
 
 
-
-
-
-
-
-
+        /*
         let origin = Point::new(0., 0.0);
 
         
@@ -298,10 +212,10 @@ impl Widget<EpubData> for EpubPage {
         
         let text_offset = druid::Vec2::new(50.+10., 0.0);
 
-        let sel_rects = self.layout.rects_for_range(self.selection.range());
-        for region in sel_rects {
-            let rounded = (region + text_offset).to_rounded_rect(1.0);
-            ctx.fill(rounded, &Color::YELLOW);
+        //let sel_rects = self.layout.rects_for_range(self.selection.range());
+        //for region in sel_rects {
+        //    let rounded = (region + text_offset).to_rounded_rect(1.0);
+        //    ctx.fill(rounded, &Color::YELLOW);
 
             //let y = region.max_y().floor();
             //let line = druid::kurbo::Line::new((region.min_x(), y), (region.max_x(), y)) + text_offset;
@@ -314,8 +228,8 @@ impl Widget<EpubData> for EpubPage {
             //println!("Region: {}{:?}", &sel_rects.len(), &region);
 
 
-                }
-        /*
+            //    }
+        
         if  !self.set2 {
             self.set2 = true;
 
@@ -336,7 +250,7 @@ impl Widget<EpubData> for EpubPage {
             ctx.fill(rect, &fill_color);
         }
     }
-        */
+        
         let label_size = ctx.size();
     
         //let asasd = crate::application_state::rebuild_rendered_text(&*data.html_text[pos_text..].to_string());
@@ -344,10 +258,9 @@ impl Widget<EpubData> for EpubPage {
 
         //self.layout.text_position_for_point(point)
 
-        self.layout.draw(ctx, origin);
 
         //ctx.clip(label_size.to_rect());
-
+        */
 
     }
 
