@@ -1,6 +1,6 @@
-use druid::{Widget, Color, RenderContext, WidgetPod, widget::Scroll, LayoutCtx, UpdateCtx, LifeCycle, LifeCycleCtx, Env, Size, BoxConstraints, PaintCtx, EventCtx, Event, WidgetExt, Point, Selector, piet::{Text, TextLayoutBuilder}};
+use druid::{Widget, Color, RenderContext, WidgetPod, widget::{Scroll, List, Label}, LayoutCtx, UpdateCtx, LifeCycle, LifeCycleCtx, Env, Size, BoxConstraints, PaintCtx, EventCtx, Event, WidgetExt, Point, Selector, piet::{Text, TextLayoutBuilder}, LensExt, im::Vector};
 
-use crate::application_state::{AppState, EpubData};
+use crate::application_state::{AppState, EpubData, TableOfContentsItem};
 
 const ICON_SIZE : f64 = 40.;
 
@@ -115,40 +115,46 @@ impl Widget<EpubData> for CustomButton {
 
 
 pub struct Toc {
-    //list : WidgetPod<AppState, Box<dyn Widget<AppState>>>,
+    list : WidgetPod<AppState, Box<dyn Widget<AppState>>>,
 }
 
 impl Toc {
     pub fn new() -> Self {
+
+        let list = List::new(|| {
+            Label::new(|item: &TableOfContentsItem, _env: &_| item.title.clone())
+
+            }).lens(AppState::epub_data.then(EpubData::table_of_contents)).boxed();
+
         Self {
-            //list : WidgetPod::new(List::new(|| {
-            //    Label::new(|item: &AppState, _env: &_| item.clone())
-            //        .padding(5.)
-            //        .expand_width()
-            //        .center()
-            //        .boxed()
-            //})).lens(AppState::epub_data.then(EpubData::table_of_contents))
+            list : WidgetPod::new(list)
         }
     }
 }
 
 impl Widget<AppState> for Toc {
-    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut AppState, _env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppState, env: &Env) {
         //println!("Event: {:?}", event);
+
+        self.list.event(ctx, event, data, env);
     }
 
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &AppState, _env: &Env) {
         //println!("Lifecycle: {:?}", event);
+        self.list.lifecycle(_ctx, _event, _data, _env);
     }
 
     fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &AppState, _data: &AppState, _env: &Env) {
         //println!("Update");
+        self.list.update(_ctx, _data, _env);
     }
 
-    fn layout(&mut self, _ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &AppState, _env: &Env) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &AppState, env: &Env) -> Size {
        //println!("Layout: {:?}", bc.max());
-        
-        bc.max()
+        let size = self.list.layout(ctx, bc, data, env);
+        self.list.set_origin(ctx, data, env, Point::new(0., 15.));
+        size
+        //bc.max()
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &AppState, _env: &Env) {
@@ -165,6 +171,9 @@ impl Widget<AppState> for Toc {
             .build()
             .unwrap();
         ctx.draw_text(&layout, (5.0, 10.0));
+    
+        self.list.paint(ctx, _data, _env);
+    
     }
 }
 

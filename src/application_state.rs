@@ -1,4 +1,4 @@
-use druid::im::Vector;
+use druid::im::{Vector, HashMap};
 use druid::piet::TextStorage;
 use druid::text::RichText;
 use druid::{
@@ -10,6 +10,8 @@ use std::sync::Arc;
 use crate::tool::Tool;
 use crate::widgets::navigator::uiview::{self as nav_uiview, UiView};
 use epub::doc::EpubDoc;
+
+use self::epub_data_derived_lenses::table_of_contents;
 
 
 
@@ -264,14 +266,15 @@ pub struct EpubData {
 
 impl EpubData {
     pub fn new(chapters: Vector<ArcStr>) -> Self {
-        let (_, visualized_page) = rebuild_rendered_text(&chapters[0]);
+        let (_, visualized_page, map) = rebuild_rendered_text(&chapters[0]);
 
         let epub_metrics = EpubMetrics::new(&chapters, visualized_page.len());
 
-        let table_of_contents = chapters.iter().enumerate().map(|(i, c)| {
-            let title = c.split_whitespace().take(5).collect::<Vec<&str>>().join(" ");
-            TableOfContentsItem::new(title, 0, i)
-        }).collect();
+        //let table_of_contents = chapters.iter().enumerate().map(|(i, c)| {
+        //    // regex for <title> tag
+        //    let title = c.find("<title>").unwrap();
+        //    TableOfContentsItem::new(c, 0, i)
+        //}).collect();
 
         
         EpubData { 
@@ -297,7 +300,7 @@ impl EpubData {
             let mut chapter_results = Vector::new();
             let mut current_position = 0;
             while let Some(pos) = chapter[  current_position..].find(search_string) {
-                let (_, rich) = rebuild_rendered_text(&chapter);
+                let (_, rich, map) = rebuild_rendered_text(&chapter);
                 chapter_results.push_back(rich);
                 current_position += pos + search_string.len();
             }
@@ -314,7 +317,7 @@ impl EpubData {
         self.epub_metrics.change_chapter(chapter, self.get_current_chapter().len());
 
 
-        let (_, rich) = rebuild_rendered_text(self.get_current_chapter());
+        let (_, rich, map) = rebuild_rendered_text(self.get_current_chapter());
         self.visualized_page = rich;
         self.epub_metrics.change_page(pos);
 
@@ -448,12 +451,18 @@ impl HtmlTag {
     
 }
 
+pub struct PagePosition {
+    pub chapter: usize,
+    pub page: usize,
+}
 
-pub fn rebuild_rendered_text(text: &str) -> (druid::ArcStr, RichText) {
+pub fn rebuild_rendered_text(text: &str) -> (druid::ArcStr, RichText, HashMap<String, Arc<PagePosition>>) {
     let mut current_pos = 0;
     let mut builder = druid::text::RichTextBuilder::new();
     let mut str = String::new();
     let mut token_stack: Vec<(usize, HtmlTag)> = Vec::new();
+
+    let mut chaps : HashMap<String, Arc<PagePosition>> = HashMap::new();
 
     for tok_result in xmlparser::Tokenizer::from(text) {
         if tok_result.is_err() {
@@ -507,6 +516,10 @@ pub fn rebuild_rendered_text(text: &str) -> (druid::ArcStr, RichText) {
                 if inner_tag.should_tag_be_written() || text.trim().is_empty() {
                     continue;
                 } else {
+                    if *inner_tag == HtmlTag::Title {
+                        chaps.insert(text.to_string(), Arc::new(PagePosition{ chapter: 0, page: 0}));//title, PagePosition { chapter: 0, page: 0 });
+                    }
+
                     let t = text.as_str().replace("\n", "");
                     current_pos = current_pos + t.len();
 
@@ -538,7 +551,7 @@ pub fn rebuild_rendered_text(text: &str) -> (druid::ArcStr, RichText) {
             */
         }
     }
-    (druid::ArcStr::from(str), builder.build())
+    (druid::ArcStr::from(str), builder.build(), chaps)
 }
 
 

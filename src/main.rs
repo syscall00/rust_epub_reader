@@ -172,7 +172,7 @@ struct ListItems {
 impl ListItems {
     pub fn new() -> Self {
         let layout = druid::TextLayout::default();
-        let mut ep = EpubDoc::new("/home/syscall/Desktop/Wolves of the Calla - Stephen King.epub").unwrap();
+        let mut ep = EpubDoc::new("/home/drivesec/Downloads/pg6622.epub").unwrap();
         
         let binding = ep.get_cover();
         let img_data = binding.as_ref().unwrap();
