@@ -2,15 +2,15 @@
 use std::ops::Range;
 
 use druid::kurbo::Line;
-use druid::piet::{Text, TextLayoutBuilder};
-use druid::widget::{Label, RawLabel, LineBreaking, Scroll, ClipBox, Axis};
+use druid::widget::{ClipBox, Axis};
 use druid::{
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
     LifeCycleCtx, PaintCtx, Point, RenderContext, Size, UpdateCtx,
-    Widget, WidgetPod, WidgetExt, Selector, Data, Modifiers, Rect,
+    Widget, WidgetPod, Data, Modifiers,
 };
 
-use crate::application_state::{EpubData};
+use crate::appstate::{EpubData, PagePosition};
+use crate::core::commands::{GO_TO_POS, CHANGE_PAGE};
 
 
 pub struct TextContainer {
@@ -24,7 +24,7 @@ pub struct TextContainer {
 }
 
 impl TextContainer {
-    pub fn new(data : EpubData) -> Self {
+    pub fn new(_data : EpubData) -> Self {
 
         let mut label = 
         
@@ -38,6 +38,18 @@ impl TextContainer {
             label_text_lines : WidgetPod::new(label),
         }
     }
+
+
+    fn clip_widget (&mut self) -> &mut ClipBox<EpubData, MyLabel> {
+        self.label_text_lines.widget_mut()
+    }  
+    pub fn move_if_not_out_of_range(&mut self, position : f64) -> bool {
+        const ORIENTATION : Axis = Axis::Vertical;
+        self.clip_widget().pan_to_on_axis(ORIENTATION, position)
+
+        
+
+    }
 }
 
 impl Widget<EpubData> for TextContainer {
@@ -48,11 +60,9 @@ impl Widget<EpubData> for TextContainer {
                 println!("Ev {:?}", key_event);
                 if key_event.key == druid::keyboard_types::Key::ArrowUp {
                     data.epub_metrics.percentage_page_in_chapter += 1.;
-                    if !self.label_text_lines
-                    .widget_mut()
-                    .pan_to_on_axis(
-                        Axis::Vertical, ctx.size().height
-                        * data.epub_metrics.percentage_page_in_chapter) {
+                    if !self.move_if_not_out_of_range(
+                        ctx.size().height * data.epub_metrics.percentage_page_in_chapter) 
+                        {
                             data.next_chapter();
                             data.epub_metrics.percentage_page_in_chapter = 0.;
                         }
@@ -78,6 +88,7 @@ impl Widget<EpubData> for TextContainer {
 
                     let pos = cmd.get_unchecked(CHANGE_PAGE);
 
+                    // DO Next Page
                     if *pos  {
                         data.epub_metrics.percentage_page_in_chapter += 1.;
                         if !self.label_text_lines
@@ -89,6 +100,7 @@ impl Widget<EpubData> for TextContainer {
                                 data.epub_metrics.percentage_page_in_chapter = 0.;
                             }
                     }
+                    // DO Previous page 
                     else {
                         
                         data.epub_metrics.percentage_page_in_chapter -= 1.;
@@ -102,15 +114,19 @@ impl Widget<EpubData> for TextContainer {
                                 data.epub_metrics.percentage_page_in_chapter = 0.;
                             }                    
                         }
+                        ctx.request_layout();
                 }
                 else if cmd.is(GO_TO_POS) {
                     let pos = cmd.get_unchecked(GO_TO_POS);
+                    data.move_to_pos(pos);
                     let label = self.label_text_lines.widget_mut().child_mut();
-                    let mut  ppt = label.layout.point_for_text_position(*pos);
+                    
+                    let mut  ppt = label.layout.point_for_text_position(pos.page);
                     ppt.y -= 15.;
                     self.label_text_lines
                         .widget_mut()
                         .pan_to(ppt);
+                    ctx.request_layout();
                 }
             }
             Event::Wheel(wheel) => {
@@ -207,7 +223,7 @@ impl MyLabel {
         self.layout.set_text_color(color);
     }
 
-    fn do_mouse_down(&mut self, point: Point, mods: Modifiers, count: u8) {
+    fn do_mouse_down(&mut self, point: Point, mods: Modifiers) {
         let point = point - Vec2::new(LABEL_X_PADDING, 0.0);
         let pos = self.layout.text_position_for_point(point);
         if mods.shift() {
@@ -224,7 +240,7 @@ impl MyLabel {
         let point = point - Vec2::new(LABEL_X_PADDING, 0.0);
         //FIXME: this should behave differently if we were double or triple clicked
         let pos = self.layout.text_position_for_point(point);
-        let text = match self.layout.text() {
+        let _text = match self.layout.text() {
             Some(text) => text,
             None => return,
         };
@@ -234,19 +250,17 @@ impl MyLabel {
 
 }
 
-const CHANGE_PAGE: Selector<bool> = Selector::new("change_page");
-const GO_TO_POS: Selector<usize> = Selector::new("go_to_pos");
 
 
 
 
 use druid::text::{RichText, Selection};
-use druid::{Vec2, TextLayout, Cursor, TextAlignment};
+use druid::{Vec2, TextLayout, Cursor};
 
 const LABEL_X_PADDING: f64 = 2.0;
 impl Widget<EpubData> for MyLabel {
 
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, _env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut EpubData, _env: &Env) {
         match event {
             Event::MouseUp(event) => {
                 // Account for the padding
@@ -258,7 +272,7 @@ impl Widget<EpubData> for MyLabel {
                 ctx.set_active(false);
             }
             Event::MouseDown(event) => {
-                self.do_mouse_down(event.pos, event.mods, event.count);
+                self.do_mouse_down(event.pos, event.mods);
                 ctx.set_active(true);
                 ctx.request_paint();
             }
@@ -301,7 +315,7 @@ impl Widget<EpubData> for MyLabel {
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, _env: &Env) {
+    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, _env: &Env) {
         match event {
             LifeCycle::WidgetAdded => {
                 self.layout.set_text(data.visualized_page.to_owned());

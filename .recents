@@ -1,7 +1,11 @@
 
 [
- {
-   "name": "libr 1",
-   "path": "/home/drivesec/Downloads/pg6622.epub"
- }
-]
+  {
+    "name": "Dialoghi con Leucò",
+    "path": "/home/syscall/Downloads/pavese_dialoghi_con_leuco.epub"
+  },
+  {
+    "name": "robida_il_20_secolo",
+    "path": "/home/syscall/Downloads/robida_il_20_secolo.epub"
+  }
+ ]

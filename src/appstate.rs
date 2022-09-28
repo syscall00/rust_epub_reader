@@ -1,5 +1,4 @@
-use druid::im::{Vector, HashMap};
-use druid::piet::TextStorage;
+use druid::im::{Vector};
 use druid::text::RichText;
 use druid::{
     commands, AppDelegate, ArcStr, Command, Data, DelegateCtx, Env, Handled, Lens, Target,
@@ -7,28 +6,25 @@ use druid::{
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 
+use crate::PageType;
 use crate::tool::Tool;
-use crate::widgets::navigator::uiview::{self as nav_uiview, UiView};
 use epub::doc::EpubDoc;
-
-use self::epub_data_derived_lenses::table_of_contents;
-
 
 
 #[derive(Clone, Data, Lens)]
 pub struct AppState {
-    pub nav_state: Arc<Vec<nav_uiview::UiView>>,
 
     pub selected: bool,
     pub selected_tool: Tool,
     pub epub_data : EpubData,
     pub home_page_data: HomePageData,
+    pub active_page : PageType,
+    pub search_input : String,
 }
 
 
 
 const LINK_COLOR: druid::Color = druid::Color::rgb8(0, 0, 0xEE);
-const SCROLL_TO: druid::Selector<u64> = druid::Selector::new("scroll-view.goto");
 
 #[derive(Clone, Data, Lens)]
 pub struct HomePageData {
@@ -98,15 +94,10 @@ impl AppDelegate<AppState> for Delegate {
         data: &mut AppState,
         _env: &Env,
     ) -> Handled {
-        //let rect = cmd.get_unchecked(SCROLL_TO_VIEW);
-        //_ctx.submit_command(SCROLL_TO_VIEW.with(*rect));
 
         if let Some(file_info) = cmd.get(commands::OPEN_FILE) {
             data.open_file(file_info.path().to_str().unwrap().to_string());
 
-            let new_views = Arc::make_mut(&mut data.nav_state);
-            new_views.push(UiView::new("read_ebook".to_string()));
-            _ctx.submit_command(Command::new(CONTACT_DETAIL, 1, Target::Auto));
 
             return Handled::Yes;
         } else {
@@ -114,18 +105,18 @@ impl AppDelegate<AppState> for Delegate {
         }
     }
 }
-const CONTACT_DETAIL: druid::Selector<usize> = druid::Selector::new("contact detail");
 
 impl AppState {
     pub fn new() -> Self {
 
         AppState {
-            nav_state: Arc::new(vec![nav_uiview::UiView::new("home_page".to_string())]),
             selected: false,
 
             selected_tool: Tool::default(),
             home_page_data: HomePageData::new(),
-            epub_data: EpubData::default(),
+            epub_data: EpubData::new(Vector::new()),
+            active_page : PageType::Home,
+            search_input : String::new(),
         }
     }
 
@@ -228,22 +219,6 @@ impl EpubMetrics {
 }
 
 
-#[derive(Clone, Lens, Data)]
-pub struct TableOfContentsItem {
-    pub title: String,
-    level: usize,
-    page: usize,
-}
-
-impl TableOfContentsItem {
-    pub fn new(title: String, level: usize, page: usize) -> Self {
-        TableOfContentsItem {
-            title,
-            level,
-            page,
-        }
-    }
-}
 
 #[derive(Clone, Lens, Data)]
 pub struct EpubData {
@@ -258,114 +233,146 @@ pub struct EpubData {
     pub visualized_page : RichText,
     pub visualized_page_position : usize,
 
-    pub table_of_contents : Vector<TableOfContentsItem>,
+    pub table_of_contents : Vector<TocItems>,
+    pub search_results : Vector<SearchResult>,
     
     // maintain font size
     pub font_size : f64,
 }
 
+#[derive(Clone, Lens, Data)]
+pub struct SearchResult {
+    pub key : String,
+    pub value: Arc<PagePosition>
+}
+
+impl SearchResult {
+    pub fn new(key : String, value : Arc<PagePosition>) -> SearchResult {
+        Self {
+            key,
+            value
+        }
+    }
+
+}
+
+#[derive(Clone, Lens, Data)]
+pub struct TocItems {
+    pub key : String,
+    pub value: Arc<PagePosition>
+}
+
+impl TocItems {
+    pub fn new(key : String, value : Arc<PagePosition>) -> TocItems {
+        Self {
+            key,
+            value
+        }
+    }
+
+}
+
+
 impl EpubData {
     pub fn new(chapters: Vector<ArcStr>) -> Self {
-        let (_, visualized_page, map) = rebuild_rendered_text(&chapters[0]);
+        let mut map : Vector<TocItems> = Vector::new();
+        for i in 0..chapters.len() {
+        let (_, mp) = rebuild_rendered_text(&chapters[i], i as i32);
+            if mp.len() != 0 {
+                map.push_back(mp[0].clone());
+            }
+            else {
+                println!("{:?}", mp.len());
+            }
+        }
+        let visualized_page = if chapters.len() > 0 {
+         rebuild_rendered_text(&chapters[0], -1).0
 
+        }
+        else {
+            RichText::new(ArcStr::from(""))
+        };
         let epub_metrics = EpubMetrics::new(&chapters, visualized_page.len());
 
-        //let table_of_contents = chapters.iter().enumerate().map(|(i, c)| {
-        //    // regex for <title> tag
-        //    let title = c.find("<title>").unwrap();
-        //    TableOfContentsItem::new(c, 0, i)
-        //}).collect();
 
         
         EpubData { 
             current_chapter: 0, 
             chapters, 
-            visualized_page: visualized_page,
+            visualized_page,
             visualized_page_position : 0,
             epub_metrics,
-            table_of_contents,
+            table_of_contents : map,
             font_size: 14.,
+            search_results: Vector::new()
         }
         
     }
 
-    /*
-    Should return a list with
-    - chapter number
-    - page position in chapter
-    */
-    pub fn search_in_book(&mut self, search_string : &str, index: usize) {
-        let mut search_results = Vector::new();
+    // Search the match in all text and 
+    // return a tuple with a string containing 5 words near match result and a PagePosition referring to the match
+    pub fn search_string_in_book(&mut self, search_string : &str) {
+        let mut results = Vector::new();
+        
         for (i, chapter) in self.chapters.iter().enumerate() {
-            let mut chapter_results = Vector::new();
-            let mut current_position = 0;
-            while let Some(pos) = chapter[  current_position..].find(search_string) {
-                let (_, rich, map) = rebuild_rendered_text(&chapter);
-                chapter_results.push_back(rich);
-                current_position += pos + search_string.len();
-            }
-            if chapter_results.len() > 0 {
-                search_results.push_back((i, chapter_results));
+            if let Some(start) = chapter.find(search_string) {
+                let mut start = start as i32 - 15;
+                if start < 0 {
+                    start = 0;
+                }
+                let mut end = start as i32 + 15;
+                if end > chapter.len() as i32 {
+                    end = chapter.len() as i32;
+                }
+                let page_position = PagePosition::new(i as i32, start, end);
+
+                let key = chapter[start as usize..end as usize].to_owned();
+                let value = Arc::new(page_position);
+                let search_result = SearchResult::new(key.to_string(), value);
+                results.push_back(search_result);
             }
         }
-        search_results.iter().for_each(|(i, v)| println!("Chapter {} has {} results", i, v.len()));
-        self.move_to_pos(search_results[0].0, search_results[0].1[index-1].len());
+
+
+        self.search_results = results
     }
-
-    pub fn move_to_pos(&mut self, chapter : usize, pos : usize) {
-        self.current_chapter = chapter;
-        self.epub_metrics.change_chapter(chapter, self.get_current_chapter().len());
-
-
-        let (_, rich, map) = rebuild_rendered_text(self.get_current_chapter());
-        self.visualized_page = rich;
-        self.epub_metrics.change_page(pos);
-
-    }
+    
 
     fn get_current_chapter(&self) -> &ArcStr {
         &self.chapters[self.current_chapter]
     }
     
-
-    //pub fn next_page(&mut self, current_page : usize) {
-    //    let (_, rich) = rebuild_rendered_text(self.get_current_chapter(), current_page);
-    //    self.visualized_page = rich;
-    //    self.epub_metrics.change_page(current_page);
-    //
-    //}
-
-
     pub fn next_chapter(&mut self) {
         self.current_chapter+=1;
         //self.pages = self.chapters[self.current_chapter].clone();
         //self.visualized_page.as_str()[0..10];
-        let (_, rich) = rebuild_rendered_text(self.get_current_chapter());
+        let (rich, _) = rebuild_rendered_text(self.get_current_chapter(), -1);
         self.epub_metrics.change_chapter(self.current_chapter, rich.len());
 
         self.visualized_page = rich;
+    }
 
+    pub fn move_to_pos(&mut self, position : &PagePosition) {
+        self.current_chapter = position.chapter;
+        let (rich, _) = rebuild_rendered_text(self.get_current_chapter(), -1);
+
+        self.epub_metrics.change_chapter(self.current_chapter, rich.len());
+        self.visualized_page = rich;
 
     }
+
     pub fn previous_chapter(&mut self) {
         self.current_chapter-=1;
 
-        let (_, rich) = rebuild_rendered_text(self.get_current_chapter());
+        let (rich, _) = rebuild_rendered_text(self.get_current_chapter(), -1);
         self.epub_metrics.change_chapter(self.current_chapter, rich.len());
 
         self.visualized_page = rich;
         // go to last position in chapter
-
-
     }
+
 }
 
-impl Default for EpubData {
-    fn default() -> Self {
-        Self { current_chapter: Default::default(), chapters: Default::default(), font_size: 14., visualized_page_position: 0,
-            visualized_page: RichText::new(ArcStr::from("".clone())), table_of_contents: Default::default(), epub_metrics: Default::default() }
-    }
-}
 
 #[derive(Debug, PartialEq, Data, Clone)]
 enum HtmlTag {
@@ -406,7 +413,7 @@ impl HtmlTag {
     pub fn add_newline_after_tag(&self) -> bool {
         matches!(
             self,
-            HtmlTag::Paragraph | HtmlTag::Header(_) | HtmlTag::Link(_) | HtmlTag::Image(_)
+            HtmlTag::Paragraph | HtmlTag::Header(_) | HtmlTag::Image(_) // | HtmlTag::Link(_) 
         )
     }
     
@@ -437,10 +444,8 @@ impl HtmlTag {
                 //Tag::Link(_link_ty, target, _title) => {
                 attrs
                     .underline(true)
-                    .text_color(LINK_COLOR)
-                    .link(SCROLL_TO.with(100)); //.with(Rect::new(10., 10., 10., 10.)));
-                                                //.link(SCROLL_TO_VIEW.with(Rect::new(10., 10., 10., 10.)));
-                                                //.link(OPEN_LINK.with("Aaaa".to_string()));
+                    .text_color(LINK_COLOR);
+                    //.link(SCROLL_TO.with(100)); //.with(Rect::new(10., 10., 10., 10.)));
             }
             HtmlTag::Image(_img) => {}
             _ => {
@@ -451,18 +456,27 @@ impl HtmlTag {
     
 }
 
+#[derive (Clone)]
 pub struct PagePosition {
-    pub chapter: usize,
-    pub page: usize,
+    pub chapter: usize, // chap_num
+    pub page: usize, // page_pos 
 }
 
-pub fn rebuild_rendered_text(text: &str) -> (druid::ArcStr, RichText, HashMap<String, Arc<PagePosition>>) {
+impl PagePosition {
+    pub fn new(chapter: i32, start: i32, end: i32) -> Self {
+        PagePosition {
+            chapter: chapter as usize,
+            page: start as usize,
+        }
+    }
+}
+
+pub fn rebuild_rendered_text(text: &str, char_num : i32 ) -> (RichText, Vector<TocItems>) {
     let mut current_pos = 0;
     let mut builder = druid::text::RichTextBuilder::new();
-    let mut str = String::new();
     let mut token_stack: Vec<(usize, HtmlTag)> = Vec::new();
 
-    let mut chaps : HashMap<String, Arc<PagePosition>> = HashMap::new();
+    let mut chaps : Vector<TocItems> = Vector::new();
 
     for tok_result in xmlparser::Tokenizer::from(text) {
         if tok_result.is_err() {
@@ -500,7 +514,6 @@ pub fn rebuild_rendered_text(text: &str) -> (druid::ArcStr, RichText, HashMap<St
                         current_pos += 2;
 
                         builder.push("\n\n");
-                        str.push_str("\n\n");
                         
                     }
                 }
@@ -512,19 +525,23 @@ pub fn rebuild_rendered_text(text: &str) -> (druid::ArcStr, RichText, HashMap<St
             xmlparser::Token::Text { text } => {
                 // TODO: Handle case of no tags, text only
                 let (_, inner_tag) = token_stack.last().unwrap();
-
+                if *inner_tag == HtmlTag::Header(1) {
+                    if char_num != -1 {
+                        chaps.push_back(
+                            TocItems::new(text.to_string(), 
+                            Arc::new(PagePosition{ chapter: char_num as usize, page: current_pos}
+                            )));
+                        }
+                }
                 if inner_tag.should_tag_be_written() || text.trim().is_empty() {
                     continue;
                 } else {
-                    if *inner_tag == HtmlTag::Title {
-                        chaps.insert(text.to_string(), Arc::new(PagePosition{ chapter: 0, page: 0}));//title, PagePosition { chapter: 0, page: 0 });
-                    }
+
 
                     let t = text.as_str().replace("\n", "");
                     current_pos = current_pos + t.len();
 
                     builder.push(&t);
-                    str.push_str(&t);
                     
                 }
             }
@@ -551,7 +568,7 @@ pub fn rebuild_rendered_text(text: &str) -> (druid::ArcStr, RichText, HashMap<St
             */
         }
     }
-    (druid::ArcStr::from(str), builder.build(), chaps)
+    (builder.build(), chaps)
 }
 
 

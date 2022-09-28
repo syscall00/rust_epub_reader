@@ -1,6 +1,6 @@
 use druid::{Widget, EventCtx, Event, Env, LifeCycleCtx, LifeCycle, UpdateCtx, BoxConstraints, LayoutCtx, Size, PaintCtx, Color, RenderContext};
 
-use crate::application_state::AppState;
+use crate::appstate::AppState;
 
 
 

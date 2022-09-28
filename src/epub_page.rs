@@ -7,14 +7,14 @@ use druid::{
     Widget, text::Selection,
 };
 
-use crate::application_state::EpubData;
+use crate::appstate::EpubData;
 use crate::tool::Tool;
 
 
 use crate::widgets::epub_page::navbar::NavigationBar;
 use crate::widgets::epub_page::textcontainer::TextContainer;
 
-const SELECTED_TOOL: druid::Key<u64> = druid::Key::new("org.linebender.example.important-label-color");
+//const SELECTED_TOOL: druid::Key<u64> = druid::Key::new("org.linebender.example.important-label-color");
 
 
 
@@ -47,7 +47,7 @@ impl Widget<EpubData> for EpubPage {
     
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
 
-        let selected_tool : Tool = env.get(SELECTED_TOOL).into();
+        //let selected_tool : Tool = env.get(SELECTED_TOOL).into();
         //println!("event: {:?}", event);
         match event {
             
@@ -253,7 +253,7 @@ impl Widget<EpubData> for EpubPage {
         
         let label_size = ctx.size();
     
-        //let asasd = crate::application_state::rebuild_rendered_text(&*data.html_text[pos_text..].to_string());
+        //let asasd = crate::appstate::rebuild_rendered_text(&*data.html_text[pos_text..].to_string());
         //println!("*data.html_text[asdad..] {:}", &*data.html_text[pos_text..].to_string());
 
         //self.layout.text_position_for_point(point)

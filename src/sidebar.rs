@@ -1,11 +1,12 @@
-use druid::{Widget, Color, RenderContext, WidgetPod, widget::{Scroll, List, Label}, LayoutCtx, UpdateCtx, LifeCycle, LifeCycleCtx, Env, Size, BoxConstraints, PaintCtx, EventCtx, Event, WidgetExt, Point, Selector, piet::{Text, TextLayoutBuilder}, LensExt, im::Vector};
+use druid::{Widget, Color, RenderContext, WidgetPod, widget::{Scroll, List, Label, TextBox}, LayoutCtx, UpdateCtx, LifeCycle, LifeCycleCtx, Env, Size, BoxConstraints, PaintCtx, EventCtx, Event, WidgetExt, Point, Selector, piet::{Text, TextLayoutBuilder}, LensExt};
 
-use crate::application_state::{AppState, EpubData, TableOfContentsItem};
+use crate::
+{appstate::{AppState, EpubData, TocItems, PagePosition, SearchResult}, 
+
+core::commands::{INTERNAL_COMMAND, SEARCH, GO_TO_POS}};
 
 const ICON_SIZE : f64 = 40.;
 
-pub const INTERNAL_COMMAND: Selector<InternalUICommand> =
-    Selector::new("epub_reader.ui_command");
 
 
 
@@ -21,7 +22,6 @@ pub enum TabKind {
     Toc,
     Highlights,
     Search,
-    Notes,
 }
 
 pub struct CustomButton {
@@ -40,6 +40,7 @@ impl Widget<EpubData> for CustomButton {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
         match event {
             Event::MouseDown(_) => {
+                ctx.set_handled();
                 ctx.submit_command(INTERNAL_COMMAND.with(InternalUICommand::SwitchTab(self.kind.clone())));
             },
             _ => {}
@@ -97,22 +98,85 @@ impl Widget<EpubData> for CustomButton {
                     .unwrap();
                 ctx.draw_text(&layout, (half_width, half_height));
             }
-            TabKind::Notes => {
-                let text = ctx.text();
-                let layout = text
-                    .new_text_layout("N")
-                    .text_color(Color::WHITE)
-                    .build()
-                    .unwrap();
-                ctx.draw_text(&layout, (half_width, half_height));
-            }
+
         
         }
     }
 }
 
 
+pub struct Search {
+    input_box: WidgetPod<AppState, Box<dyn Widget<AppState>>>,
+    search_results: WidgetPod<AppState, Box<dyn Widget<AppState>>>,
 
+}
+
+impl Search {
+    pub fn new() -> Self {
+
+        let input_box = TextBox::new().lens(AppState::search_input).boxed();
+
+        let search_results = List::new(|| {
+            Label::new(|item: &SearchResult, _env: &_| item.key.clone())
+            .on_click(|ctx, data: &mut SearchResult, _env | {
+                ctx.submit_command(GO_TO_POS.with((*data.value).clone()));
+            })
+
+            }).lens(AppState::epub_data.then(EpubData::search_results)).boxed();
+
+
+        Self {
+            input_box: WidgetPod::new(input_box),
+            search_results: WidgetPod::new(search_results),
+        }
+    }
+}
+
+impl Widget<AppState> for Search {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppState, env: &Env) {
+        match event {
+            // If click middle, search
+            Event::MouseDown(mouse) => {
+                if mouse.button.is_middle() {
+                    data.epub_data.search_string_in_book(&data.search_input);
+                    ctx.request_update();
+                    ctx.request_layout();
+                    //ctx.submit_command(SEARCH.with(data.search_input.clone()));
+                }
+            }
+            _ => {},
+        }
+        self.input_box.event(ctx, event, data, env);
+        self.search_results.event(ctx, event, data, env);
+    }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &AppState, env: &Env) {
+        self.input_box.lifecycle(ctx, event, data, env);
+        self.search_results.lifecycle(ctx, event, data, env);
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &AppState, data: &AppState, env: &Env) {
+        self.input_box.update(ctx, data, env);
+        self.search_results.update(ctx, data, env);
+    }
+
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &AppState, env: &Env) -> Size {
+        let size = bc.max();
+        let input_box_size = Size::new(size.width, 30.);
+        let search_results_size = Size::new(size.width, 300.);
+        self.input_box.layout(ctx, &BoxConstraints::tight(input_box_size), data, env);
+        self.input_box.set_origin(ctx, data, env, Point::ORIGIN);
+        self.search_results.layout(ctx, &BoxConstraints::tight(search_results_size), data, env);
+        self.search_results.set_origin(ctx, data, env, Point::new(0., 30.));
+
+        size
+    }
+
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &AppState, env: &Env) {
+        self.input_box.paint(ctx, data, env);
+        self.search_results.paint(ctx, data, env);
+    }
+}
 
 pub struct Toc {
     list : WidgetPod<AppState, Box<dyn Widget<AppState>>>,
@@ -122,7 +186,10 @@ impl Toc {
     pub fn new() -> Self {
 
         let list = List::new(|| {
-            Label::new(|item: &TableOfContentsItem, _env: &_| item.title.clone())
+            Label::new(|item: &TocItems, _env: &_| item.key.clone())
+            .on_click(|ctx, data: &mut TocItems, _env | {
+                ctx.submit_command(GO_TO_POS.with((*data.value).clone()));
+            })
 
             }).lens(AppState::epub_data.then(EpubData::table_of_contents)).boxed();
 
@@ -134,27 +201,24 @@ impl Toc {
 
 impl Widget<AppState> for Toc {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppState, env: &Env) {
-        //println!("Event: {:?}", event);
 
         self.list.event(ctx, event, data, env);
     }
 
     fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &AppState, _env: &Env) {
-        //println!("Lifecycle: {:?}", event);
         self.list.lifecycle(_ctx, _event, _data, _env);
     }
 
     fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &AppState, _data: &AppState, _env: &Env) {
-        //println!("Update");
         self.list.update(_ctx, _data, _env);
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &AppState, env: &Env) -> Size {
        //println!("Layout: {:?}", bc.max());
         let size = self.list.layout(ctx, bc, data, env);
-        self.list.set_origin(ctx, data, env, Point::new(0., 15.));
-        size
-        //bc.max()
+        self.list.set_origin(ctx, data, env, Point::new(0., 30.));
+        //size
+        bc.max()
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, _data: &AppState, _env: &Env) {
@@ -186,18 +250,13 @@ impl Panel {
     pub fn new(kind : TabKind) -> Self {
         let widget = match kind {
             TabKind::Toc => {
-                Scroll::new(Toc::new()).vertical()
+                Scroll::new(Search::new()).vertical()
             }
-            _ => { 
-                Scroll::new(Toc::new()).vertical()
-                //Scroll::new(List::new(|| {
-                //    Label::new(|data: &crate::application_state::TableOfContentsItem, _env: &Env| {
-                //        data.title.clone()
-                //    })
-                //    .with_text_color(Color::WHITE)
-                //    .with_text_size(16.0)
-                //    .padding(5.0)
-                //})).lens(AppState::epub_data.then(EpubData::table_of_contents))
+            TabKind::Search => { 
+                Scroll::new(Search::new()).vertical()
+            }
+            TabKind::Highlights => {
+                Scroll::new(Search::new()).vertical()
             }
         };
         Self {
@@ -208,14 +267,7 @@ impl Panel {
 
 impl Widget<AppState> for Panel {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppState, env: &Env) {
-            self.content.event(ctx, event, data, env);
-        match event {
-
-            _ => {}
-        }
-        
-
-        
+            self.content.event(ctx, event, data, env);       
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &AppState, env: &Env) {
@@ -262,7 +314,7 @@ impl Sidebar {
     pub fn new() -> Sidebar {
 
         let mut buttons = Vec::new();
-        for kind in vec![TabKind::Toc, TabKind::Highlights, TabKind::Search, TabKind::Notes] {
+        for kind in vec![TabKind::Toc, TabKind::Highlights, TabKind::Search] {
             let other_but  = CustomButton::new(kind).lens(AppState::epub_data).boxed();
             buttons.push(WidgetPod::new(other_but));
         }
@@ -285,6 +337,7 @@ impl Widget<AppState> for Sidebar {
                     match cmd {
                         InternalUICommand::SwitchTab(tab) => {
 
+                        
                             if self.opened_tab == Some(tab.clone()) {
                                 self.opened = false;
                                 self.opened_tab = None;
@@ -292,6 +345,7 @@ impl Widget<AppState> for Sidebar {
                                 self.opened = true;
                                 self.opened_tab = Some(tab.clone());
                             }
+                            ctx.set_handled();
 
                             ctx.request_layout();
 
@@ -376,12 +430,6 @@ impl Widget<AppState> for Sidebar {
             TabKind::Search => {
                 sizee.y0 = ICON_SIZE*2.;
                 sizee.y1 = ICON_SIZE*3.;
-
-                ctx.fill(sizee, &Color::rgb8(255, 255, 255));
-            }
-            TabKind::Notes => {
-                sizee.y0 = ICON_SIZE*3.;
-                sizee.y1 = ICON_SIZE*4.;
 
                 ctx.fill(sizee, &Color::rgb8(255, 255, 255));
             }

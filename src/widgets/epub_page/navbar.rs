@@ -2,10 +2,10 @@
 use druid::{
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
     LifeCycleCtx, PaintCtx, RenderContext, Size, UpdateCtx,
-    Widget, Rect, Point, WidgetPod, widget::Slider, piet::{Text, TextLayoutBuilder, TextLayout}, Selector,
+    Widget, Rect, Point, WidgetPod, piet::{Text, TextLayoutBuilder, TextLayout}, Selector,
 };
 
-use crate::application_state::{EpubData, AppState};
+use crate::appstate::EpubData;
 
 
 pub struct NavigationBar {
@@ -42,7 +42,7 @@ impl Widget<EpubData> for NavigationBar {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _: &EpubData, data: &EpubData, env: &Env) {
 
         for button in self.navigation_buttons.iter_mut() {
             button.update(ctx, data, env);
@@ -78,11 +78,20 @@ impl Widget<EpubData> for NavigationBar {
             ctx.fill(size.to_rect(), &COLOR_DARK_BACKG.with_alpha(0.3));
 
             let vec = vec!["Reading percentage", "Page number", "Page pos"];
+
             for (i, s) in vec.iter().enumerate() {
                 let text = ctx.text();
                 let mut t = String::new();
                 t.push_str(s);
+                if i == 0 {
                 t.push_str(&data.epub_metrics.current_chapter.to_string());
+                }
+                else if i == 1 {
+                    t.push_str(&(data.epub_metrics.percentage_page_in_chapter+1.).to_string());
+                }
+                else {
+                    t.push_str(&data.epub_metrics.percentage_page_in_book.to_string());
+                }
                 let layout = text
                 .new_text_layout(t)
                 .text_color(Color::BLACK)
@@ -121,34 +130,29 @@ impl NavigationButton {
 const CHANGE_PAGE: Selector<bool> = Selector::new("change_page");
 
 impl Widget<EpubData> for NavigationButton {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut EpubData, _env: &Env) {
         match event {
-            Event::MouseDown(_mouse) => {
+            Event::MouseUp(_) => {
+                ctx.set_handled();
                 ctx.submit_command(CHANGE_PAGE.with(self.direction));
-                //if self.direction {
-                //    data.next_chapter();
-                //}
-                //else {
-                //    data.previous_chapter();
-                //}
+
             }
             _ => { } 
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, env: &Env) {
-    }
+    fn lifecycle(&mut self, _: &mut LifeCycleCtx, _: &LifeCycle, _: &EpubData, _: &Env) {}
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, env: &Env) {
-    }
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, env: &Env) { }
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &EpubData, env: &Env) -> Size {
+    fn layout(&mut self, _: &mut LayoutCtx, _: &BoxConstraints, _: &EpubData, _: &Env) -> Size {
         Size::new(50., 50.)
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
         
-        let mut r = Rect::from_origin_size(Point::new(0., 0.), ctx.size());
+        // Draw arrow here!!!
+        let r = Rect::from_origin_size(Point::new(0., 0.), ctx.size());
         ctx.fill(r, &Color::BLACK);
     }
 }

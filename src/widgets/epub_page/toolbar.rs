@@ -1,7 +1,6 @@
 
 use std::sync::Arc;
 
-use druid::piet::{Text, TextLayoutBuilder};
 use druid::widget::{TextBox, Button, Flex};
 use druid::{
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
@@ -9,7 +8,7 @@ use druid::{
     Widget, WidgetPod,
 };
 
-use crate::application_state::{EpubData, AppState};
+use crate::appstate::{EpubData, PagePosition};
 
 
 // Create a base widget for styling toolbar buttons
@@ -121,7 +120,6 @@ pub struct Toolbar {
     toolbar_controller: WidgetPod<EpubData, ToolbarController>,
 }
 
-const GO_TO_POS: druid::Selector<usize> = druid::Selector::new("go_to_pos");
 
 impl Toolbar {
     pub fn new() -> Self {
@@ -132,10 +130,10 @@ impl Toolbar {
         .with_flex_child(Button::new("asda".to_string()), 1.)
         //.with_flex_child(InputWithButtons::new(), 0.5)
         .with_default_spacer()
-        .with_flex_child(Button::new("GOTO".to_string())
-            .on_click(|ctx, data, env| {
-                ctx.submit_command(GO_TO_POS.with(15));
-            }), 0.2)
+        //.with_flex_child(Button::new("GOTO".to_string())
+        //    .on_click(|ctx, data, env| {
+        //        ctx.submit_command(GO_TO_POS.with(15));
+        //    }), 0.2)
         .with_flex_child(Button::new("asda".to_string()), 1.)
         .with_flex_child(Button::new("asda".to_string()), 1.)
         .with_flex_child(Button::new("asda".to_string()), 1.);
