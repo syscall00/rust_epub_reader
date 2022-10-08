@@ -5,13 +5,15 @@ use druid::{
     Widget, Rect, Point, WidgetPod, piet::{Text, TextLayoutBuilder, TextLayout}, Selector,
 };
 
-use crate::appstate::EpubData;
+use crate::{appstate::EpubData, core::commands::CHANGE_PAGE};
 
 
 pub struct NavigationBar {
     navigation_buttons : Vec<WidgetPod<EpubData, NavigationButton>>,
 
-    // TODO: Chapter slider!
+
+
+    height : f64,
     //chapter_slider : WidgetPod<EpubData, Slider>,
 }
 
@@ -23,13 +25,26 @@ impl NavigationBar {
 
         //let chapter_slider = WidgetPod::new(Slider::new());
         
-        Self {navigation_buttons }
+        Self {navigation_buttons, height: 0. }
+    }
+
+    pub fn with_height(mut self, height : f64 ) -> Self  {
+        self.height = height;
+        self
     }
 }
 
 impl Widget<EpubData> for NavigationBar {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
-
+        match event {
+            Event::MouseMove(_) => {
+                ctx.set_active(true);
+                if ctx.is_active() {
+                    ctx.request_paint();
+                }
+            }
+            _ => {}
+        }
         for button in self.navigation_buttons.iter_mut() {
             button.event(ctx, event, data, env);
         }
@@ -62,7 +77,12 @@ impl Widget<EpubData> for NavigationBar {
 
             button.set_origin(ctx, data, env, origin)
         }
-        bc.max()
+        if self.height == 0. {
+            bc.max()
+        }
+        else {
+            Size::new(bc.max().width, self.height)
+        }
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
@@ -127,7 +147,6 @@ impl NavigationButton {
         }
     }
 }
-const CHANGE_PAGE: Selector<bool> = Selector::new("change_page");
 
 impl Widget<EpubData> for NavigationButton {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut EpubData, _env: &Env) {

@@ -20,7 +20,6 @@ impl Widget<AppState> for Topbar {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppState, env: &Env) {
         match event {
             _ => {
-                println!("event {:?}", event);
             }
         }
     }
@@ -28,7 +27,6 @@ impl Widget<AppState> for Topbar {
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &AppState, env: &Env) {
         match event {
             _ => {
-                println!("lifecycle {:?}", event);
             }
         }
     }

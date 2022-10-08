@@ -7,24 +7,21 @@ use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 
 use crate::PageType;
-use crate::tool::Tool;
+use crate::core::commands::VisualizationMode;
+use crate::core::style::LINK_COLOR;
 use epub::doc::EpubDoc;
 
 
 #[derive(Clone, Data, Lens)]
 pub struct AppState {
 
-    pub selected: bool,
-    pub selected_tool: Tool,
     pub epub_data : EpubData,
     pub home_page_data: HomePageData,
     pub active_page : PageType,
-    pub search_input : String,
 }
 
 
 
-const LINK_COLOR: druid::Color = druid::Color::rgb8(0, 0, 0xEE);
 
 #[derive(Clone, Data, Lens)]
 pub struct HomePageData {
@@ -110,13 +107,9 @@ impl AppState {
     pub fn new() -> Self {
 
         AppState {
-            selected: false,
-
-            selected_tool: Tool::default(),
             home_page_data: HomePageData::new(),
             epub_data: EpubData::new(Vector::new()),
             active_page : PageType::Home,
-            search_input : String::new(),
         }
     }
 
@@ -140,8 +133,6 @@ impl AppState {
     }
 
 }
-
-
 
 
 #[derive(Clone, Lens, Default, Debug)]
@@ -201,8 +192,7 @@ impl EpubMetrics {
     }
     
 
-    pub fn change_chapter(&mut self, new_chapter : usize, chapter_length : usize) {
-        self.current_chapter = new_chapter;
+    pub fn change_chapter(&mut self, chapter_length : usize) {
         self.chapter_length = chapter_length;
         self.change_page(0);
 
@@ -213,7 +203,6 @@ impl EpubMetrics {
         self.percentage_page_in_chapter = self.position_in_chapter as f64 / self.chapter_length as f64 * 100.;
         self.percentage_page_in_book = self.position_in_chapter as f64 / self.book_length as f64 * 100.;
 
-        //println!("EpubMetrics: {:?}", self);
     }
 
 }
@@ -222,100 +211,98 @@ impl EpubMetrics {
 
 #[derive(Clone, Lens, Data)]
 pub struct EpubData {
-    pub current_chapter : usize,
 
     pub epub_metrics : EpubMetrics,
-
+    pub edit_mode : bool,
 
     // Plain text of all book 
     pub chapters: Vector<ArcStr>,
 
     pub visualized_page : RichText,
+    pub visualized_chapter : String,
     pub visualized_page_position : usize,
 
-    pub table_of_contents : Vector<TocItems>,
-    pub search_results : Vector<SearchResult>,
+    pub table_of_contents : Vector<IndexedText>,
+    pub search_results : Vector<IndexedText>,
+    pub book_highlights : Vector<IndexedText>,
     
     // maintain font size
     pub font_size : f64,
+
+    pub search_input : String,
+    pub visualization_mode : VisualizationMode,
 }
+
 
 #[derive(Clone, Lens, Data)]
-pub struct SearchResult {
+pub struct IndexedText {
     pub key : String,
-    pub value: Arc<PagePosition>
+    pub value : Arc<PagePosition>,
 }
 
-impl SearchResult {
-    pub fn new(key : String, value : Arc<PagePosition>) -> SearchResult {
-        Self {
+impl IndexedText {
+    pub fn new(key : String, value : Arc<PagePosition>) -> Self {
+        IndexedText {
             key,
-            value
+            value,
         }
     }
-
-}
-
-#[derive(Clone, Lens, Data)]
-pub struct TocItems {
-    pub key : String,
-    pub value: Arc<PagePosition>
-}
-
-impl TocItems {
-    pub fn new(key : String, value : Arc<PagePosition>) -> TocItems {
-        Self {
-            key,
-            value
-        }
-    }
-
 }
 
 
 impl EpubData {
     pub fn new(chapters: Vector<ArcStr>) -> Self {
-        let mut map : Vector<TocItems> = Vector::new();
+        let mut map : Vector<IndexedText> = Vector::new();
         for i in 0..chapters.len() {
         let (_, mp) = rebuild_rendered_text(&chapters[i], i as i32);
             if mp.len() != 0 {
                 map.push_back(mp[0].clone());
+                map.push_back(mp[0].clone());
             }
             else {
-                println!("{:?}", mp.len());
+                println!("mp len: {:?}", mp.len());
             }
         }
         let visualized_page = if chapters.len() > 0 {
          rebuild_rendered_text(&chapters[0], -1).0
-
+         
         }
         else {
             RichText::new(ArcStr::from(""))
         };
         let epub_metrics = EpubMetrics::new(&chapters, visualized_page.len());
 
+        let visualized_chapter = if chapters.len() > 0  {
+            chapters[0].clone().to_string()
+        }
+        else {
+            String::new()
+        };
 
-        
         EpubData { 
-            current_chapter: 0, 
             chapters, 
             visualized_page,
+            visualized_chapter,
             visualized_page_position : 0,
             epub_metrics,
             table_of_contents : map,
+            edit_mode : false,
             font_size: 14.,
-            search_results: Vector::new()
+            search_results: Vector::new(),
+            search_input : String::new(),
+            visualization_mode : VisualizationMode::Single,
+            book_highlights : Vector::new(),
         }
         
     }
 
     // Search the match in all text and 
     // return a tuple with a string containing 5 words near match result and a PagePosition referring to the match
-    pub fn search_string_in_book(&mut self, search_string : &str) {
+    pub fn search_string_in_book(&mut self) {
         let mut results = Vector::new();
         
         for (i, chapter) in self.chapters.iter().enumerate() {
-            if let Some(start) = chapter.find(search_string) {
+            if let Some(start) = chapter.find(&self.search_input) {
                 let mut start = start as i32 - 15;
                 if start < 0 {
                     start = 0;
@@ -328,7 +315,7 @@ impl EpubData {
 
                 let key = chapter[start as usize..end as usize].to_owned();
                 let value = Arc::new(page_position);
-                let search_result = SearchResult::new(key.to_string(), value);
+                let search_result = IndexedText::new(key.to_string(), value);
                 results.push_back(search_result);
             }
         }
@@ -339,33 +326,30 @@ impl EpubData {
     
 
     fn get_current_chapter(&self) -> &ArcStr {
-        &self.chapters[self.current_chapter]
+        &self.chapters[self.epub_metrics.current_chapter]
     }
     
     pub fn next_chapter(&mut self) {
-        self.current_chapter+=1;
+        self.epub_metrics.current_chapter+=1;
         //self.pages = self.chapters[self.current_chapter].clone();
         //self.visualized_page.as_str()[0..10];
         let (rich, _) = rebuild_rendered_text(self.get_current_chapter(), -1);
-        self.epub_metrics.change_chapter(self.current_chapter, rich.len());
+        self.epub_metrics.change_chapter(rich.len());
 
         self.visualized_page = rich;
     }
 
     pub fn move_to_pos(&mut self, position : &PagePosition) {
-        self.current_chapter = position.chapter;
         let (rich, _) = rebuild_rendered_text(self.get_current_chapter(), -1);
 
-        self.epub_metrics.change_chapter(self.current_chapter, rich.len());
+        self.epub_metrics.change_chapter(rich.len());
         self.visualized_page = rich;
 
     }
 
     pub fn previous_chapter(&mut self) {
-        self.current_chapter-=1;
-
         let (rich, _) = rebuild_rendered_text(self.get_current_chapter(), -1);
-        self.epub_metrics.change_chapter(self.current_chapter, rich.len());
+        self.epub_metrics.change_chapter(rich.len());
 
         self.visualized_page = rich;
         // go to last position in chapter
@@ -450,7 +434,7 @@ impl HtmlTag {
             HtmlTag::Image(_img) => {}
             _ => {
                 return;
-            } //println!("Unhandled tag: {:?}", token)},
+            } 
         }
     }
     
@@ -471,12 +455,12 @@ impl PagePosition {
     }
 }
 
-pub fn rebuild_rendered_text(text: &str, char_num : i32 ) -> (RichText, Vector<TocItems>) {
+pub fn rebuild_rendered_text(text: &str, char_num : i32 ) -> (RichText, Vector<IndexedText>) {
     let mut current_pos = 0;
     let mut builder = druid::text::RichTextBuilder::new();
     let mut token_stack: Vec<(usize, HtmlTag)> = Vec::new();
 
-    let mut chaps : Vector<TocItems> = Vector::new();
+    let mut chaps  = Vector::new();
 
     for tok_result in xmlparser::Tokenizer::from(text) {
         if tok_result.is_err() {
@@ -506,7 +490,6 @@ pub fn rebuild_rendered_text(text: &str, char_num : i32 ) -> (RichText, Vector<T
                         );
                         continue;
                     }
-                    //println!("Tag {:?}", &closed_token);
 
                     tk.add_attribute_for_token(builder.add_attributes_for_range(pos..current_pos));
 
@@ -528,7 +511,7 @@ pub fn rebuild_rendered_text(text: &str, char_num : i32 ) -> (RichText, Vector<T
                 if *inner_tag == HtmlTag::Header(1) {
                     if char_num != -1 {
                         chaps.push_back(
-                            TocItems::new(text.to_string(), 
+                            IndexedText::new(text.to_string(), 
                             Arc::new(PagePosition{ chapter: char_num as usize, page: current_pos}
                             )));
                         }

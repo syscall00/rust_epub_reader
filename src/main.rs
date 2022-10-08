@@ -1,9 +1,10 @@
+use crate::core::commands::NAVIGATE_TO;
 use std::{path::PathBuf};
 
 use appstate::{AppState, HomePageData, Recent, EpubData};
 use druid::{
     widget::{
-        Button, Container, Flex, List, Image, FillStrat, ViewSwitcher},
+        Button, Flex, List, Image, FillStrat, ViewSwitcher, Split},
     AppLauncher, Color, Selector, WidgetExt,
     WindowDesc, EventCtx, FileInfo, WidgetPod, Event, Env, LifeCycleCtx, LifeCycle, UpdateCtx, BoxConstraints, LayoutCtx, PaintCtx, Size, Point, Data,
 };
@@ -12,7 +13,7 @@ use druid::Widget;
 // use druid_widget_nursery::material_icons::{Icon, normal::action::ALARM_ADD};
 
 use epub::doc::EpubDoc;
-use epub_page::EpubPage;
+use epub_page::{EpubPage, Container};
 use sidebar::Sidebar;
 use widgets::epub_page::toolbar;
 mod widgets;
@@ -22,8 +23,12 @@ mod appstate;
 mod sidebar;
 mod core;
 
-//const SELECTED_TOOL: Key<u64> = Key::new("org.linebender.example.important-label-color");
-const NAVIGATE_TO: Selector<PageType> = Selector::new("navigate_to");
+#[derive(Data, PartialEq, Clone, Copy)]
+pub enum PageType {
+    Home,
+    Reader,
+}
+
 
 fn main() {
 
@@ -40,7 +45,6 @@ fn main() {
 
 
 pub fn navigator(data : AppState) -> Box<dyn Widget<AppState>> {
-    // druid::widget::TextBox::new().lens(AppState::text)
     let _topbar = crate::widgets::home_page::topbar::Topbar::new();
 
 
@@ -108,43 +112,22 @@ impl Widget<AppState> for MainContainer {
 
 pub fn read_ebook(data : EpubData) -> Box<dyn Widget<AppState>> {
 
-    let epub_page = EpubPage::new(data).lens(AppState::epub_data);
+    //let epub_page = EpubPage::new(data).lens(AppState::epub_data);
 
-       
-
-        let toolbar = toolbar::Toolbar::new().lens(AppState::epub_data);
-        let row = Flex::row()
-        .with_flex_child(Sidebar::new(), 0.3)
-        .with_default_spacer()
-        .with_flex_child(epub_page, 1.);
-           
-        let ex = Flex::column()
-           .with_default_spacer()
-           .with_child(toolbar)//build_toolbar())
-           .with_default_spacer()
-           .with_flex_child(row, 1.0);
-           //.env_scope(|env: &mut druid::Env, data: &AppState| {
-           //    env.set(SELECTED_TOOL, data.selected_tool.clone());
-           //});
-           
-    Box::new(ex)
-       
-               
-/*
-    let layout = Flex::row()
-        .with_flex_child(open_epub, 1.);
-    Box::new(Container::new(layout).background(Color::WHITE))*/
-
+    Container::column()
+    .with_child(Sidebar::new())
+    .with_child(EpubPage::new(data))
+    .lens(AppState::epub_data)
+    .boxed()
+    
 }
 
 
 struct ListItems {
-
     layout: druid::TextLayout<String>,
     image : WidgetPod<Recent, Image>,
-
-
 } 
+
 impl ListItems {
     pub fn new() -> Self {
         let layout = druid::TextLayout::default();
@@ -237,6 +220,7 @@ impl Widget<Recent> for ListItems {
 // main page and contains list view of contacts
 // notice that this must return Box<dyn Widget<YourState>> instead of impl Widget<YourState>
 // navigator needs Boxed widgets in order to store the widgets
+
 pub fn home_page(data : AppState) -> impl Widget<HomePageData> {
     
     let list = List::new(|| {
@@ -275,14 +259,10 @@ pub fn home_page(data : AppState) -> impl Widget<HomePageData> {
     let layout = Flex::column()
         .with_flex_child(open_epub, 1.)
         .with_flex_child(list, 1.);//.lens(AppState::home_page_data);
-    Container::new(layout).background(Color::WHITE)
+        layout
+    //Container::new(layout).background(Color::WHITE)
 }
 
 
 
 
-#[derive(Data, PartialEq, Clone, Copy)]
-pub enum PageType {
-    Home,
-    Reader,
-}

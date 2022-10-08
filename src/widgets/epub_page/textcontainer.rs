@@ -2,15 +2,15 @@
 use std::ops::Range;
 
 use druid::kurbo::Line;
-use druid::widget::{ClipBox, Axis};
+use druid::widget::{ClipBox, Axis, ViewSwitcher};
 use druid::{
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
     LifeCycleCtx, PaintCtx, Point, RenderContext, Size, UpdateCtx,
-    Widget, WidgetPod, Data, Modifiers,
+    Widget, WidgetPod, Data, Modifiers, WidgetExt,
 };
 
-use crate::appstate::{EpubData, PagePosition};
-use crate::core::commands::{GO_TO_POS, CHANGE_PAGE};
+use crate::appstate::{EpubData};
+use crate::core::commands::{GO_TO_POS, CHANGE_PAGE, VisualizationMode};
 
 
 pub struct TextContainer {
@@ -34,6 +34,19 @@ impl TextContainer {
         );
         label.set_constrain_horizontal(true);
 
+
+        //let visualization_mode_switcher = ViewSwitcher::new(
+        //    |data: &EpubData, _env: &Env| data.visualization_mode.clone(),
+        //    |visualization_mode, data, _env| {
+        //        match *visualization_mode {
+        //            VisualizationMode::Single => label.boxed(),
+        //            VisualizationMode::Two => todo!(),
+        //            VisualizationMode::Scroll => todo!(),
+        //        }
+        //    }
+        //);
+
+
         Self {
             label_text_lines : WidgetPod::new(label),
         }
@@ -44,10 +57,7 @@ impl TextContainer {
         self.label_text_lines.widget_mut()
     }  
     pub fn move_if_not_out_of_range(&mut self, position : f64) -> bool {
-        const ORIENTATION : Axis = Axis::Vertical;
-        self.clip_widget().pan_to_on_axis(ORIENTATION, position)
-
-        
+        self.clip_widget().pan_to_on_axis(Axis::Vertical, position)
 
     }
 }
@@ -187,6 +197,8 @@ impl Widget<EpubData> for TextContainer {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
 
         let size = ctx.size();
+        ctx.fill(size.to_rect(), &Color::WHITE);
+
         ctx.clip(size.to_rect());
         self.label_text_lines.paint(ctx, data, env);
 

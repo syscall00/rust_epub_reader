@@ -8,7 +8,8 @@ use druid::{
     Widget, WidgetPod,
 };
 
-use crate::appstate::{EpubData, PagePosition};
+use crate::appstate::EpubData;
+use crate::core::commands::{REQUEST_EDIT, CHANGE_VISUALIZATION, VisualizationMode};
 
 
 // Create a base widget for styling toolbar buttons
@@ -36,7 +37,6 @@ impl Widget<EpubData> for InputWithButtons {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
         match event {
             _ => {
-                println!("event {:?}", event);
             }
         }
         self.text.event(ctx, event, &mut data.font_size.to_string(), env);
@@ -81,7 +81,6 @@ impl Widget<EpubData> for ToolbarController {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
         match event {
             _ => {
-                //println!("event {:?}", event);
             }
         }
     }
@@ -120,6 +119,13 @@ pub struct Toolbar {
     toolbar_controller: WidgetPod<EpubData, ToolbarController>,
 }
 
+// Create a controller
+/*pub struct btnController;
+impl btnController {
+    pub fn new() -> Self {
+        Self {}
+    }
+}*/
 
 impl Toolbar {
     pub fn new() -> Self {
@@ -127,16 +133,28 @@ impl Toolbar {
         let expanded = true;
         //let tools = Vec::new();
         let tools = Flex::row()
-        .with_flex_child(Button::new("asda".to_string()), 1.)
-        //.with_flex_child(InputWithButtons::new(), 0.5)
+        .with_flex_child(Button::new("Edit Page".to_string())            
+        .on_click(|ctx, data: &mut EpubData, env| {
+            ctx.submit_command(REQUEST_EDIT.with(()));
+        }), 1.)
         .with_default_spacer()
         //.with_flex_child(Button::new("GOTO".to_string())
         //    .on_click(|ctx, data, env| {
         //        ctx.submit_command(GO_TO_POS.with(15));
         //    }), 0.2)
-        .with_flex_child(Button::new("asda".to_string()), 1.)
-        .with_flex_child(Button::new("asda".to_string()), 1.)
-        .with_flex_child(Button::new("asda".to_string()), 1.);
+        .with_flex_child(Button::new("Save".to_string()), 1.)
+        .with_default_spacer()
+        .with_flex_child(Button::new("Single Page".to_string()).on_click(|ctx, data: &mut EpubData, env| {
+            ctx.submit_command(CHANGE_VISUALIZATION.with(VisualizationMode::Single));
+        }), 1.)
+        .with_default_spacer()
+        .with_flex_child(Button::new("Two Page".to_string()).on_click(|ctx, data: &mut EpubData, env| {
+            ctx.submit_command(CHANGE_VISUALIZATION.with(VisualizationMode::Two));
+        }), 1.)
+        .with_default_spacer()
+        .with_flex_child(Button::new("Scroll".to_string()).on_click(|ctx, data: &mut EpubData, env| {
+            ctx.submit_command(CHANGE_VISUALIZATION.with(VisualizationMode::Scroll));
+        }), 1.);
         let toolbar_controller = 
         WidgetPod::new(ToolbarController::new(Arc::new(expanded)));
         Self {
