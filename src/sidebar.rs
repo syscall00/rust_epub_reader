@@ -1,15 +1,11 @@
-use druid::{Widget, Color, RenderContext, WidgetPod, widget::{Scroll, List, Label, TextBox}, LayoutCtx, UpdateCtx, LifeCycle, LifeCycleCtx, Env, Size, BoxConstraints, PaintCtx, EventCtx, Event, WidgetExt, Point, piet::{Text, TextLayoutBuilder}, LensExt};
+use druid::{Widget, Color, RenderContext, WidgetPod, widget::{Scroll, List, Label, TextBox, Controller, Flex}, LayoutCtx, UpdateCtx, LifeCycle, LifeCycleCtx, Env, Size, BoxConstraints, PaintCtx, EventCtx, Event, WidgetExt, Point, piet::{Text, TextLayoutBuilder}, LensExt, Data, ArcStr, TextLayout};
 
 use crate::
-{appstate::{ EpubData, IndexedText}, 
+{appstate::{ EpubData, IndexedText, AppState}, 
 
 core::{commands::{INTERNAL_COMMAND, GO_TO_POS}, style::{BAR_COLOR, CONTENT_COLOR}}};
 
 const ICON_SIZE : f64 = 40.;
-
-
-
-
     pub enum InternalUICommand {
     SwitchTab(TabKind),
 }
@@ -97,201 +93,189 @@ impl Widget<EpubData> for CustomButton {
 }
 
 
-pub struct Search {
-    input_box: WidgetPod<EpubData, Box<dyn Widget<EpubData>>>,
-    search_results: WidgetPod<EpubData, Box<dyn Widget<EpubData>>>,
-
+struct ClickableLabel {
+    layout: TextLayout<ArcStr>,
 }
-
-impl Search {
-    pub fn new() -> Self {
-
-        let input_box = TextBox::new().lens(EpubData::search_input).boxed();
-
-        let search_results = List::new(|| {
-            Label::new(|item: &IndexedText, _env: &_| item.key.clone())
-            .on_click(|ctx, data: &mut IndexedText, _env | {
-                ctx.submit_command(GO_TO_POS.with((*data.value).clone()));
-            })
-
-            }).lens(EpubData::search_results).boxed();
-
-
+impl ClickableLabel {
+    fn new() -> Self {
         Self {
-            input_box: WidgetPod::new(input_box),
-            search_results: WidgetPod::new(search_results),
+            layout: TextLayout::new(),
         }
     }
 }
 
-impl Widget<EpubData> for Search {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
+impl Widget<IndexedText> for ClickableLabel {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut IndexedText, _env: &Env) {
         match event {
-            // If click middle, search
             Event::MouseDown(mouse) => {
-                if mouse.button.is_right() {
-                    data.search_string_in_book();
-                    ctx.request_update();
-                    ctx.request_layout();
+                if mouse.button.is_left() {
+                    ctx.submit_command(GO_TO_POS.with((*data.value).clone()));
                 }
             }
-            _ => {},
+            Event::MouseMove(_) => {
+                ctx.set_cursor(&druid::Cursor::Pointer);
+            }
+            _ => {}
         }
-        self.input_box.event(ctx, event, data, env);
-        self.search_results.event(ctx, event, data, env);
+    }
+
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &IndexedText, env: &Env) {
+        match event {
+            LifeCycle::WidgetAdded => {
+                self.layout.set_text(data.key.clone());
+                self.layout.rebuild_if_needed(ctx.text(), env);
+            }
+            LifeCycle::HotChanged(_) => {
+                ctx.request_paint();
+            }
+            _ => {}
+        }
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &IndexedText, data: &IndexedText, env: &Env) {
+        if !(old_data.same(data)) {
+            self.layout.set_text(data.key.clone());
+            self.layout.rebuild_if_needed(ctx.text(), env);
+            ctx.request_layout();
+            
+        }
+    }
+
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &IndexedText, env: &Env) -> Size {
+        self.layout.set_wrap_width(bc.max().width);
+        self.layout.rebuild_if_needed(ctx.text(), env);
+        let mut size = self.layout.size();
+        size.width = bc.max().width;
+        bc.constrain(size)
+    }
+
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &IndexedText, env: &Env) {
+        let size = ctx.size();
+        if ctx.is_hot() {
+        let rect = ctx.size().to_rect();
+
+            ctx.fill(rect, &Color::BLUE);
+        }
+        //println!("painting : {:?}", size);
+        ctx.clip(size.to_rect());
+
+        self.layout.draw(ctx,(5., 0.));
+        
+    }
+    
+}
+
+pub struct Panel {
+    header: TextLayout<ArcStr>,
+    input_widget: Option<WidgetPod<EpubData, Box<dyn Widget<EpubData>>>>,
+    widget: WidgetPod<EpubData, Box<dyn Widget<EpubData>>>,
+
+}
+
+impl Panel {
+    pub fn new(title: &str, widget: Box<dyn Widget<EpubData>>) -> Self {
+        Self {
+            header: TextLayout::from_text(title.to_string()),
+            input_widget: None,
+            widget: WidgetPod::new(widget),
+        }
+    }
+
+    pub fn with_input_widget(mut self) -> Self {
+        let input_widget = TextBox::new().lens(EpubData::search_input).boxed();
+        self.input_widget = Some(WidgetPod::new(input_widget));
+        self
+    }
+}
+
+impl Widget<EpubData> for Panel {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
+        if self.input_widget.is_some() {
+            match event {
+                Event::KeyUp(key) => {
+                    if key.code == druid::Code::Enter {
+                        data.search_string_in_book();
+                        ctx.request_update();
+                        ctx.request_layout();
+                    }
+                },
+                _ => {},
+            }
+            self.input_widget.as_mut().unwrap().event(ctx, event, data, env);
+        }
+
+        self.widget.event(ctx, event, data, env);
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, env: &Env) {
-        self.input_box.lifecycle(ctx, event, data, env);
-        self.search_results.lifecycle(ctx, event, data, env);
+        if self.input_widget.is_some() {
+            self.input_widget.as_mut().unwrap().lifecycle(ctx, event, data, env);
+        }
+        self.widget.lifecycle(ctx, event, data, env);
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, env: &Env) {
-        self.input_box.update(ctx, data, env);
-        self.search_results.update(ctx, data, env);
+        if !old_data.same(data) {
+            if self.input_widget.is_some() {
+                self.input_widget.as_mut().unwrap().update(ctx, data, env);
+            }
+            self.widget.update(ctx, data, env);
+        }
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &EpubData, env: &Env) -> Size {
         let size = bc.max();
-        let input_box_size = Size::new(size.width, 30.);
-        let search_results_size = Size::new(size.width, 300.);
-        self.input_box.layout(ctx, &BoxConstraints::tight(input_box_size), data, env);
-        self.input_box.set_origin(ctx, data, env, Point::ORIGIN);
-        self.search_results.layout(ctx, &BoxConstraints::tight(search_results_size), data, env);
-        self.search_results.set_origin(ctx, data, env, Point::new(0., 30.));
+        let mut widget_size = Size::new(size.width, size.height - 30.);
+        let mut input_widget_size = Size::new(size.width, 0.);
+        if self.input_widget.is_some() {
+            input_widget_size = self.input_widget.as_mut().unwrap().layout(ctx, &BoxConstraints::tight(Size::new(size.width-50., 25.)), data, env);
+            self.input_widget.as_mut().unwrap().set_origin(ctx, data, env, Point::new(0., 30.));
+            widget_size.height -= 25.;
+        }
+        
+        self.header.rebuild_if_needed(ctx.text(), env);
+        self.header.layout();
+        self.widget.layout(ctx, &BoxConstraints::tight(widget_size), data, env);
+        self.widget.set_origin(ctx, data, env, Point::new(0., 30.+ input_widget_size.height));
 
         size
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
-        self.input_box.paint(ctx, data, env);
-        self.search_results.paint(ctx, data, env);
+        let size = ctx.size();
+        ctx.fill(size.to_rect(), &CONTENT_COLOR.unwrap());
+        self.header.draw(ctx, (5., 5.));
+        if self.input_widget.is_some() {
+            self.input_widget.as_mut().unwrap().paint(ctx, data, env);
+        }
+        self.widget.paint(ctx, data, env);
     }
 }
-
 pub struct Toc {
     list : WidgetPod<EpubData, Box<dyn Widget<EpubData>>>,
 }
+
 
 impl Toc {
     pub fn new() -> Self {
 
         let list = List::new(|| {
-            Label::new(|item: &IndexedText, _env: &_| item.key.clone())
-            .on_click(|ctx, data: &mut IndexedText, _env | {
-                ctx.submit_command(GO_TO_POS.with((*data.value).clone()));
-            })
 
-            }).lens(EpubData::table_of_contents).boxed();
+            //| &IndexedText, _env: &_ | -> Widget<T> + 'static
+            //let a = | item: &IndexedText, _env: &Env| -> String {
+            //    item.key.clone()
+            //};
+            //Label::new(a)
+            ClickableLabel::new()
+
+            })
+            .lens(EpubData::table_of_contents).boxed();
 
         Self {
-            list : WidgetPod::new(list)
+            list : WidgetPod::new(Scroll::new(list).vertical().boxed())
         }
     }
 }
-
-impl Widget<EpubData> for Toc {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
-
-        self.list.event(ctx, event, data, env);
-    }
-
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &EpubData, _env: &Env) {
-        self.list.lifecycle(_ctx, _event, _data, _env);
-    }
-
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &EpubData, _data: &EpubData, _env: &Env) {
-        self.list.update(_ctx, _data, _env);
-    }
-
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &EpubData, env: &Env) -> Size {
-        let size = self.list.layout(ctx, bc, data, env);
-        self.list.set_origin(ctx, data, env, Point::new(0., 30.));
-        size
-    }
-
-    fn paint(&mut self, ctx: &mut PaintCtx, _data: &EpubData, _env: &Env) {
-        let rect = ctx.size().to_rect();
-
-        let text = ctx.text();
-        let layout = text
-            .new_text_layout("TABLE OF CONTENTS")
-            .font(druid::FontFamily::MONOSPACE, 14.0)
-
-            .text_color(Color::WHITE)
-            .max_width(ctx.size().width-10.)
-            .build()
-            .unwrap();
-        ctx.draw_text(&layout, (5.0, 10.0));
-    
-        self.list.paint(ctx, _data, _env);
-    
-    }
-}
-
-
-pub struct Hightlights {
-    list : WidgetPod<EpubData, Box<dyn Widget<EpubData>>>,
-}
-
-impl Hightlights {
-    pub fn new() -> Self {
-
-        let list = List::new(|| {
-            Label::new(|item: &IndexedText, _env: &_| item.key.clone())
-            .on_click(|ctx, data: &mut IndexedText, _env | {
-                ctx.submit_command(GO_TO_POS.with((*data.value).clone()));
-            })
-
-            }).lens(EpubData::book_highlights).boxed();
-
-        Self {
-            list : WidgetPod::new(list)
-        }
-    }
-}
-
-impl Widget<EpubData> for Hightlights {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
-
-        self.list.event(ctx, event, data, env);
-    }
-
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &EpubData, _env: &Env) {
-        self.list.lifecycle(_ctx, _event, _data, _env);
-    }
-
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &EpubData, _data: &EpubData, _env: &Env) {
-        self.list.update(_ctx, _data, _env);
-    }
-
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &EpubData, env: &Env) -> Size {
-        let size = self.list.layout(ctx, bc, data, env);
-        self.list.set_origin(ctx, data, env, Point::new(0., 30.));
-        size
-    }
-
-    fn paint(&mut self, ctx: &mut PaintCtx, _data: &EpubData, _env: &Env) {
-        let rect = ctx.size().to_rect();
-
-        let text = ctx.text();
-        let layout = text
-            .new_text_layout("HIGHLIGHTS")
-            .font(druid::FontFamily::MONOSPACE, 14.0)
-
-            .text_color(Color::WHITE)
-            .max_width(ctx.size().width-10.)
-            .build()
-            .unwrap();
-        ctx.draw_text(&layout, (5.0, 10.0));
-    
-        self.list.paint(ctx, _data, _env);
-    
-    }
-}
-
-
-
 
 pub struct Sidebar {
     side_buttons : Vec<WidgetPod<EpubData, Box<dyn Widget<EpubData>>>>,
@@ -307,11 +291,57 @@ impl Sidebar {
         let mut panels = Vec::new();
 
         for kind in vec![TabKind::Toc, TabKind::Search, TabKind::Highlights] {
-
+    
             match &kind {
-                TabKind::Toc => panels.push(WidgetPod::new((Toc::new()).boxed())),
-                TabKind::Search => panels.push(WidgetPod::new((Search::new()).boxed())),
-                TabKind::Highlights => panels.push(WidgetPod::new((Hightlights::new()).boxed())),
+                TabKind::Toc => {
+                    const TOC_TITLE : &str = "TABLE OF CONTENTS";
+                    let widget = Scroll::new(
+                        List::new(|| {
+                            ClickableLabel::new()
+                        }
+                    )
+                    .lens(EpubData::table_of_contents)).vertical().boxed();
+        
+                    panels.push(
+                        WidgetPod::new((
+                            Panel::new(TOC_TITLE, widget))
+                            .boxed()
+                        )
+                    )
+
+                },
+                TabKind::Search => {
+                    const TOC_TITLE : &str = "SEARCH";
+                    let widget = Scroll::new(
+                            List::new(|| {
+                                ClickableLabel::new()
+                    }).lens(EpubData::search_results)).vertical()
+                    .boxed();
+        
+                    panels.push(
+                        WidgetPod::new((
+                            Panel::new(TOC_TITLE, widget))
+                            .with_input_widget()
+                            .boxed()
+                        )
+                    )
+                },
+                TabKind::Highlights => {
+                    const TOC_TITLE : &str = "HIGHLIGHTS";
+                    let widget = Scroll::new(
+                        List::new(|| {
+                            ClickableLabel::new()
+                        }
+                    )
+                    .lens(EpubData::book_highlights)).vertical().boxed();
+        
+                    panels.push(
+                        WidgetPod::new((
+                            Panel::new(TOC_TITLE, widget))
+                            .boxed()
+                        )
+                    )
+                },
                 _ => {},
 
             }
@@ -388,6 +418,7 @@ impl Widget<EpubData> for Sidebar {
     }
 
     fn layout(&mut self, ctx: &mut druid::LayoutCtx, bc: &BoxConstraints, data: &EpubData, env: &druid::Env) -> druid::Size {
+        const PANEL_PADDING : f64 = 0.;
         let max_size = bc.max();
         let closed_size = Size::new(ICON_SIZE, max_size.height);
         let mut prev_height = Point::new(0., 0.);
@@ -398,7 +429,7 @@ impl Widget<EpubData> for Sidebar {
             prev_height.y += button.layout_rect().height();
         }
         if self.opened_tab.is_some() {
-            self.get_active_panel().layout(ctx, &BoxConstraints::tight(max_size), data, env);
+            self.get_active_panel().layout(ctx, &BoxConstraints::tight(Size::new(ICON_SIZE*6., max_size.height-PANEL_PADDING)), data, env);
             self.get_active_panel().set_origin(ctx, data, env, Point::new(ICON_SIZE, 0.));
             Size::new(ICON_SIZE*6., max_size.height)
         } else {
@@ -408,11 +439,6 @@ impl Widget<EpubData> for Sidebar {
 
     fn paint(&mut self, ctx: &mut druid::PaintCtx, data: &EpubData, env: &druid::Env) {
         
-        if self.opened_tab.is_some() {
-            let size = ctx.size();
-            ctx.fill(size.to_rect(), &CONTENT_COLOR.unwrap());
-        }
-
         let rect = Size::new(ICON_SIZE, ctx.size().height).to_rect();
         ctx.fill(rect, &BAR_COLOR.unwrap());
     
@@ -430,20 +456,19 @@ impl Widget<EpubData> for Sidebar {
 
             TabKind::Toc => {
                 sizee.y0 = 0.;
-                ctx.fill(sizee, &Color::rgb8(255, 255, 255));
-            }
-            TabKind::Highlights => {
-                sizee.y0 = ICON_SIZE;
-                sizee.y1 = ICON_SIZE*2.;
-                ctx.fill(sizee, &Color::rgb8(255, 255, 255));
             }
             TabKind::Search => {
+                sizee.y0 = ICON_SIZE;
+                sizee.y1 = ICON_SIZE*2.;
+            }
+            TabKind::Highlights => {
                 sizee.y0 = ICON_SIZE*2.;
                 sizee.y1 = ICON_SIZE*3.;
 
-                ctx.fill(sizee, &Color::rgb8(255, 255, 255));
             }
         }
+        ctx.fill(sizee, &Color::rgb8(255, 255, 255));
+
     }
     }
 }

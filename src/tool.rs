@@ -1,6 +1,6 @@
 use druid::Data;
 
-#[derive(Clone, PartialEq, Data)]
+#[derive(Clone, PartialEq, Data, Debug)]
 pub enum Tool {
     Arrow, 
     Marker,

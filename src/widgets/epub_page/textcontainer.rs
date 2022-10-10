@@ -2,13 +2,12 @@
 use std::ops::Range;
 
 use druid::kurbo::Line;
-use druid::widget::{ClipBox, Axis, ViewSwitcher};
+use druid::widget::{ClipBox, Scroll, Axis, ViewSwitcher};
 use druid::{
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
     LifeCycleCtx, PaintCtx, Point, RenderContext, Size, UpdateCtx,
-    Widget, WidgetPod, Data, Modifiers, WidgetExt,
+    Widget, WidgetPod, Data, Modifiers, WidgetExt, Rect,
 };
-
 use crate::appstate::{EpubData};
 use crate::core::commands::{GO_TO_POS, CHANGE_PAGE, VisualizationMode};
 
@@ -19,20 +18,21 @@ pub struct TextContainer {
     // tool: Tool,
 
     // List of text lines
-    label_text_lines: WidgetPod<EpubData, ClipBox<EpubData, MyLabel>>,
+    label_text_lines: WidgetPod<EpubData, Scroll<EpubData, MyLabel>>,
     
 }
 
 impl TextContainer {
     pub fn new(_data : EpubData) -> Self {
 
-        let mut label = 
-        
-        ClipBox::new(
+        let mut label = Scroll::new(
             MyLabel::new()
             .with_text_color(Color::BLACK)
-        );
-        label.set_constrain_horizontal(true);
+        ).disable_scrollbars();
+        //label.set_vertical_scroll_enabled(false);
+        label.set_horizontal_scroll_enabled(false);
+        
+        //// label.set_constrain_horizontal(true);
 
 
         //let visualization_mode_switcher = ViewSwitcher::new(
@@ -53,123 +53,82 @@ impl TextContainer {
     }
 
 
-    fn clip_widget (&mut self) -> &mut ClipBox<EpubData, MyLabel> {
+    fn clip_widget (&mut self) -> &mut Scroll<EpubData, MyLabel> {
         self.label_text_lines.widget_mut()
+        
     }  
     pub fn move_if_not_out_of_range(&mut self, position : f64) -> bool {
-        self.clip_widget().pan_to_on_axis(Axis::Vertical, position)
-
+        //self.clip_widget().pan_to_on_axis(Axis::Vertical, position)
+        self.clip_widget().scroll_to_on_axis(Axis::Vertical, position)
     }
 }
 
 impl Widget<EpubData> for TextContainer {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
         match event {
-
-            Event::KeyDown(key_event) => {
-                println!("Ev {:?}", key_event);
-                if key_event.key == druid::keyboard_types::Key::ArrowUp {
-                    data.epub_metrics.percentage_page_in_chapter += 1.;
-                    if !self.move_if_not_out_of_range(
-                        ctx.size().height * data.epub_metrics.percentage_page_in_chapter) 
-                        {
-                            data.next_chapter();
-                            data.epub_metrics.percentage_page_in_chapter = 0.;
-                        }
-                    }
-
-
-                if key_event.key == druid::keyboard_types::Key::ArrowDown {
-                    data.epub_metrics.percentage_page_in_chapter -= 1.;
-
-                    if !self.label_text_lines
-                    .widget_mut()
-                    .pan_to_on_axis(
-                        Axis::Vertical, ctx.size().height
-                        * data.epub_metrics.percentage_page_in_chapter) {
-                            data.previous_chapter();
-                            data.epub_metrics.percentage_page_in_chapter = 0.;
-                        }                    
-                }
-            }
-            
             Event::Command(cmd) => {
                 if cmd.is(CHANGE_PAGE) {
-
                     let pos = cmd.get_unchecked(CHANGE_PAGE);
 
                     // DO Next Page
                     if *pos  {
-                        data.epub_metrics.percentage_page_in_chapter += 1.;
-                        if !self.label_text_lines
-                        .widget_mut()
-                        .pan_to_on_axis(
-                            Axis::Vertical, ctx.size().height
-                            * data.epub_metrics.percentage_page_in_chapter) {
-                                data.next_chapter();
-                                data.epub_metrics.percentage_page_in_chapter = 0.;
-                            }
+                        let can_move = self.move_if_not_out_of_range(
+                            ctx.size().height * (data.epub_metrics.get_next_page_in_chap()) as f64);
+                        data.next(can_move);
                     }
                     // DO Previous page 
                     else {
                         
-                        data.epub_metrics.percentage_page_in_chapter -= 1.;
+                        data.epub_metrics.current_page_in_chapter -= 1;
 
-                        if !self.label_text_lines
-                        .widget_mut()
-                        .pan_to_on_axis(
-                            Axis::Vertical, ctx.size().height
-                            * data.epub_metrics.percentage_page_in_chapter) {
+                        if !self.move_if_not_out_of_range(
+                            ctx.size().height * data.epub_metrics.get_previous_page_in_chap() as f64) {
                                 data.previous_chapter();
-                                data.epub_metrics.percentage_page_in_chapter = 0.;
+                                data.epub_metrics.current_page_in_chapter = 0;
                             }                    
                         }
                         ctx.request_layout();
                 }
+
+
+
                 else if cmd.is(GO_TO_POS) {
                     let pos = cmd.get_unchecked(GO_TO_POS);
+                    println!("Pos: {:?}", self.label_text_lines.widget_mut().offset());
                     data.move_to_pos(pos);
                     let label = self.label_text_lines.widget_mut().child_mut();
-                    
-                    let mut  ppt = label.layout.point_for_text_position(pos.page);
-                    ppt.y -= 15.;
-                    self.label_text_lines
-                        .widget_mut()
-                        .pan_to(ppt);
-                    ctx.request_layout();
+                    let mut ppt = label.layout.point_for_text_position(pos.page);
+                /////     self.label_text_lines
+                /////         .widget_mut()
+                /////         .scroll_to_on_axis(Axis::Vertical, ppt.x);
                 }
+                ///// ctx.request_layout();
             }
-            Event::Wheel(wheel) => {
-                // if scrolling down, next page; if scrolling up, previous page
-                if wheel.wheel_delta.y > 0. {
-                    data.epub_metrics.percentage_page_in_chapter += 1.;
-                    if !self.label_text_lines
-                    .widget_mut()
-                    .pan_to_on_axis(
-                        Axis::Vertical, ctx.size().height
-                        * data.epub_metrics.percentage_page_in_chapter) {
-                            data.next_chapter();
-                            data.epub_metrics.percentage_page_in_chapter = 0.;
-                        }
-                }
-                else {
-                    
-                    data.epub_metrics.percentage_page_in_chapter -= 1.;
+            ///// Event::Wheel(wheel) => {
+            /////     // if scrolling down, next page; if scrolling up, previous page
+            /////     if wheel.wheel_delta.y > 0. {
+            /////         data.epub_metrics.current_page_in_chapter += 1;
+            /////         if !self.move_if_not_out_of_range(
+            /////             ctx.size().height * data.epub_metrics.current_page_in_chapter as f64) {
+            /////                 data.next_chapter();
+            /////                 data.epub_metrics.current_page_in_chapter = 0;
+            /////             }
+            /////     }
+            /////     else {
+            /////         
+            /////         data.epub_metrics.current_page_in_chapter -= 1;
+///// 
+            /////         if !self.move_if_not_out_of_range(
+            /////             ctx.size().height * data.epub_metrics.current_page_in_chapter as f64) {
+            /////                 data.previous_chapter();
+            /////                 data.epub_metrics.current_page_in_chapter = 0;
+            /////             }                    
+            /////         }
+///// 
+            /////         ctx.request_layout();
+///// 
 
-                    if !self.label_text_lines
-                    .widget_mut()
-                    .pan_to_on_axis(
-                        Axis::Vertical, ctx.size().height
-                        * data.epub_metrics.percentage_page_in_chapter) {
-                            data.previous_chapter();
-                            data.epub_metrics.percentage_page_in_chapter = 0.;
-                        }                    
-                    }
-
-
-
-                
-            }
+            ////}
             _ => { } 
         }
 
@@ -212,7 +171,6 @@ impl Widget<EpubData> for TextContainer {
 pub struct MyLabel {
     layout: TextLayout<RichText>,
     selection : Selection,
-    sel_rects: Vec<Selection>,
 }
 
 
@@ -222,7 +180,6 @@ impl MyLabel {
         Self {
             layout: TextLayout::new(),
             selection : Selection::default(),
-            sel_rects: Vec::new(),
         }
     }
 
@@ -260,6 +217,14 @@ impl MyLabel {
     }
 
 
+    fn paint_selection(&mut self, ctx : &mut PaintCtx, lines : Vec<Rect>, color: &Color) {
+        for region in lines {
+            let y = region.max_y().floor();
+            let line = Line::new((region.min_x(), y-10.), (region.max_x(), y-10.));
+            ctx.stroke(line, color, 13.0);
+        }
+    }
+
 }
 
 
@@ -272,7 +237,7 @@ use druid::{Vec2, TextLayout, Cursor};
 const LABEL_X_PADDING: f64 = 2.0;
 impl Widget<EpubData> for MyLabel {
 
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut EpubData, _env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, _env: &Env) {
         match event {
             Event::MouseUp(event) => {
                 // Account for the padding
@@ -280,47 +245,67 @@ impl Widget<EpubData> for MyLabel {
                 if let Some(link) = self.layout.link_for_pos(pos) {
                     ctx.submit_command(link.command.clone());
                 }
-                self.sel_rects.push(self.selection);
-                ctx.set_active(false);
+                if event.button.is_left() && self.selection.active != self.selection.anchor {
+                    if data.selected_tool == crate::tool::Tool::Marker {
+                        data.add_book_highlight(self.selection.anchor, self.selection.active);
+                        self.selection.active = 0;
+                        self.selection.anchor = 0;    
+                    }
+                    ctx.request_update();
+                    ctx.request_paint();
+                }
+                ctx.set_handled();
+
             }
             Event::MouseDown(event) => {
-                self.do_mouse_down(event.pos, event.mods);
-                ctx.set_active(true);
-                ctx.request_paint();
+                if event.button.is_left() {
+                    self.do_mouse_down(event.pos, event.mods);
+                    ctx.request_paint();
+                }
+                else if event.button.is_right() {
+                    // Open a context menu!
+
+                    for (i, hightlight) in data.book_highlights.iter().enumerate() {
+                        let r = hightlight.value.slice.0..hightlight.value.slice.1;
+                        let rect = self.layout.rects_for_range(r);
+                        for r in rect {
+                            if r.contains(event.pos) {
+                                println!("RIMUOVO {}", i);
+                                break;
+                                // Should open a context menu
+                            }
+                        }
+
+                    }
+
+                    ctx.set_handled();
+                    //}
+                    
+                }
             }
             Event::MouseMove(event) => {
                 // IF Selected tool is Highlighter
-                if !ctx.is_disabled() {
-                    ctx.set_cursor(&Cursor::IBeam);
-                    if ctx.is_active() {
+                ctx.set_cursor(&Cursor::IBeam);
+                
+                
+                if event.buttons.contains(druid::MouseButton::Left)  {
+                        println!("mouse move");
                         self.do_drag(event.pos);
                         ctx.request_paint();
                     }
-                    /*
-                    if !ctx.is_disabled() {
-                    ctx.set_cursor(&Cursor::IBeam);
-                    if ctx.is_active() {
-                        let pre_sel = self.borrow().selection();
-                        self.borrow_mut().do_drag(mouse.pos);
-                        if self.borrow().selection() != pre_sel {
-                            self.borrow_mut()
-                                .update_pending_invalidation(ImeInvalidation::SelectionChanged);
-                            ctx.request_update();
-                            ctx.request_paint();
-                        }
-                    }   
-                    */
+
+                //}
+                                
+                // Account for the padding
+                let pos = event.pos - Vec2::new(LABEL_X_PADDING, 0.0);
+                if self.layout.link_for_pos(pos).is_some() {
+                    ctx.set_cursor(&Cursor::Pointer);
                 }
                 else {
-                    // Account for the padding
-                    let pos = event.pos - Vec2::new(LABEL_X_PADDING, 0.0);
-
-                    if self.layout.link_for_pos(pos).is_some() {
-                        ctx.set_cursor(&Cursor::Pointer);
-                    } else {
-                        ctx.clear_cursor();
-                    }
+                    
                 }
+                ctx.set_handled();
+
             }
 
             _ => {  }
@@ -348,7 +333,6 @@ impl Widget<EpubData> for MyLabel {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &EpubData, env: &Env) -> Size {
-        bc.debug_check("Label");
 
         let width = bc.max().width - LABEL_X_PADDING * 2.0;
 
@@ -364,17 +348,24 @@ impl Widget<EpubData> for MyLabel {
         size
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, _data: &EpubData, _env: &Env) {
-
-
-        for selection in self.sel_rects.iter() {
-            let rects = self.layout.rects_for_range(selection.range());
-            for region in rects {
-                let y = region.max_y().floor();
-                let line = Line::new((region.min_x(), y), (region.max_x(), y));//- Vec2::new(LABEL_X_PADDING, 0.);
-                ctx.stroke(line, &Color::YELLOW, 10.0);
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
+        
+        for selection in data.book_highlights.iter() {
+            if selection.value.chapter != data.epub_metrics.current_chapter {
+                continue;
             }
-            }
+            let rects = self.layout.rects_for_range(selection.value.slice.0..selection.value.slice.1);
+            self.paint_selection(ctx, rects, &Color::YELLOW);
+        }
+
+        let selection_lines = self.layout.rects_for_range(self.selection.range());
+        if !(data.selected_tool == crate::tool::Tool::Marker) {
+            self.paint_selection(ctx, selection_lines, &env.get(druid::theme::SELECTED_TEXT_BACKGROUND_COLOR));
+        }
+        else {
+            self.paint_selection(ctx, selection_lines,&Color::YELLOW);
+        }
+
 
         let origin = Point::new(LABEL_X_PADDING, 0.0);
         let label_size = ctx.size();
@@ -382,4 +373,7 @@ impl Widget<EpubData> for MyLabel {
         self.layout.draw(ctx, origin);
 
     }
+
+
+    
 }

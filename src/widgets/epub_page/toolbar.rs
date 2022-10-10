@@ -10,6 +10,7 @@ use druid::{
 
 use crate::appstate::EpubData;
 use crate::core::commands::{REQUEST_EDIT, CHANGE_VISUALIZATION, VisualizationMode};
+use crate::tool::Tool;
 
 
 // Create a base widget for styling toolbar buttons
@@ -143,6 +144,17 @@ impl Toolbar {
         //        ctx.submit_command(GO_TO_POS.with(15));
         //    }), 0.2)
         .with_flex_child(Button::new("Save".to_string()), 1.)
+        .with_default_spacer()
+        .with_flex_child(Button::new("Marker".to_string()).on_click(|ctx, data: &mut EpubData, env| {
+            if data.selected_tool == Tool::Marker {
+                data.selected_tool = Tool::default();
+            }
+            else {
+                data.selected_tool = Tool::Marker;
+            }
+            println!("Data sel: {:?}", data.selected_tool);
+            ////ctx.submit_command(CHANGE_VISUALIZATION.with(VisualizationMode::Single));
+        }), 1.)
         .with_default_spacer()
         .with_flex_child(Button::new("Single Page".to_string()).on_click(|ctx, data: &mut EpubData, env| {
             ctx.submit_command(CHANGE_VISUALIZATION.with(VisualizationMode::Single));
