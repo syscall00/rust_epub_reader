@@ -145,6 +145,9 @@ pub struct EpubMetrics {
     pub num_chapters: usize,
     pub book_length : usize,
 
+
+    pub BOOK_POSITION: usize,
+
     // calculate at change of new chapter:
     pub current_chapter: usize,
     pub current_page_in_chapter: usize,
@@ -161,6 +164,7 @@ impl EpubMetrics {
 
         EpubMetrics {
             num_chapters,
+            BOOK_POSITION: 0,
             book_length,
             current_chapter: 0,
             current_page_in_chapter : 0,
@@ -180,13 +184,41 @@ impl EpubMetrics {
         }
     }
 
-    pub fn change_chapter(&mut self, chapter_length : usize) {
+    pub fn set_position(&mut self, pos : usize, b : bool) {
+        if b  {
+            //let self.BOOK_POSITION = if self.BOOK_POSITION + pos > self.book_length {
+            //    self.book_length
+            //} else {
+            //    self.BOOK_POSITION + pos
+            //};
+            self.BOOK_POSITION += pos;
+
+        }
+        else {
+            self.BOOK_POSITION = if self.BOOK_POSITION < pos {
+                0
+            } else {
+                self.BOOK_POSITION - pos
+            };
+        }
+    }
+
+    pub fn impose_position(&mut self, pos : usize) {
+        self.BOOK_POSITION = pos;
+    }
+
+    pub fn change_chapter(&mut self, chapter_num : usize, chapter_length : usize) {
         self.chapter_length = chapter_length;
+        self.current_chapter = chapter_num;
         self.change_page(0);
+        
 
     }
     
     pub fn change_page (&mut self, current_position : usize) {
+        self.current_page_in_chapter = current_position;
+        self.BOOK_POSITION = current_position;
+
         //self.position_in_chapter = current_position;
         //self.percentage_page_in_chapter = self.position_in_chapter as f64 / self.chapter_length as f64 * 100.;
         //self.percentage_page_in_book = self.position_in_chapter as f64 / self.book_length as f64 * 100.;
@@ -357,29 +389,34 @@ impl EpubData {
 
     }
     pub fn next_chapter(&mut self) {
-        self.epub_metrics.current_chapter+=1;
-        //self.pages = self.chapters[self.current_chapter].clone();
-        //self.visualized_page.as_str()[0..10];
-        self.visualized_page = self.rich_chapters[self.epub_metrics.current_chapter].clone();
-        self.epub_metrics.change_chapter(self.visualized_page.len());
+        if self.epub_metrics.current_chapter < self.chapters.len() - 1 {
+            self.epub_metrics.current_chapter += 1;
+            //self.epub_metrics.current_page_in_chapter = 0;
+            self.visualized_page = self.rich_chapters[self.epub_metrics.current_chapter].clone();
+            self.visualized_chapter = self.chapters[self.epub_metrics.current_chapter].clone().to_string();
+            self.epub_metrics.change_chapter(self.epub_metrics.current_chapter, self.visualized_page.len());
+
+        }
 
     }
 
     pub fn move_to_pos(&mut self, position : &PagePosition) {
         let t = self.rich_chapters[position.chapter].clone();
-        self.epub_metrics.change_chapter(t.len());
+        self.epub_metrics.change_chapter(position.chapter, t.len());
         self.epub_metrics.current_page_in_chapter = position.page;
+        self.epub_metrics.BOOK_POSITION = position.page;
         println!("Page: {:?}", position);
         self.visualized_page = t;
 
     }
 
     pub fn previous_chapter(&mut self) {
-        let (rich, _) = rebuild_rendered_text(self.get_current_chapter(), -1);
-        self.epub_metrics.change_chapter(rich.len());
-
-        self.visualized_page = rich;
-        // go to last position in chapter
+        if self.epub_metrics.current_chapter > 0 {
+            self.epub_metrics.current_chapter-=1;
+            self.visualized_page = self.rich_chapters[self.epub_metrics.current_chapter].clone();
+            self.visualized_chapter = self.chapters[self.epub_metrics.current_chapter].clone().to_string();
+            self.epub_metrics.change_chapter(self.epub_metrics.current_chapter, self.visualized_page.len());
+        }
     }
 
 }

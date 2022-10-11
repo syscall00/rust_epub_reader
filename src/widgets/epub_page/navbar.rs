@@ -109,6 +109,9 @@ impl Widget<EpubData> for NavigationBar {
                 else if i == 1 {
                     t.push_str(&(data.epub_metrics.current_page_in_chapter+1).to_string());
                 }
+                else {
+                    t.push_str(&data.epub_metrics.BOOK_POSITION.to_string());
+                }
 
                 let layout = text
                 .new_text_layout(t)

@@ -18,21 +18,29 @@ pub struct TextContainer {
     // tool: Tool,
 
     // List of text lines
-    label_text_lines: WidgetPod<EpubData, Scroll<EpubData, MyLabel>>,
+    
+    //label_text_lines: WidgetPod<EpubData, Scroll<EpubData, MyLabel>>,
+    label_text_lines: WidgetPod<EpubData, ClipBox<EpubData, MyLabel>>,
     
 }
 
 impl TextContainer {
     pub fn new(_data : EpubData) -> Self {
 
-        let mut label = Scroll::new(
+        let mut label = ClipBox::new(
             MyLabel::new()
             .with_text_color(Color::BLACK)
-        ).disable_scrollbars();
-        //label.set_vertical_scroll_enabled(false);
-        label.set_horizontal_scroll_enabled(false);
+        );
+        label.set_constrain_horizontal(true);
         
-        //// label.set_constrain_horizontal(true);
+        //// SCROLL
+        //  let mut label = ClipBox::new(
+        //      MyLabel::new()
+        //     .with_text_color(Color::BLACK)
+        //  ).disable_scrollbars();
+        //label.set_vertical_scroll_enabled(false);
+        //label.set_horizontal_scroll_enabled(false);
+        
 
 
         //let visualization_mode_switcher = ViewSwitcher::new(
@@ -53,13 +61,33 @@ impl TextContainer {
     }
 
 
-    fn clip_widget (&mut self) -> &mut Scroll<EpubData, MyLabel> {
-        self.label_text_lines.widget_mut()
-        
+    //fn clip_widget (&mut self) -> &mut Scroll<EpubData, MyLabel> {
+    fn clip_widget (&self) -> &ClipBox<EpubData, MyLabel> {
+        self.label_text_lines.widget() 
     }  
+
+    fn clip_mut (&mut self) -> &mut ClipBox<EpubData, MyLabel> {
+        self.label_text_lines.widget_mut() 
+    }
+
+    fn label (&self) -> &MyLabel {
+        self.clip_widget().child()
+    }
+    fn label_mut (&mut self) -> &mut MyLabel {
+        self.clip_mut().child_mut()
+    }
+
+    fn text_to_point(&self, text_pos: usize) -> Point {
+        self.label().layout.point_for_text_position(text_pos)
+    }
+
+    fn point_to_text(&self, point: Point) -> usize {
+        self.label().layout.text_position_for_point(point)
+    }
+
     pub fn move_if_not_out_of_range(&mut self, position : f64) -> bool {
-        //self.clip_widget().pan_to_on_axis(Axis::Vertical, position)
-        self.clip_widget().scroll_to_on_axis(Axis::Vertical, position)
+        self.clip_mut().pan_to_on_axis(Axis::Vertical, position)
+        //self.clip_widget().scroll_to_on_axis(Axis::Vertical, position)
     }
 }
 
@@ -67,42 +95,66 @@ impl Widget<EpubData> for TextContainer {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
         match event {
             Event::Command(cmd) => {
+
+                let orig = self.label_text_lines.widget().viewport();
+                let BOOK_POSITION = self.point_to_text(Point::new(orig.view_size.width, orig.view_size.height-20.));
+                //println!(" Num:{}", BOOK_POSITION );
+            
+
+
+                // Text that should be displayed
+                //let t = druid::piet::TextStorage::as_str(self.label().layout.text().unwrap());
+
+                //println!(" TEXT:{}", utf8_slice::slice(t, (orig.content_size.height % (orig.view_origin.y)) as usize, 
+                //        (orig.content_size.height % orig.view_origin.y) as usize + BOOK_POSITION));
+
+                ////println!("Vh size: {}", self.clip_mut().viewport_size());
+                ////println!("Vh: {:?}", self.clip_mut().viewport());
+
+                    
                 if cmd.is(CHANGE_PAGE) {
                     let pos = cmd.get_unchecked(CHANGE_PAGE);
+                    data.epub_metrics.set_position(BOOK_POSITION, *pos);
+                    let point = self.text_to_point(data.epub_metrics.BOOK_POSITION);
 
                     // DO Next Page
                     if *pos  {
                         let can_move = self.move_if_not_out_of_range(
-                            ctx.size().height * (data.epub_metrics.get_next_page_in_chap()) as f64);
+                            point.y);
+                        // let can_move = self.move_if_not_out_of_range(
+                        //     ctx.size().height * (data.epub_metrics.get_next_page_in_chap()) as f64);
                         data.next(can_move);
+                        
                     }
                     // DO Previous page 
                     else {
-                        
-                        data.epub_metrics.current_page_in_chapter -= 1;
+                        let can_move = self.move_if_not_out_of_range(point.y);
 
-                        if !self.move_if_not_out_of_range(
-                            ctx.size().height * data.epub_metrics.get_previous_page_in_chap() as f64) {
+                        if !can_move {
                                 data.previous_chapter();
-                                data.epub_metrics.current_page_in_chapter = 0;
                             }                    
-                        }
-                        ctx.request_layout();
+                    }
                 }
-
-
 
                 else if cmd.is(GO_TO_POS) {
                     let pos = cmd.get_unchecked(GO_TO_POS);
-                    println!("Pos: {:?}", self.label_text_lines.widget_mut().offset());
+                    println!("Pos: {:?}", self.text_to_point(pos.page));
+
                     data.move_to_pos(pos);
-                    let label = self.label_text_lines.widget_mut().child_mut();
-                    let mut ppt = label.layout.point_for_text_position(pos.page);
-                /////     self.label_text_lines
-                /////         .widget_mut()
-                /////         .scroll_to_on_axis(Axis::Vertical, ppt.x);
+                    data.epub_metrics.impose_position(pos.page);
+                    ctx.request_update();
+
+                    self.label_mut().set_selection(pos.page+10.. pos.page+ data.search_input.len()+10);
+                    let ppt = self.text_to_point(pos.page);
+                    self.label_text_lines
+                         .widget_mut()
+                         .pan_to(ppt);
+                    
                 }
-                ///// ctx.request_layout();
+                ctx.request_update();
+                ctx.request_layout();
+                ctx.request_paint();
+
             }
             ///// Event::Wheel(wheel) => {
             /////     // if scrolling down, next page; if scrolling up, previous page
@@ -202,6 +254,10 @@ impl MyLabel {
             self.selection = Selection::new(start, end);
 
         }
+    }
+
+    fn set_selection(&mut self, range: Range<usize>) {
+        self.selection = Selection::new(range.start, range.end);
     }
 
 
