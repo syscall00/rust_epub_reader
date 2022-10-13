@@ -1,7 +1,7 @@
 use druid::{Widget, Color, RenderContext, WidgetPod, widget::{Scroll, List, Label, TextBox, Controller, Flex}, LayoutCtx, UpdateCtx, LifeCycle, LifeCycleCtx, Env, Size, BoxConstraints, PaintCtx, EventCtx, Event, WidgetExt, Point, piet::{Text, TextLayoutBuilder}, LensExt, Data, ArcStr, TextLayout};
 
 use crate::
-{appstate::{ EpubData, IndexedText, AppState}, 
+{appstate::{ EpubData, IndexedText, AppState, SidebarData}, 
 
 core::{commands::{INTERNAL_COMMAND, GO_TO_POS}, style::{BAR_COLOR, CONTENT_COLOR}}};
 
@@ -142,10 +142,13 @@ impl Widget<IndexedText> for ClickableLabel {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &IndexedText, env: &Env) -> Size {
-        self.layout.set_wrap_width(bc.max().width);
+        //self.layout.set_wrap_width(bc.max().width);
         self.layout.rebuild_if_needed(ctx.text(), env);
-        let mut size = self.layout.size();
-        size.width = bc.max().width;
+        self.layout.set_wrap_width(f64::INFINITY);
+        let size = self.layout.size();
+        let text_metrics = self.layout.layout_metrics();
+        ctx.set_baseline_offset(text_metrics.size.height - text_metrics.first_baseline);
+
         bc.constrain(size)
     }
 
@@ -269,7 +272,7 @@ impl Toc {
             ClickableLabel::new()
 
             })
-            .lens(EpubData::table_of_contents).boxed();
+            .lens(EpubData::sidebar_data.then(SidebarData::table_of_contents)).boxed();
 
         Self {
             list : WidgetPod::new(Scroll::new(list).vertical().boxed())
@@ -300,7 +303,7 @@ impl Sidebar {
                             ClickableLabel::new()
                         }
                     )
-                    .lens(EpubData::table_of_contents)).vertical().boxed();
+                    .lens(EpubData::sidebar_data.then(SidebarData::table_of_contents))).vertical().boxed();
         
                     panels.push(
                         WidgetPod::new((
@@ -315,7 +318,7 @@ impl Sidebar {
                     let widget = Scroll::new(
                             List::new(|| {
                                 ClickableLabel::new()
-                    }).lens(EpubData::search_results)).vertical()
+                    }).lens(EpubData::sidebar_data.then(SidebarData::search_results))).vertical()
                     .boxed();
         
                     panels.push(
@@ -333,7 +336,7 @@ impl Sidebar {
                             ClickableLabel::new()
                         }
                     )
-                    .lens(EpubData::book_highlights)).vertical().boxed();
+                    .lens(EpubData::sidebar_data.then(SidebarData::book_highlights))).vertical().boxed();
         
                     panels.push(
                         WidgetPod::new((

@@ -106,10 +106,7 @@ impl Widget<EpubData> for NavigationBar {
                 if i == 0 {
                 t.push_str(&data.epub_metrics.current_chapter.to_string());
                 }
-                else if i == 1 {
-                    t.push_str(&(data.epub_metrics.current_page_in_chapter+1).to_string());
-                }
-                else {
+                else if i == 1{
                     t.push_str(&data.epub_metrics.BOOK_POSITION.to_string());
                 }
 
