@@ -118,8 +118,34 @@ impl Widget<EpubData> for TwoView {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, env: &Env) {
-        self.left_view.lifecycle(ctx, event, data, env);
-        self.right_view.lifecycle(ctx, event, data, env);
+        match event {
+            LifeCycle::WidgetAdded => {
+                self.left_view.lifecycle(ctx, event, data, env);
+                self.right_view.lifecycle(ctx, event, data, env);
+
+            
+                
+            
+                let orig = self.left_view.widget().viewport();
+                let pointt = Point::new(orig.view_size.width, orig.view_size.height);
+                let visualized_length = self.left_view.widget_mut().child().layout.text_position_for_point(pointt);
+
+                let apad = self.left_view.widget_mut().child().layout.point_for_text_position(data.epub_metrics.BOOK_POSITION).y;   
+                let can_move = self.left_view.widget_mut().pan_to_on_axis(Axis::Vertical, apad);
+
+                // if not possible, then load the next chapter
+                if !can_move {
+                    println!("Cant move");
+                    //data.next_chapter();
+                }   
+
+            },
+            _ => {
+                self.left_view.lifecycle(ctx, event, data, env);
+                self.right_view.lifecycle(ctx, event, data, env);        
+            }
+        }
+
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, env: &Env) {
