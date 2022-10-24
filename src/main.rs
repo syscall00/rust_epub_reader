@@ -131,11 +131,8 @@ struct ListItems {
 impl ListItems {
     pub fn new() -> Self {
         let layout = druid::TextLayout::default();
-        let mut ep = EpubDoc::new("/home/syscall/Downloads/pavese_dialoghi_con_leuco.epub").unwrap();
         
-        let binding = ep.get_cover();
-        let img_data = binding.as_ref().unwrap();
-        let img_buf = druid::ImageBuf::from_data(&img_data).unwrap();
+        let img_buf = druid::ImageBuf::empty();
         let image = WidgetPod::new(Image::new(img_buf)
             .fill_mode(FillStrat::Fill));
         ListItems{ layout, image }
@@ -172,6 +169,13 @@ impl Widget<Recent> for ListItems {
                 druid::LifeCycle::WidgetAdded => {
                     self.layout.set_text(data.name.clone());
                     self.layout.set_text_color(Color::BLACK);
+                    let mut ep = EpubDoc::new(data.path.clone()).unwrap();
+        
+                    let binding = ep.get_cover();
+                    let img_data = binding.as_ref().unwrap();
+                    let img_buf = druid::ImageBuf::from_data(&img_data).unwrap();
+
+                    self.image.widget_mut().set_image_data(img_buf);
 
                 }
                 _ => {} 

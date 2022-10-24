@@ -13,6 +13,7 @@ pub const GO_TO_POS: Selector<PagePosition> = Selector::new("go_to_pos");
 pub const NAVIGATE_TO: Selector<PageType> = Selector::new("navigate_to");
 
 pub const CHANGE_PAGE: Selector<bool> = Selector::new("change_page");
+pub const CHANGE_CHAPTER: Selector<bool> = Selector::new("change_chapter");
 
 
 // Commands for EpubPage view
