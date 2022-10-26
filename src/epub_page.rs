@@ -13,7 +13,7 @@ use crate::appstate::{EpubData, AppState};
 
 use crate::core::commands::{REQUEST_EDIT, CHANGE_VISUALIZATION, VisualizationMode};
 use crate::widgets::epub_page::navbar::NavigationBar;
-use crate::widgets::epub_page::textcontainer::{TextContainer, TwoView};
+use crate::widgets::epub_page::textcontainer::{TextContainer};
 use crate::widgets::epub_page::toolbar::Toolbar;
 
 pub struct Container<T>  {
@@ -192,8 +192,8 @@ impl EpubPage {
                         |visualization_mode, data, _env| {
                             match *visualization_mode {
                                 VisualizationMode::Single => TextContainer::new(data.clone()).expand().boxed(),
-                                VisualizationMode::Two => TwoView::new().boxed(),
-                                VisualizationMode::Scroll => todo!(),
+                                VisualizationMode::Two => TextContainer::new(data.clone()).expand().boxed(),
+                                VisualizationMode::Scroll => TextContainer::new(data.clone()).expand().boxed(),
                             }
                         }
                     );
@@ -235,13 +235,13 @@ impl Widget<EpubData> for EpubPage {
                     ctx.set_handled();
                 }
 
-                if let Some(visualization) = cmd.get(CHANGE_VISUALIZATION) {
-                    //data.visualized_chapter = visualization.clone();
-                    data.visualization_mode = visualization.clone();
-                    println!("Visualization mode changed to {:?}", data.visualization_mode);
-                    ctx.request_update();
-                    ctx.set_handled();
-                }
+                //if let Some(visualization) = cmd.get(CHANGE_VISUALIZATION) {
+                //    //data.visualized_chapter = visualization.clone();
+                //    data.visualization_mode = visualization.clone();
+                //    println!("Visualization mode changed to {:?}", data.visualization_mode);
+                //    ctx.request_update();
+                //    ctx.set_handled();
+                //}
             },
             _ => { }
         }

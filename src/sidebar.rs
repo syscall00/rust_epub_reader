@@ -1,4 +1,4 @@
-use druid::{Widget, Color, RenderContext, WidgetPod, widget::{Scroll, List, Label, TextBox, Controller, Flex}, LayoutCtx, UpdateCtx, LifeCycle, LifeCycleCtx, Env, Size, BoxConstraints, PaintCtx, EventCtx, Event, WidgetExt, Point, piet::{Text, TextLayoutBuilder}, LensExt, Data, ArcStr, TextLayout};
+use druid::{Widget, Color, RenderContext, WidgetPod, widget::{Scroll, List, Label, TextBox, Controller, Flex}, LayoutCtx, UpdateCtx, LifeCycle, LifeCycleCtx, Env, Size, BoxConstraints, PaintCtx, EventCtx, Event, WidgetExt, Point, piet::{Text, TextLayoutBuilder}, LensExt, Data, ArcStr, TextLayout, FontFamily};
 
 use crate::
 {appstate::{ EpubData, IndexedText, AppState, SidebarData}, 
@@ -18,13 +18,15 @@ pub enum TabKind {
 }
 
 pub struct CustomButton {
-    kind: TabKind
+    kind: TabKind,
+    font: FontFamily,
 }
 
 impl CustomButton {
     pub fn new(kind : TabKind) -> Self {
         Self {
-            kind
+            kind,
+            font: FontFamily::default(),
         }
     }
 }
@@ -39,13 +41,29 @@ impl Widget<EpubData> for CustomButton {
             // set cursors hand on hover 
             Event::MouseMove(_) => {
                 ctx.set_cursor(&druid::Cursor::Pointer);
-            }
+            },
+            Event::WindowConnected => 
+            {
+            },
             _ => {}
         }
+
         ctx.request_paint();
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, env: &Env) {
+        match event {
+            LifeCycle::WidgetAdded => {
+                // load the new font for icons                
+                if self.font == FontFamily::default() {
+                    self.font = ctx.text().font_family("druid-epub-icons").unwrap();
+                    //self.font = ctx.text().load_font(std::include_bytes!("assets/druid-epub-icons.ttf")).unwrap();
+                    println!("Font loaded");
+        
+                }
+            }
+            _ => {}
+        }
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, env: &Env) { }
@@ -55,14 +73,19 @@ impl Widget<EpubData> for CustomButton {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
-        let half_width = ctx.size().width / 2.;
-        let half_height = ctx.size().height / 2.-3.;
+        let half_width = ctx.size().width / 2.-10.;
+        let half_height = ctx.size().height / 2.-5.;
+
+
+
         match self.kind {
             TabKind::Toc => {
+                
                 let text = ctx.text();
                 let layout = text
-                    .new_text_layout("T")
+                    .new_text_layout("\u{A000}")
                     .text_color(Color::WHITE)
+                    .font(self.font.clone(), 15.)
                     .build()
                     .unwrap();
 
@@ -71,8 +94,9 @@ impl Widget<EpubData> for CustomButton {
             TabKind::Highlights => {
                 let text = ctx.text();
                 let layout = text
-                    .new_text_layout("H")
+                    .new_text_layout("\u{E803}")
                     .text_color(Color::WHITE)
+                    .font(self.font.clone(), 20.)
                     .build()
                     .unwrap();
                 ctx.draw_text(&layout, (half_width, half_height));
@@ -80,8 +104,9 @@ impl Widget<EpubData> for CustomButton {
             TabKind::Search => {
                 let text = ctx.text();
                 let layout = text
-                    .new_text_layout("S")
+                    .new_text_layout("\u{A001}")
                     .text_color(Color::WHITE)
+                    .font(self.font.clone(), 20.)
                     .build()
                     .unwrap();
                 ctx.draw_text(&layout, (half_width, half_height));

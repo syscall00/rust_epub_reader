@@ -1,11 +1,12 @@
 
 [
   {
-    "name": "Dialoghi con Leucò",
     "path": "examples/1.epub"
   },
   {
-    "name": "robida_il_20_secolo",
     "path": "examples/2.epub"
+  },
+  {
+    "path": "examples/3.epub"
   }
  ]

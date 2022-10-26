@@ -3,6 +3,7 @@ use std::ops::Range;
 
 use druid::im::Vector;
 use druid::kurbo::Line;
+use druid::piet::TextLayout as textLayout;
 use druid::widget::{ClipBox, Scroll, Axis, ViewSwitcher};
 use druid::{
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
@@ -11,7 +12,9 @@ use druid::{
 };
 use crate::appstate::{EpubData};
 use crate::core::commands::{GO_TO_POS, CHANGE_PAGE, VisualizationMode, CHANGE_CHAPTER};
+use crate::core::commands::{REQUEST_EDIT, CHANGE_VISUALIZATION};
 
+use crate::appstate::NavigationDirection;
 
 // Create a common interface for both single and multi page views
 pub trait CommonInterface {
@@ -25,177 +28,226 @@ pub trait CommonInterface {
     fn get_pos(&self) -> Option<(usize, Point)>;
 }
 
-pub struct TwoView {
-    left_view: WidgetPod<EpubData, ClipBox<EpubData, MyLabel>>,
-    right_view: WidgetPod<EpubData, ClipBox<EpubData, MyLabel>>,
-}
-
-impl TwoView {
-    pub fn new() -> Self {
-        let mut left_view = ClipBox::new(
-            MyLabel::new(0)
-            .with_text_color(Color::BLACK)
-        );
-        left_view.set_constrain_horizontal(true);
-
-        let mut right_view = ClipBox::new(
-            MyLabel::new(1)
-            .with_text_color(Color::BLACK)
-        );
-        right_view.set_constrain_horizontal(true);
-        TwoView {
-            left_view: WidgetPod::new(left_view),
-            right_view: WidgetPod::new(right_view),
-        }
-    }
-}
-
-impl Widget<EpubData> for TwoView {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
-                match event {
-            Event::Command(cmd) => {
-
-                //println!(" Num:{}", BOOK_POSITION );
-
-                // Text that should be displayed
-                //let t = druid::piet::TextStorage::as_str(self.label().layout.text().unwrap());
-
-                //println!(" TEXT:{}", utf8_slice::slice(t, (orig.content_size.height % (orig.view_origin.y)) as usize, 
-                //        (orig.content_size.height % orig.view_origin.y) as usize + BOOK_POSITION));
-
-                ////println!("Vh size: {}", self.clip_mut().viewport_size());
-                ////println!("Vh: {:?}", self.clip_mut().viewport());
-
-                    
-                //if cmd.is(CHANGE_PAGE) {
-                //    let pos = cmd.get_unchecked(CHANGE_PAGE);
+//pub struct TwoView {
+//    left_view: WidgetPod<EpubData, ClipBox<EpubData, MyLabel>>,
+//    right_view: WidgetPod<EpubData, ClipBox<EpubData, MyLabel>>,
+//}
 //
-                //    // DO Next Page
-                //    if *pos  { 
-                //        let orig = self.right_view.widget().viewport();
-                //        println!("ORIG: {:?}", orig);
-                //        let pointt = Point::new(orig.view_size.width, orig.view_size.height);
-                //        let visualized_length = self.point_to_text(pointt);
-        //
-                //        data.epub_metrics.navigate(NavigationDirection::Next(visualized_length));
+//impl TwoView {
+//    pub fn new() -> Self {
+//        let mut left_view = ClipBox::new(
+//            MyLabel::new(0)
+//            .with_text_color(Color::BLACK)
+//        );
+//        left_view.set_constrain_horizontal(true);
 //
-                //        // Move to the next page if possible
-                //        let can_move = self.move_if_not_out_of_range(
-                //            self.text_to_point(data.epub_metrics.BOOK_POSITION).y);
+//        let mut right_view = ClipBox::new(
+//            MyLabel::new(1)
+//            .with_text_color(Color::BLACK)
+//        );
+//        right_view.set_constrain_horizontal(true);
+//        TwoView {
+//            left_view: WidgetPod::new(left_view),
+//            right_view: WidgetPod::new(right_view),
+//        }
+//    }
+////}
 //
-                //        // if not possible, then load the next chapter
-                //        if !can_move {
-                //            data.next_chapter();
-                //        }   
-                //    }
-                //    // DO Previous page 
-                //    else {
-                //        let orig = self.label_text_lines.widget().viewport();
-                //        println!("ORIG: {:?}", orig);
-                //        let pointt = Point::new(orig.view_size.width, orig.view_size.height);
-                //        let visualized_length = self.point_to_text(pointt);
-        //
-                //        data.epub_metrics.navigate(NavigationDirection::Prev(visualized_length));
+//impl Widget<EpubData> for TwoView {
+//    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
+//                match event {
+//            Event::Command(cmd) => {
 //
-                //        println!("Visualized length: {}", visualized_length);
-                //        println!("Book Pos {}", data.epub_metrics.BOOK_POSITION);
-                //        let mut ppt=  self.text_to_point(data.epub_metrics.BOOK_POSITION);
-                //        if data.epub_metrics.BOOK_POSITION == 0 {
-                //            ppt.y -= 30.;
-                //        }
-                //        let can_move = self.clip_mut().pan_to(
-                //            ppt);
+//                //println!(" Num:{}", BOOK_POSITION );
 //
-                //        if !can_move {
-                //            data.previous_chapter();
-                //        }                    
-                //    }
-                //}
-            },
-            _ => {}
-        }
-        self.left_view.event(ctx, event, data, env);
-        self.right_view.event(ctx, event, data, env);
-    }
-
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, env: &Env) {
-        match event {
-            LifeCycle::WidgetAdded => {
-                self.left_view.lifecycle(ctx, event, data, env);
-                self.right_view.lifecycle(ctx, event, data, env);
-
-            
-                
-            
-                let orig = self.left_view.widget().viewport();
-                let pointt = Point::new(orig.view_size.width, orig.view_size.height);
-                let visualized_length = self.left_view.widget_mut().child().layout.text_position_for_point(pointt);
-
-                let apad = self.left_view.widget_mut().child().layout.point_for_text_position(data.epub_metrics.BOOK_POSITION).y;   
-                let can_move = self.left_view.widget_mut().pan_to_on_axis(Axis::Vertical, apad);
-
-                // if not possible, then load the next chapter
-                if !can_move {
-                    println!("Cant move");
-                    //data.next_chapter();
-                }   
-
-            },
-            _ => {
-                self.left_view.lifecycle(ctx, event, data, env);
-                self.right_view.lifecycle(ctx, event, data, env);        
-            }
-        }
-
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, env: &Env) {
-        self.left_view.update(ctx, data, env);
-        self.right_view.update(ctx,data, env);
-    }
-
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &EpubData, env: &Env) -> Size {
-        let mut size = bc.max();
-        size.height -= 50.;
-        let left_size = Size::new(size.width / 2.0, size.height);
-        let right_size = Size::new(size.width / 2.0, size.height);
-        let left_origin = Point::ORIGIN;
-        let right_origin = Point::new(size.width / 2.0, 0.0);
-        self.left_view.layout(ctx, &BoxConstraints::tight(left_size), data, env);
-        self.right_view.layout(ctx, &BoxConstraints::tight(right_size), data, env);
-        self.left_view.set_origin(ctx, data, env, left_origin);
-        self.right_view.set_origin(ctx, data, env, right_origin);
-        size
-    }
-
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
-        let size = ctx.size();
-        ctx.fill(size.to_rect(), &Color::WHITE);
-
-        self.left_view.paint(ctx, data, env);
-        self.right_view.paint(ctx, data, env);
-    }
-}
+//                // Text that should be displayed
+//                //let t = druid::piet::TextStorage::as_str(self.label().layout.text().unwrap());
+//
+//                //println!(" TEXT:{}", utf8_slice::slice(t, (orig.content_size.height % (orig.view_origin.y)) as usize, 
+//                //        (orig.content_size.height % orig.view_origin.y) as usize + BOOK_POSITION));
+//
+//                ////println!("Vh size: {}", self.clip_mut().viewport_size());
+//                ////println!("Vh: {:?}", self.clip_mut().viewport());
+//
+//                    
+//                //if cmd.is(CHANGE_PAGE) {
+//                //    let pos = cmd.get_unchecked(CHANGE_PAGE);
+////
+//                //    // DO Next Page
+//                //    if *pos  { 
+//                //        let orig = self.right_view.widget().viewport();
+//                //        println!("ORIG: {:?}", orig);
+//                //        let pointt = Point::new(orig.view_size.width, orig.view_size.height);
+//                //        let visualized_length = self.point_to_text(pointt);
+//        //
+//                //        data.epub_metrics.navigate(NavigationDirection::Next(visualized_length));
+////
+//                //        // Move to the next page if possible
+//                //        let can_move = self.move_if_not_out_of_range(
+//                //            self.text_to_point(data.epub_metrics.BOOK_POSITION).y);
+////
+//                //        // if not possible, then load the next chapter
+//                //        if !can_move {
+//                //            data.next_chapter();
+//                //        }   
+//                //    }
+//                //    // DO Previous page 
+//                //    else {
+//                //        let orig = self.label_text_lines.widget().viewport();
+//                //        println!("ORIG: {:?}", orig);
+//                //        let pointt = Point::new(orig.view_size.width, orig.view_size.height);
+//                //        let visualized_length = self.point_to_text(pointt);
+//        //
+//                //        data.epub_metrics.navigate(NavigationDirection::Prev(visualized_length));
+////
+//                //        println!("Visualized length: {}", visualized_length);
+//                //        println!("Book Pos {}", data.epub_metrics.BOOK_POSITION);
+//                //        let mut ppt=  self.text_to_point(data.epub_metrics.BOOK_POSITION);
+//                //        if data.epub_metrics.BOOK_POSITION == 0 {
+//                //            ppt.y -= 30.;
+//                //        }
+//                //        let can_move = self.clip_mut().pan_to(
+//                //            ppt);
+////
+//                //        if !can_move {
+//                //            data.previous_chapter();
+//                //        }                    
+//                //    }
+//                //}
+//            },
+//            _ => {}
+//        }
+//        self.left_view.event(ctx, event, data, env);
+//        self.right_view.event(ctx, event, data, env);
+//    }
+//
+//    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, env: &Env) {
+//        match event {
+//            LifeCycle::WidgetAdded => {
+//                self.left_view.lifecycle(ctx, event, data, env);
+//                self.right_view.lifecycle(ctx, event, data, env);
+//
+//            
+//                
+//            
+//                let orig = self.left_view.widget().viewport();
+//                let pointt = Point::new(orig.view_size.width, orig.view_size.height);
+//                let visualized_length = self.left_view.widget_mut().child().layout.text_position_for_point(pointt);
+//
+//                let apad = self.left_view.widget_mut().child().layout.point_for_text_position(data.epub_metrics.BOOK_POSITION).y;   
+//                let can_move = self.left_view.widget_mut().pan_to_on_axis(Axis::Vertical, apad);
+//
+//                // if not possible, then load the next chapter
+//                if !can_move {
+//                    println!("Cant move");
+//                    //data.next_chapter();
+//                }   
+//
+//            },
+//            _ => {
+//                self.left_view.lifecycle(ctx, event, data, env);
+//                self.right_view.lifecycle(ctx, event, data, env);        
+//            }
+//        }
+//
+//    }
+//
+//    fn update(&mut self, ctx: &mut UpdateCtx, do_mouse_down: &EpubData, data: &EpubData, env: &Env) {
+//        self.left_view.update(ctx, data, env);
+//        self.right_view.update(ctx,data, env);
+//    }
+//
+//    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &EpubData, env: &Env) -> Size {
+//        let mut size = bc.max();
+//        size.height -= 50.;
+//        let left_size = Size::new(size.width / 2.0, size.height);
+//        let right_size = Size::new(size.width / 2.0, size.height);
+//        let left_origin = Point::ORIGIN;
+//        let right_origin = Point::new(size.width / 2.0, 0.0);
+//        self.left_view.layout(ctx, &BoxConstraints::tight(left_size), data, env);
+//        self.right_view.layout(ctx, &BoxConstraints::tight(right_size), data, env);
+//        self.left_view.set_origin(ctx, data, env, left_origin);
+//        self.right_view.set_origin(ctx, data, env, right_origin);
+//        size
+//    }
+//
+//    fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
+//        let size = ctx.size();
+//        ctx.fill(size.to_rect(), &Color::WHITE);
+//
+//        self.left_view.paint(ctx, data, env);
+//        self.right_view.paint(ctx, data, env);
+//    }
+//}
 
 pub struct PageSplitter {
     //text: Vec<WidgetPod<EpubData, Box<dyn Widget<EpubData>>>>,
     text: Vec<TextLayout<RichText>>,
-    side: usize,
     starting_point: usize,
-    current_length: usize,
-    prev_length: usize,
-    direction: bool // true = forward, false = backward
+    visualized_range: PageSplitterRanges,
+    two_side : bool
 }
 
+enum PageSplitterRanges {
+    OnePage(std::ops::Range<usize>),
+    TwoPages(std::ops::Range<usize>, std::ops::Range<usize>),
+}
+
+
+impl PageSplitterRanges {
+    pub fn is_empty(&self) -> bool {
+        match self {
+            PageSplitterRanges::OnePage(range) => range.is_empty(),
+            PageSplitterRanges::TwoPages(range1, _) => range1.is_empty(),
+        }
+    }
+
+    pub fn get_page(&self, page: usize) -> std::ops::Range<usize> {
+        match self {
+            PageSplitterRanges::OnePage(range) => {
+                if page == 0 {
+                    return range.clone();
+                } 
+            }
+            PageSplitterRanges::TwoPages(range1, range2) => {
+                if page == 0 {
+                    return range1.clone();
+                } else if page == 1 {
+                    return range2.clone();
+                } 
+            }
+        };
+        Range::default()
+    }
+
+    pub fn start(&self) -> usize {
+        match self {
+            PageSplitterRanges::OnePage(range) => range.start,
+            PageSplitterRanges::TwoPages(range1, _) => range1.start,
+        }
+    }
+
+    pub fn end(&self) -> usize {
+        match self {
+            PageSplitterRanges::OnePage(range) => range.end,
+            PageSplitterRanges::TwoPages(_, range2) => range2.end,
+        }
+    }
+
+
+}
+impl Default for PageSplitterRanges {
+    fn default() -> Self {
+        PageSplitterRanges::OnePage(0..0)
+    }
+}
 impl PageSplitter {
     pub fn new() -> Self {
         Self { 
             text: Vec::new(),
-            side: 0,
             starting_point: 0,
-            current_length: 0,
-            prev_length: 0,
-            direction: true
+            visualized_range: PageSplitterRanges::default(),
+            two_side: false
         }
     }
 
@@ -209,40 +261,58 @@ impl PageSplitter {
         }
     }
 
-    fn get_current_range(&mut self, ctx: &PaintCtx) -> std::ops::Range<usize> {
-        let size = ctx.size();
+    
+    fn get_current_range(&mut self, current_size: &Size, direction: bool) -> PageSplitterRanges {
         let mut cnt = 0;
         let mut y = 0.;
-        if self.direction {
-            for (i, label) in self.text.iter().skip(self.starting_point).enumerate() {
-                cnt = i;
-                if y + label.size().height > size.height {
-                    break;
-                }
-                y += label.size().height + 10.;
+        
+        let it :  Box<dyn Iterator<Item = (usize, &TextLayout<RichText>)>> = if direction {
+            Box::new(self.text.iter().enumerate().skip(self.starting_point))
+        } else {
+            Box::new(self.text.iter().enumerate().filter(|(i,_)| *i < self.starting_point).rev())
+        };
+        
+        
+        //let _ = 
+        //self.text.iter().enumerate().filter(|(i,_)| *i < self.starting_point).map(|(i, _)| i).rev().collect::<Vec<usize>>();
+        
+        //println!("it {:?} {:?}", aaa.first(), aaa.last());
+        for (i, label) in it {
+            cnt = i;
+            if y + label.size().height > current_size.height {
+                break;
             }
-            self.starting_point..self.starting_point + cnt
+            y += label.size().height+ 10.;
 
+        }
+
+        
+        //if self.two_side {
+        //    y = 0.;
+        //    for (i, label) in itt {
+        //        cnt = i;
+        //        if y + label.size().height > current_size.height {
+        //            break;
+        //        }
+        //        y += label.size().height+ 10.;
+    //
+        //    }
+    //
+        //}
+        if !direction && cnt == 0 {
+                self.starting_point = cnt;
+                return self.get_current_range(current_size, true);
+        }
+        //println!("First {} Second {} ", y, current_size.height);
+
+        if direction {
+            PageSplitterRanges::OnePage(self.starting_point..cnt)
         }
         else {
-            for (i, label) in self.text.iter().rev().skip(self.starting_point).enumerate() {
-                cnt = i;
-                if y + label.size().height > size.height {
-                    break;
-                }
-                y += label.size().height+ 10.;
-            }
-            if self.starting_point as i32 - (cnt as i32) < 0 {
-                self.starting_point = 0;
-                self.direction = true;
-                self.get_current_range(ctx)
-            }
-            else {
-                self.starting_point-cnt..self.starting_point
-            }
-
+            PageSplitterRanges::OnePage(cnt..self.starting_point)
         }
     }
+
 
 }
 
@@ -260,32 +330,67 @@ impl Widget<EpubData> for PageSplitter {
             //Event::Zoom(_) => todo!(),
             //Event::Timer(_) => todo!(),
             //Event::AnimFrame(_) => todo!(),
+            ////Event::MouseMove(e) => {
+            ////    if ctx.is_hot() {
+            ////        // have to check if exists any label under the mouse
+            ////        //println!("Have to check if exists in range {:?} {:?}", self.starting_point, self.current_length);
+            ////        self.text.iter().enumerate().filter(|(i,_)| *i >= self.starting_point && *i < self.current_length).for_each(|(i, label)| {
+            ////            println!("Checking pos {:?} in label {} {:?}", e.pos, i, label.size());
+            ////            if label.layout().unwrap().hit_test_point(e.pos).is_inside {
+            ////                println!("Found label {}", i);
+            ////            }
+            ////        });
+            ////    }
+            ////}
             Event::Command(cmd) => {
                 if cmd.is(CHANGE_PAGE) {
                     let direction = cmd.get_unchecked(CHANGE_PAGE).clone();
-                    self.direction = direction;
+                    //println!("starting point: {}, current_length: {}", self.starting_point, data.get_current_chap().len());
+
                     if direction {
-                        if self.starting_point >= self.current_length{//data.get_current_chap().len() {
+                        self.starting_point = self.visualized_range.end();
+                        self.visualized_range = self.get_current_range(&ctx.size(), direction);
+
+                        if (self.visualized_range.is_empty() || self.visualized_range.end() >= data.get_current_chap().len()-1) && data.has_next_chapter(){
+                            //println!("Visualized empty range {:?}", self.visualized_range);
                             data.next_chapter();
-                            println!("New chapter");
 
-                            self.current_length = 0;
                             self.text.clear();
-
                             self.generate_text(data.get_current_chap());
-                            ctx.request_layout();
-                            ctx.request_paint();
+
+                            self.starting_point = 0;
+                            
                         }
-                            self.starting_point = self.current_length;
-
-                        
-
+                            //self.starting_point = self.visualized_range.end;
                     }
                     else {
-                        self.starting_point = self.prev_length;
+                        self.starting_point = self.visualized_range.start();
+                        self.visualized_range = self.get_current_range(&ctx.size(), direction);
+
+                        if (self.visualized_range.is_empty() || self.visualized_range.start() == 0) && data.has_prev_chapter() {
+                            println!("Empty");
+                            data.previous_chapter();
+
+                            self.text.clear();
+                            self.generate_text(data.get_current_chap());
+
+                            self.starting_point = data.get_current_chap().len()-1;
+
+                        }
+
                     }
+                    self.visualized_range = self.get_current_range(&ctx.size(), direction);
+
                     //data.epu_metrics.navigate(NavigationDirection::Page(page));
-                    ctx.request_layout();
+
+                }
+                else if cmd.is(CHANGE_VISUALIZATION) {
+                    let v = cmd.get_unchecked(CHANGE_VISUALIZATION);
+                    match v {
+                        VisualizationMode::Single => self.two_side = false,
+                        VisualizationMode::Two => self.two_side = true,
+                        VisualizationMode::Scroll => self.two_side = false,
+                    }
                 }
                 //if cmd.is(selector::NAVIGATE) {
                 //    let nav = cmd.get_unchecked(selector::NAVIGATE);
@@ -306,11 +411,19 @@ impl Widget<EpubData> for PageSplitter {
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, env: &Env) {
+    fn lifecycle(&mut self, _: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, env: &Env) {
         match event {
             LifeCycle::WidgetAdded => {
                 self.generate_text(data.get_current_chap());
+                //self.visualized_range = 0..self.text.len();
         
+            },
+            LifeCycle::Size(new_size) => {
+                self.starting_point = self.visualized_range.start();
+
+                self.visualized_range = self.get_current_range(&new_size, true);
+                //println!("Changin size. New range is {:?} ", self.visualized_range);
+
             }
             _ => {}
         }
@@ -322,8 +435,13 @@ impl Widget<EpubData> for PageSplitter {
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &EpubData, env: &Env) -> Size {
 
+        let width = if self.two_side {
+            bc.max().width/2.-20.
+        } else {
+            bc.max().width-20.
+        };
         for t in self.text.iter_mut() {
-            t.set_wrap_width(bc.max().width-25.);
+            t.set_wrap_width(width);
             t.rebuild_if_needed(ctx.text(), env);
         }
         bc.max()
@@ -332,17 +450,29 @@ impl Widget<EpubData> for PageSplitter {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
         let size = ctx.size();
         let mut y = 0.0;
-
-        let range = self.get_current_range(ctx);
-        println!("Range is {:?}", range);
-        self.current_length = range.end;
-        self.prev_length = range.start;
-        for i in range {
+        //let range = self.get_current_range(&size);
+        //let mut range2 = self.get_current_range(&ctx.size());
+        //if self.two_side {
+        //    self.starting_point = range.end;
+        //    range2 = self.get_current_range(&ctx.size());
+        //}
+        //self.prev_length = range.start;
+        
+        //println!("Im painting in this range {:?}", self.visualized_range);
+        for i in self.visualized_range.get_page(0) {
             let label = &self.text[i];
-            label.draw(ctx, Point::new(25., y));
+            label.draw(ctx, Point::new(10., y));
             y += label.size().height+ 10.;
         }
-
+        //if self.two_side {
+        //    y = 0.;
+        //    for i in range2 {
+        //        let label = &self.text[i];
+        //        label.draw(ctx, Point::new(ctx.size().width/2.+10., y));
+        //        y += label.size().height+ 10.;
+        //    }
+        //    self.starting_point = range.start;
+        //}
         
     }
 }
@@ -406,15 +536,7 @@ impl TextContainer {
         }
     }
 
-    pub fn with_side(mut self, side : usize) -> Self {
-        //self.side = side;
-        //        let mut label = ClipBox::new(
-        //    MyLabel::new(side)
-        //    .with_text_color(Color::BLACK)
-        //);
-        //self.label_text_lines = WidgetPod::new(label);
-        self
-    }
+
 
     //fn clip_widget (&mut self) -> &mut Scroll<EpubData, MyLabel> {
     //fn clip_widget (&self) -> &ClipBox<EpubData, MyLabel> {
@@ -446,32 +568,7 @@ impl TextContainer {
     //}
 }
 
-impl CommonInterface for TextContainer {
-    fn get_next_pos(&self) -> Option<(usize, Point)> {
-        None
-        //let orig = self.label_text_lines.widget().viewport();
-        //// ABSOLUTE POINT!!!
-//
-        //// ABSOLUTE POSITION!!!
-        //let position = self.point_to_text(
-        //    Point::new(orig.view_size.width, orig.view_size.height-20.)
-        //);
-        //Some((position, self.text_to_point(position)))
-    }
-    fn get_prev_pos(&self) -> Option<(usize, Point)> {
-        None    
-    }
-    fn get_pos(&self) -> Option<(usize, Point)> {
-        None    
-    }
 
-    
-}
-
-pub struct View {
-    left_view: WidgetPod<EpubData, ClipBox<EpubData, MyLabel>>,
-}
-use crate::appstate::NavigationDirection;
 impl Widget<EpubData> for TextContainer {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
         match event {
@@ -612,7 +709,6 @@ impl Widget<EpubData> for TextContainer {
 pub struct MyLabel {
     layout: TextLayout<RichText>,
     selection : Selection,
-    side: usize
 }
 
 
@@ -622,7 +718,6 @@ impl MyLabel {
         Self {
             layout: TextLayout::new(),
             selection : Selection::default(),
-            side
         }
     }
 

@@ -146,9 +146,8 @@ impl Widget<Recent> for ListItems {
             //druid::Event::WindowSize(_) => todo!(),
             druid::Event::MouseDown(_) => {
                 ctx.set_handled();
-                let cmd = druid::commands::OPEN_FILE;
-                let f : FileInfo = FileInfo { path: PathBuf::from(data.path.clone()), format: None };
-                ctx.submit_command(druid::Command::new(cmd, f, druid::Target::Auto));
+                let f = FileInfo { path: PathBuf::from(data.path.clone()), format: None };
+                ctx.submit_command(druid::Command::new(druid::commands::OPEN_FILE, f, druid::Target::Auto));
 
                 ctx.submit_command(NAVIGATE_TO.with(PageType::Reader));
             }
@@ -167,10 +166,15 @@ impl Widget<Recent> for ListItems {
     fn lifecycle(&mut self, _ctx: &mut druid::LifeCycleCtx, event: &druid::LifeCycle, data: &Recent, _env: &druid::Env) {
             match event {
                 druid::LifeCycle::WidgetAdded => {
-                    self.layout.set_text(data.name.clone());
-                    self.layout.set_text_color(Color::BLACK);
                     let mut ep = EpubDoc::new(data.path.clone()).unwrap();
-        
+                    const UNTITLED_BOOK : &str = "Untitled";
+
+                    let title = ep.metadata.get("title").and_then(|v| v.get(0))
+                        .unwrap_or(&UNTITLED_BOOK.to_string()).to_string();
+                    self.layout.set_text(title);
+                    self.layout.set_text_color(Color::WHITE);
+                    ep = EpubDoc::new(data.path.clone()).unwrap();
+
                     let binding = ep.get_cover();
                     let img_data = binding.as_ref().unwrap();
                     let img_buf = druid::ImageBuf::from_data(&img_data).unwrap();

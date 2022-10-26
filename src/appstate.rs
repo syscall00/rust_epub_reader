@@ -1,7 +1,5 @@
 use druid::im::{Vector};
-use druid::piet::TextStorage;
 use druid::text::RichText;
-use druid::widget::ListIter;
 use druid::{
     commands, AppDelegate, ArcStr, Command, Data, DelegateCtx, Env, Handled, Lens, Target,
 };
@@ -44,14 +42,12 @@ pub struct HomePageData {
 
 #[derive(Clone, Data, Lens, Serialize, Deserialize, Debug)]
 pub struct Recent {
-    pub name: String,
     pub path: String,
     //pub image_data: Vector<u8>,
 }
 impl Recent {
     pub fn new(name: String, path: String) -> Self {
         Recent {
-            name,
             path,
             //image_data,
         }
@@ -353,6 +349,14 @@ impl EpubData {
     pub fn get_current_chap(&self) -> &Vector<RichText> {
         &self.rich_chapters[self.epub_metrics.current_chapter]
     }
+    
+    pub fn has_next_chapter(&self) -> bool {
+        return self.epub_metrics.current_chapter < self.rich_chapters.len() - 1;
+    }
+
+    pub fn has_prev_chapter(&self) -> bool {
+        return self.epub_metrics.current_chapter > 0;
+    }
 
     // Search the match in all text and 
     // return a tuple with a string containing 5 words near match result and a PagePosition referring to the match
@@ -429,10 +433,10 @@ impl EpubData {
     }
 
     pub fn previous_chapter(&mut self) {
-      //  if self.epub_metrics.current_chapter > 0 {
-      //      let len = self.rich_chapters[self.epub_metrics.current_chapter-1].len();
-      //      self.move_to_pos(&PagePosition::new(self.epub_metrics.current_chapter-1, len, len))
-      //  }
+        if self.epub_metrics.current_chapter > 0 {
+            self.epub_metrics.current_chapter-=1;
+    //        self.move_to_pos(&PagePosition::new(self.epub_metrics.current_chapter+1, 0, 0))
+        }
     }
 
 }
