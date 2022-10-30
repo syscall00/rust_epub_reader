@@ -169,8 +169,7 @@ impl Widget<Recent> for ListItems {
                     let mut ep = EpubDoc::new(data.path.clone()).unwrap();
                     const UNTITLED_BOOK : &str = "Untitled";
 
-                    let title = ep.metadata.get("title").and_then(|v| v.get(0))
-                        .unwrap_or(&UNTITLED_BOOK.to_string()).to_string();
+                    let title = ep.mdata("title").unwrap_or(UNTITLED_BOOK.to_string()).to_string();
                     self.layout.set_text(title);
                     self.layout.set_text_color(Color::WHITE);
                     ep = EpubDoc::new(data.path.clone()).unwrap();

@@ -11,7 +11,7 @@ use druid::{
 use crate::appstate::{EpubData, AppState};
 
 
-use crate::core::commands::{REQUEST_EDIT, CHANGE_VISUALIZATION, VisualizationMode};
+use crate::core::commands::{REQUEST_EDIT, CHANGE_VISUALIZATION, VisualizationMode, SAVE_EPUB};
 use crate::widgets::epub_page::navbar::NavigationBar;
 use crate::widgets::epub_page::textcontainer::{TextContainer};
 use crate::widgets::epub_page::toolbar::Toolbar;
@@ -234,6 +234,14 @@ impl Widget<EpubData> for EpubPage {
                     ctx.request_update();
                     ctx.set_handled();
                 }
+                else if cmd.is(SAVE_EPUB) {
+                    // first, save epup; then go to visualization mode
+                    data.save_new_epub();
+                    data.edit_mode = !data.edit_mode;
+                    ctx.request_update();
+                    ctx.set_handled();
+
+                } 
 
                 //if let Some(visualization) = cmd.get(CHANGE_VISUALIZATION) {
                 //    //data.visualized_chapter = visualization.clone();

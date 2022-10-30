@@ -8,7 +8,7 @@ use druid::{
     Widget, WidgetPod,
 };
 
-use crate::appstate::EpubData;
+use crate::appstate::{EpubData, PagePosition};
 use crate::core::commands::{REQUEST_EDIT, CHANGE_VISUALIZATION, VisualizationMode};
 use crate::tool::Tool;
 
@@ -141,9 +141,11 @@ impl Toolbar {
         .with_default_spacer()
         //.with_flex_child(Button::new("GOTO".to_string())
         //    .on_click(|ctx, data, env| {
-        //        ctx.submit_command(GO_TO_POS.with(15));
+        //        ctx.submit_command(crate::core::commands::GO_TO_POS.with(PagePosition::new(5, 15, 0)));
         //    }), 0.2)
-        .with_flex_child(Button::new("Save".to_string()), 1.)
+        .with_flex_child(Button::new("Save".to_string()).on_click(|ctx, data, env| {
+            ctx.submit_command(crate::core::commands::SAVE_EPUB.with(()));
+        }), 0.1)
         .with_default_spacer()
         .with_flex_child(Button::new("Marker".to_string()).on_click(|ctx, data: &mut EpubData, env| {
             if data.selected_tool == Tool::Marker {

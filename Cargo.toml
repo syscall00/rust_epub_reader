@@ -23,6 +23,9 @@ serde_json = "1.0.85"
 utf8_slice = "1.0.0"
 lipsum = "0.8.2"
 rand = "0.8.5"
+
+
+zip = "0.6.3"
 #druid-widget-nursery = { git = "https://github.com/linebender/druid-widget-nursery", features = ["material-icons"]}
 #[dependencies.druid]
 #git = "https://github.com/linebender/druid"

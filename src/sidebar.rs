@@ -169,12 +169,13 @@ impl Widget<IndexedText> for ClickableLabel {
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &IndexedText, env: &Env) -> Size {
         //self.layout.set_wrap_width(bc.max().width);
         self.layout.rebuild_if_needed(ctx.text(), env);
-        self.layout.set_wrap_width(f64::INFINITY);
+        //self.layout.set_wrap_width(f64::INFINITY);
         let size = self.layout.size();
         let text_metrics = self.layout.layout_metrics();
         ctx.set_baseline_offset(text_metrics.size.height - text_metrics.first_baseline);
 
-        bc.constrain(size)
+        //bc.constrain(size)
+        Size::new(150., 23.)
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &IndexedText, env: &Env) {
@@ -354,22 +355,23 @@ impl Sidebar {
                         )
                     )
                 },
-                TabKind::Highlights => {
-                    const TOC_TITLE : &str = "HIGHLIGHTS";
-                    let widget = Scroll::new(
-                        List::new(|| {
-                            ClickableLabel::new()
-                        }
-                    )
-                    .lens(EpubData::sidebar_data.then(SidebarData::book_highlights))).vertical().boxed();
-        
-                    panels.push(
-                        WidgetPod::new((
-                            Panel::new(TOC_TITLE, widget))
-                            .boxed()
-                        )
-                    )
-                },
+                //TabKind::Highlights => {
+                //    const TOC_TITLE : &str = "HIGHLIGHTS";
+                //    let widget = Scroll::new(
+                //        List::new(|| {
+                //            ClickableLabel::new()
+                //        }
+                //    )
+                //    .lens(EpubData::sidebar_data.then(SidebarData::book_highlights))).vertical().boxed();
+        //
+                //    panels.push(
+                //        WidgetPod::new((
+                //            Panel::new(TOC_TITLE, widget))
+                //            .boxed()
+                //        )
+                //    )
+                //},
+                
                 _ => {},
 
             }
