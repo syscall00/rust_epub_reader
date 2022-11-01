@@ -11,7 +11,7 @@ use druid::{
 use crate::appstate::{EpubData, AppState};
 
 
-use crate::core::commands::{REQUEST_EDIT, CHANGE_VISUALIZATION, VisualizationMode, SAVE_EPUB};
+use crate::core::commands::{REQUEST_EDIT, VisualizationMode, SAVE_EPUB};
 use crate::widgets::epub_page::navbar::NavigationBar;
 use crate::widgets::epub_page::textcontainer::{TextContainer};
 use crate::widgets::epub_page::toolbar::Toolbar;
@@ -19,6 +19,7 @@ use crate::widgets::epub_page::toolbar::Toolbar;
 pub struct Container<T>  {
     widgets: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
     widget_origins: Vec<Point>,  
+    widget_size: Vec<f64>,
     axis: Axis,
 }
 
@@ -27,6 +28,7 @@ impl<T> Container<T> {
         Self {
             widgets: Vec::new(),
             widget_origins: Vec::new(),
+            widget_size: Vec::new(),
             axis: Axis::Horizontal,
         }
     }
@@ -35,6 +37,7 @@ impl<T> Container<T> {
         Self {
             widgets: Vec::new(),
             widget_origins: Vec::new(),
+            widget_size: Vec::new(),
             axis,
         }
     }
@@ -49,21 +52,35 @@ impl<T> Container<T> {
     pub fn with_child(mut self, child: impl Widget<T> + 'static) -> Self {
         self.widgets.push(WidgetPod::new(Box::new(child)));
         self.widget_origins.push(Point::ORIGIN);
+        self.widget_size.push(1.);
         self
     }
 
+    pub fn with_child_and_size(mut self, child: impl Widget<T> + 'static, size: f64) -> Self {
+        self.widgets.push(WidgetPod::new(Box::new(child)));
+        self.widget_origins.push(Point::ORIGIN);
+        self.widget_size.push(size);
+
+        self
+    }
     pub fn with_widget_and_origin(mut self, child: impl Widget<T> + 'static, origin: Point) -> Self {
         self.widgets.push(WidgetPod::new(Box::new(child)));
         self.widget_origins.push(origin);
+        self.widget_size.push(1.);
+
         self
     }
     pub fn add_child(&mut self, child: impl Widget<T> + 'static) {
         self.widgets.push(WidgetPod::new(Box::new(child)));
         self.widget_origins.push(Point::ORIGIN);
+        self.widget_size.push(1.);
+
     }
     pub fn add_widget_and_origin(&mut self, child: impl Widget<T> + 'static, origin: Point) {
         self.widgets.push(WidgetPod::new(Box::new(child)));
         self.widget_origins.push(origin);
+        self.widget_size.push(1.);
+
     }
 
 }
@@ -92,8 +109,11 @@ impl<T: Data> Widget<T> for Container<T> {
         let size = bc.max();
         
         let mut zero_origin = Size::ZERO;
-        for (widget, origin) in self.widgets.iter_mut().zip(self.widget_origins.iter()) {
-            let widget_size = widget.layout(ctx, &BoxConstraints::tight(size-zero_origin), data, env);
+        for (widget, (origin, wid_size)) in 
+            self.widgets.iter_mut().zip((self.widget_origins.iter()).zip(self.widget_size.iter()))  {
+
+                let siz = Size::new(size.width * wid_size, size.height)-zero_origin;
+            let widget_size = widget.layout(ctx, &BoxConstraints::tight(siz), data, env);
             let mut orig = *origin;
 
             if orig.x < 0. {
@@ -184,24 +204,15 @@ impl EpubPage {
 
         let view_switcher = WidgetPod::new(ViewSwitcher::new(
             |data: &EpubData, _env: &Env| data.edit_mode,
-            |edit_mode, data, _env| {
+            |edit_mode, _, _env| {
                 if !*edit_mode {
 
-                    let visualization_mode_switcher = ViewSwitcher::new(
-                        |data: &EpubData, _env: &Env| data.visualization_mode.clone(),
-                        |visualization_mode, data, _env| {
-                            match *visualization_mode {
-                                VisualizationMode::Single => TextContainer::new(data.clone()).expand().boxed(),
-                                VisualizationMode::Two => TextContainer::new(data.clone()).expand().boxed(),
-                                VisualizationMode::Scroll => TextContainer::new(data.clone()).expand().boxed(),
-                            }
-                        }
-                    );
+                    let visualization_mode_switcher = TextContainer::new().expand().boxed();
 
                     let c = Container::new()
                     .with_child(Toolbar::new())
                     .with_child(visualization_mode_switcher);
-                    if !(data.visualization_mode == VisualizationMode::Scroll) {
+                    if !(false) {
                         c.with_widget_and_origin(NavigationBar::new(), Point::new(0.0, -50.0))
                     } else {
                         c
@@ -243,13 +254,6 @@ impl Widget<EpubData> for EpubPage {
 
                 } 
 
-                //if let Some(visualization) = cmd.get(CHANGE_VISUALIZATION) {
-                //    //data.visualized_chapter = visualization.clone();
-                //    data.visualization_mode = visualization.clone();
-                //    println!("Visualization mode changed to {:?}", data.visualization_mode);
-                //    ctx.request_update();
-                //    ctx.set_handled();
-                //}
             },
             _ => { }
         }

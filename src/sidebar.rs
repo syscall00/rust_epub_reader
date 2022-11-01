@@ -1,9 +1,11 @@
-use druid::{Widget, Color, RenderContext, WidgetPod, widget::{Scroll, List, Label, TextBox, Controller, Flex}, LayoutCtx, UpdateCtx, LifeCycle, LifeCycleCtx, Env, Size, BoxConstraints, PaintCtx, EventCtx, Event, WidgetExt, Point, piet::{Text, TextLayoutBuilder}, LensExt, Data, ArcStr, TextLayout, FontFamily};
+use std::str::FromStr;
+
+use druid::{Widget, Color, RenderContext, WidgetPod, widget::{Scroll, List, Label, TextBox, Controller, Flex, Slider, Button, Svg, SvgData}, LayoutCtx, UpdateCtx, LifeCycle, LifeCycleCtx, Env, Size, BoxConstraints, PaintCtx, EventCtx, Event, WidgetExt, Point, piet::{Text, TextLayoutBuilder}, LensExt, Data, ArcStr, TextLayout, FontFamily};
 
 use crate::
-{appstate::{ EpubData, IndexedText, AppState, SidebarData}, 
+{appstate::{ EpubData, IndexedText, AppState, SidebarData, EpubSettings}, 
 
-core::{commands::{INTERNAL_COMMAND, GO_TO_POS}, style::{BAR_COLOR, CONTENT_COLOR}}};
+core::{commands::{INTERNAL_COMMAND, GO_TO_POS, VisualizationMode}, style::{BAR_COLOR, CONTENT_COLOR}, constants::{self, epub_settings::{MIN_FONT_SIZE, MAX_FONT_SIZE, MIN_MARGIN, MAX_MARGIN, MIN_PARAGRAPH_SPACING, MAX_PARAGRAPH_SPACING}}}};
 
 const ICON_SIZE : f64 = 40.;
     pub enum InternalUICommand {
@@ -15,17 +17,25 @@ pub enum TabKind {
     Toc = 0,
     Search = 1,
     Highlights = 2,
+    Settings = 3,
 }
 
 pub struct CustomButton {
     kind: TabKind,
+    svg_icon : WidgetPod<EpubData, Box<dyn Widget<EpubData>>>,
     font: FontFamily,
 }
 
 impl CustomButton {
     pub fn new(kind : TabKind) -> Self {
+        //let svg_data = SvgData::default();
+        println!("text {:?}", include_str!("/home/syscall/Desktop/rust_epub_reader/src/assets/tocc.svg"));   
+
+        let svg_data : SvgData = SvgData::from_str(include_str!("/home/syscall/Desktop/rust_epub_reader/src/assets/tocc.svg")).unwrap();
+        let svg_icon = Svg::new(svg_data).fill_mode(druid::widget::FillStrat::Contain).fix_size(10., 10.);//.center();
         Self {
             kind,
+            svg_icon: WidgetPod::new(svg_icon.boxed()),
             font: FontFamily::default(),
         }
     }
@@ -48,6 +58,7 @@ impl Widget<EpubData> for CustomButton {
             _ => {}
         }
 
+        self.svg_icon.event(ctx, event, data, env);
         ctx.request_paint();
     }
 
@@ -57,18 +68,19 @@ impl Widget<EpubData> for CustomButton {
                 // load the new font for icons                
                 if self.font == FontFamily::default() {
                     self.font = ctx.text().font_family("druid-epub-icons").unwrap();
-                    //self.font = ctx.text().load_font(std::include_bytes!("assets/druid-epub-icons.ttf")).unwrap();
-                    println!("Font loaded");
         
                 }
             }
             _ => {}
         }
+        self.svg_icon.lifecycle(ctx, event, data, env);
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, env: &Env) { }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &EpubData, env: &Env) -> Size {
+        self.svg_icon.layout(ctx, &BoxConstraints::tight(Size::new(ICON_SIZE, ICON_SIZE)), data, env);
+        self.svg_icon.set_origin(ctx, data, env, Point::ORIGIN);
         Size::new(ICON_SIZE, ICON_SIZE)
     }
 
@@ -81,15 +93,9 @@ impl Widget<EpubData> for CustomButton {
         match self.kind {
             TabKind::Toc => {
                 
-                let text = ctx.text();
-                let layout = text
-                    .new_text_layout("\u{A000}")
-                    .text_color(Color::WHITE)
-                    .font(self.font.clone(), 15.)
-                    .build()
-                    .unwrap();
+                // draw an svg icon
+                self.svg_icon.paint(ctx, data, env);
 
-                ctx.draw_text(&layout, (half_width, half_height));
             }
             TabKind::Highlights => {
                 let text = ctx.text();
@@ -110,6 +116,17 @@ impl Widget<EpubData> for CustomButton {
                     .build()
                     .unwrap();
                 ctx.draw_text(&layout, (half_width, half_height));
+            },
+            TabKind::Settings => {
+                let text = ctx.text();
+                let layout = text
+                    .new_text_layout("\u{A001}")
+                    .text_color(Color::WHITE)
+                    .font(self.font.clone(), 20.)
+                    .build()
+                    .unwrap();
+                ctx.draw_text(&layout, (half_width, half_height));
+   
             }
 
         
@@ -211,7 +228,7 @@ impl Panel {
     }
 
     pub fn with_input_widget(mut self) -> Self {
-        let input_widget = TextBox::new().lens(EpubData::search_input).boxed();
+        let input_widget = TextBox::new().lens(EpubData::sidebar_data.then(SidebarData::search_input)).boxed();
         self.input_widget = Some(WidgetPod::new(input_widget));
         self
     }
@@ -319,7 +336,7 @@ impl Sidebar {
         let mut side_buttons = Vec::new();
         let mut panels = Vec::new();
 
-        for kind in vec![TabKind::Toc, TabKind::Search, TabKind::Highlights] {
+        for kind in vec![TabKind::Toc, TabKind::Search, TabKind::Highlights, TabKind::Settings] {
     
             match &kind {
                 TabKind::Toc => {
@@ -355,22 +372,107 @@ impl Sidebar {
                         )
                     )
                 },
-                //TabKind::Highlights => {
-                //    const TOC_TITLE : &str = "HIGHLIGHTS";
-                //    let widget = Scroll::new(
-                //        List::new(|| {
-                //            ClickableLabel::new()
-                //        }
-                //    )
-                //    .lens(EpubData::sidebar_data.then(SidebarData::book_highlights))).vertical().boxed();
-        //
-                //    panels.push(
-                //        WidgetPod::new((
-                //            Panel::new(TOC_TITLE, widget))
-                //            .boxed()
-                //        )
-                //    )
-                //},
+                TabKind::Highlights => {
+                    const TOC_TITLE : &str = "HIGHLIGHTS";
+                    let widget = Scroll::new(
+                        List::new(|| {
+                            ClickableLabel::new()
+                        }
+                    )
+                    .lens(EpubData::sidebar_data.then(SidebarData::book_highlights))).vertical().boxed();
+        
+                    panels.push(
+                        WidgetPod::new((
+                            Panel::new(TOC_TITLE, widget))
+                            .boxed()
+                        )
+                    )
+                },
+                TabKind::Settings => {
+                    const TOC_TITLE : &str = "SETTINGS";
+                    let widget = Scroll::new(
+                        /*
+                        Here we can set font size, text margin, visualization mode, 
+                        */                        
+                        // Create a slider for font size
+                        // Create a slider for text margin
+                        // Create three button for visualization mode
+                        
+
+                        Flex::column()
+                        .with_child(
+                            // Create three button able to change visualization mode
+                            Flex::row()
+                            .with_child(
+                                Button::new("Single").on_click(|ctx, data: &mut EpubData, _env| {
+                                    data.epub_settings.visualization_mode = VisualizationMode::SinglePage;
+                                    ctx.request_paint();
+                                })
+                            )
+                            .with_child(
+                                Button::new("Two").on_click(|ctx, data: &mut EpubData, _env| {
+                                    data.epub_settings.visualization_mode = VisualizationMode::TwoPage;
+                                    ctx.request_paint();
+                                })
+                            )
+
+
+                        )
+                        .with_spacer(10.)
+                        .with_child(
+                            Flex::column()
+                            .with_child(
+                                        Label::new(|data: &EpubData, _env: &_| {
+                                            format!("Font size: {number:.prec$}",prec = 2, number = data.epub_settings.font_size)
+                                        })
+                                    )
+                                .with_child(
+                                    Slider::new()
+                                    .with_range(MIN_FONT_SIZE, MAX_FONT_SIZE)
+                                    .lens(EpubData::epub_settings.then(EpubSettings::font_size))
+                                    .expand_width()
+                            )
+                        )
+                        .with_spacer(10.)
+                        .with_child(
+                            Flex::column()
+                            .with_child(
+                                Label::new(|data: &EpubData, _env: &_| {
+                                    format!("Text margin: {number:.prec$}",prec = 2, number = data.epub_settings.margin)
+                                })
+                            )                                
+                                .with_child(
+                                    Slider::new()
+                                    .with_range(MIN_MARGIN, MAX_MARGIN)
+                                    .lens(EpubData::epub_settings.then(EpubSettings::margin))
+                                    .expand_width()
+                            )
+                        )
+                        .with_spacer(10.)
+                        .with_child(
+                            Flex::column()
+                            .with_child(
+                                Label::new(|data: &EpubData, _env: &_| {
+                                    format!("Paragraph spacing: {number:.prec$}",prec = 2, number = data.epub_settings.paragraph_spacing)
+                                })
+                            )
+                                .with_child(
+                                    Slider::new()
+                                    .with_range(MIN_PARAGRAPH_SPACING, MAX_PARAGRAPH_SPACING)
+                                    .lens(EpubData::epub_settings.then(EpubSettings::paragraph_spacing))
+                                    .expand_width()
+                            )
+                        )                        
+                    ).vertical()
+                    .boxed();
+        
+                    panels.push(
+                        WidgetPod::new((
+                            Panel::new(TOC_TITLE, widget))
+                            .boxed()
+                        )
+                    )
+                },
                 
                 _ => {},
 
@@ -495,6 +597,10 @@ impl Widget<EpubData> for Sidebar {
                 sizee.y0 = ICON_SIZE*2.;
                 sizee.y1 = ICON_SIZE*3.;
 
+            }
+            TabKind::Settings => {
+                sizee.y0 = ICON_SIZE*3.;
+                sizee.y1 = ICON_SIZE*4.;
             }
         }
         ctx.fill(sizee, &Color::rgb8(255, 255, 255));

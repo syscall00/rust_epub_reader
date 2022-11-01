@@ -114,8 +114,14 @@ pub fn read_ebook(data : EpubData) -> Box<dyn Widget<AppState>> {
 
     //let epub_page = EpubPage::new(data).lens(AppState::epub_data);
 
+
+    ////Flex::row()
+    ////    .with_flex_child(Sidebar::new().lens(AppState::epub_data), 0.2)
+    ////    .with_child(EpubPage::new(data).lens(AppState::epub_data))
+    ////    .boxed()
+    ////
     Container::column()
-    .with_child(Sidebar::new())
+    .with_child_and_size(Sidebar::new(),0.25)
     .with_child(EpubPage::new(data))
     .lens(AppState::epub_data)
     .boxed()

@@ -1,6 +1,6 @@
 use druid::Selector;
 
-use crate::{sidebar::InternalUICommand, appstate::{PagePosition, PageIndex}, PageType};
+use crate::{sidebar::InternalUICommand, appstate::{PageIndex}, PageType};
 
 
 pub const INTERNAL_COMMAND: Selector<InternalUICommand> =
@@ -19,14 +19,10 @@ pub const CHANGE_CHAPTER: Selector<bool> = Selector::new("change_chapter");
 // Commands for EpubPage view
 pub const REQUEST_EDIT: Selector<()> = Selector::new("request_edit");
 
-pub const CHANGE_VISUALIZATION: Selector<VisualizationMode> =
-    Selector::new("change_visualization");
-
 
 pub const SAVE_EPUB: Selector<()> = Selector::new("save_epub");
 #[derive(druid::Data, Clone, PartialEq, Debug)]
 pub enum VisualizationMode {
-    Single = 0,
-    Two = 1,
-    Scroll = 2
+    SinglePage = 0,
+    TwoPage = 1,
 }

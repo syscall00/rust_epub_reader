@@ -12,6 +12,7 @@ use std::sync::Arc;
 
 use crate::PageType;
 use crate::core::commands::VisualizationMode;
+use crate::core::constants;
 use crate::core::style::LINK_COLOR;
 use crate::tool::Tool;
 use epub::doc::EpubDoc;
@@ -155,12 +156,7 @@ impl AppState {
 
 #[derive(Clone, Lens, Default, Debug, Data)]
 pub struct EpubMetrics {
-    // Static metrics:
     pub num_chapters: usize,
-
-
-
-    // calculate at change of new chapter:
     pub current_chapter: usize,
 
 }
@@ -168,14 +164,12 @@ pub struct EpubMetrics {
 impl EpubMetrics {
     pub fn new(pages : &Vector<ArcStr>) -> Self {
         let num_chapters = pages.len();
-        //let book_length = pages.iter().map(|p| p.len()).sum();
 
         EpubMetrics {
             num_chapters,
             current_chapter: 0,
         }
     }
-
 
     pub fn change_chapter(&mut self, chapter_num : usize) {
         self.current_chapter = chapter_num;
@@ -191,6 +185,8 @@ pub struct SidebarData {
     pub search_results : Vector<IndexedText>,
     pub book_highlights : Vector<IndexedText>,
 
+    pub search_input : String,
+
 }
 
 impl SidebarData {
@@ -199,6 +195,8 @@ impl SidebarData {
             table_of_contents,
             search_results : Vector::new(),
             book_highlights : Vector::new(),
+
+            search_input: String::default(),
         }
     }
 }
@@ -214,28 +212,47 @@ pub struct EpubData {
 
     //pub left_text : RichText,
     //pub right_text : RichText,
-
     pub visualized_chapter : String,
-
     pub sidebar_data : SidebarData,
-    // maintain font size
-    pub font_size : f64,
-
-    pub search_input : String,
     pub edit_mode : bool,
-
-    pub visualization_mode : VisualizationMode,
-
-
     pub selected_tool : Tool,
-
     
-
+    pub epub_settings: EpubSettings
     
 
     
 }
 
+#[derive(Lens, Clone, Data)]
+pub struct EpubSettings {
+    
+    pub font_size: f64,
+    pub margin: f64,
+    pub paragraph_spacing: f64,
+
+    pub visualization_mode: VisualizationMode,
+}
+impl EpubSettings {
+    pub fn new() -> Self {
+        EpubSettings::default()
+    }
+
+
+
+
+}
+
+impl Default for EpubSettings {
+    fn default() -> Self {
+        EpubSettings {
+            font_size: constants::epub_settings::DEFAULT_FONT_SIZE,
+            margin: constants::epub_settings::DEFAULT_MARGIN,
+            paragraph_spacing: constants::epub_settings::DEFAULT_PARAGRAPH_SPACING,
+
+            visualization_mode: VisualizationMode::SinglePage,
+        }
+    }
+}
 
 #[derive(Clone, Lens, Data)]
 pub struct IndexedText {
@@ -261,30 +278,61 @@ impl EpubData {
             rich_chapters: Vector::new(),
             visualized_chapter : String::new(),
             sidebar_data : SidebarData::new(Vector::new()),
-            font_size : 12.,
-            search_input : String::new(),
             edit_mode : false,
-            visualization_mode : VisualizationMode::Single,
             selected_tool : Tool::default(),
+            epub_settings: EpubSettings::default(),
+            
         }
     }
+    
+    pub fn new(chapters: Vector<ArcStr>, doc: EpubDoc<File>) -> Self {
 
+        let epub_settings=  EpubSettings::default();
+        let mut rich_chapters : Vector<Vector<RichText>> = Vector::new();
+
+
+        let toc : Vector<IndexedText> = doc.toc.iter().map(|toc| {
+            let key = toc.label.clone();
+            let value = PageIndex::IndexPosition { chapter: toc.play_order, richtext_number: 0 };
+            IndexedText::new(ArcStr::from(key), Arc::new(value))
+        }).collect();
+
+
+        for i in 0..chapters.len() {
+        let rich = rebuild_rendered_text(&chapters[i], &epub_settings);
+            rich_chapters.push_back(rich);
+        }
+
+        let epub_metrics = EpubMetrics::new(&chapters);
+
+        EpubData { 
+            visualized_chapter : chapters[0].clone().to_string(),
+            chapters, 
+
+            epub_metrics,
+            edit_mode : false,
+            sidebar_data: SidebarData::new(toc),
+
+            
+            rich_chapters,
+            selected_tool : Tool::default(),
+            epub_settings
+            
+        }
+        
+    }
 
     pub fn save_new_epub(&mut self) {
         let new_page = self.visualized_chapter.clone();
-        let labels = rebuild_rendered_text(&new_page);
+        let labels = rebuild_rendered_text(&new_page, &self.epub_settings);
 
-        self.rich_chapters.remove(self.epub_metrics.current_chapter);
-        self.rich_chapters.insert(self.epub_metrics.current_chapter, labels);
+        self.rich_chapters[self.epub_metrics.current_chapter] = labels;
 
         let mut zip = zip::ZipArchive::new(
             File::open("/home/syscall/Desktop/rust_epub_reader/examples/1.epub").unwrap()).unwrap();
 
         let mut zip_writer = zip::ZipWriter::new(File::create("/home/syscall/Desktop/rust_epub_reader/examples/1_modified.epub").unwrap());
-        //let options = zip::write::FileOptions::default()
-        //    .compression_method(zip::CompressionMethod::Stored)
-        //    .unix_permissions(0o755);
-        //    
+
         for i in 0..zip.len() {
             let file_n = zip.by_index(i).unwrap();
             let file_name = String::from(file_n.name());
@@ -295,65 +343,14 @@ impl EpubData {
         }
         zip_writer.finish().unwrap();
     }
-    pub fn new(chapters: Vector<ArcStr>, mut doc: EpubDoc<File>) -> Self {
-
-        // move data from EpubDoc to EpubData; no need to keep EpubDoc around
-
-        
-        
-        println!("Get current {:?}", doc.get_current_str().unwrap());
-
-        let mut toc : Vector<IndexedText> = doc.toc.iter().map(|toc| {
-            let key = toc.label.clone();
-            let value = PageIndex::IndexPosition { chapter: toc.play_order, richtext_number: 0 };
-            IndexedText::new(ArcStr::from(key), Arc::new(value))
-        }).collect();
-        let mut rich_chapters : Vector<Vector<RichText>> = Vector::new();
-        for i in 0..chapters.len() {
-        let rich = rebuild_rendered_text(&chapters[i]);
-            rich_chapters.push_back(rich);
-
-        }
-        if chapters.len() == 0 {
-            toc.push_back(IndexedText::new(ArcStr::from("No chapters found"), Arc::new(PageIndex::IndexPosition { chapter: 0 , richtext_number: 0 })));
-            rich_chapters.push_back(Vector::new());
-        }
-        let visualized_chapterr = if chapters.len() > 0  {
-            chapters[0].clone().to_string()
-        } 
-        else {
-            String::new()
-        };
-        
-        
-        let epub_metrics = EpubMetrics::new(&chapters);//, rich_chapters[0].len());
-
-        EpubData { 
-            visualized_chapter : visualized_chapterr,
-            chapters, 
-
-
-            epub_metrics,
-            edit_mode : false,
-            font_size: 14.,
-            sidebar_data: SidebarData::new(toc),
-
-            
-            search_input : String::new(),
-            visualization_mode : VisualizationMode::Single,
-            rich_chapters,
-            selected_tool : Tool::default(),
-            
-        }
-        
-    }
-
+    
+    
     pub fn get_current_chap(&self) -> &Vector<RichText> {
         &self.rich_chapters[self.epub_metrics.current_chapter]
     }
     
     pub fn has_next_chapter(&self) -> bool {
-        return self.epub_metrics.current_chapter < self.rich_chapters.len() - 1;
+        return self.epub_metrics.current_chapter < self.chapters.len() - 1;
     }
 
     pub fn has_prev_chapter(&self) -> bool {
@@ -361,16 +358,16 @@ impl EpubData {
     }
 
     // Search the match in all text and 
-    // return a tuple with a string containing 5 words near match result and a PagePosition referring to the match
+    // return a tuple with a string containing 5 words near match result referring to the match
     pub fn search_string_in_book(&mut self) {
         const MAX_SEARCH_RESULTS : usize = 100;
         let mut results = Vector::new();
-        if !self.search_input.is_empty() {
-            let search_lenght = self.search_input.len();
+        if !self.sidebar_data.search_input.is_empty() {
+            let search_lenght = self.sidebar_data.search_input.len();
          
             'outer: for (i, chapter) in self.rich_chapters.iter().enumerate() {
                 for (j, richtext) in chapter.iter().enumerate() {
-                    let matches : Vec<usize> = richtext.as_str().match_indices(&self.search_input).map(|(i, _)|i).collect();
+                    let matches : Vec<usize> = richtext.as_str().match_indices(&self.sidebar_data.search_input).map(|(i, _)|i).collect();
                     for occ_match in matches {
                         let range_position = PageIndex::RangePosition { chapter: i, richtext_number: j, range: occ_match..search_lenght };
 
@@ -407,14 +404,15 @@ impl EpubData {
     pub fn next_chapter(&mut self) {
         if self.epub_metrics.current_chapter < self.epub_metrics.num_chapters - 1 {
             self.epub_metrics.current_chapter+=1;
+            self.visualized_chapter = self.chapters[self.epub_metrics.current_chapter].clone().to_string();
         }
     }
-
-    pub fn move_to_pos(&mut self, position : &PagePosition) { }
 
     pub fn previous_chapter(&mut self) {
         if self.epub_metrics.current_chapter > 0 {
             self.epub_metrics.current_chapter-=1;
+            self.visualized_chapter = self.chapters[self.epub_metrics.current_chapter].clone().to_string();
+
         }
     }
 
@@ -468,19 +466,30 @@ impl HtmlTag {
         matches!(self, HtmlTag::Title)
     }
 
-    pub fn add_attribute_for_token(&self, mut attrs: druid::text::AttributesAdder) {
+    pub fn add_attribute_for_token(&self, mut attrs: druid::text::AttributesAdder,epub_settings: &EpubSettings) {
         match self {
             HtmlTag::Header(lvl) => {
-                attrs
-                    .size(16. + *lvl as f64)
+                let font_size = epub_settings.font_size *
+                    match lvl {
+                        1 => 2.,
+                        2 => 1.5,
+                        3 => 1.17,
+                        4 => 1.,
+                        5 => 0.8375,
+                        6 => 0.67,
+                        _ => 1.,
+                    };
+                    attrs
+                    .size(font_size)
                     .weight(druid::FontWeight::BOLD);
+                    
             }
             HtmlTag::Bold => {
                 attrs.weight(druid::FontWeight::BOLD);
             }
             HtmlTag::Italic => {
                 attrs.style(druid::FontStyle::Italic);
-            }
+            }                       
             HtmlTag::Underline => {
                 attrs.underline(true);
             }
@@ -492,7 +501,6 @@ impl HtmlTag {
                 attrs
                     .underline(true)
                     .text_color(LINK_COLOR);
-                    //.link(SCROLL_TO.with(100)); //.with(Rect::new(10., 10., 10., 10.)));
             }
             HtmlTag::Image(_img) => {}
             _ => {
@@ -503,12 +511,6 @@ impl HtmlTag {
     
 }
 
-#[derive (Clone, Debug)]
-pub struct PagePosition {
-    pub chapter: usize, // chap_num
-    pub page: usize, // page_pos
-    pub slice : (usize, usize),
-}
 
 #[derive(Clone)]
 pub enum PageIndex {
@@ -516,17 +518,8 @@ pub enum PageIndex {
     RangePosition {chapter : usize, richtext_number: usize, range: std::ops::Range<usize> }
 }
 
-impl PagePosition {
-    pub fn new(chapter: usize, start: usize, end: usize) -> Self {
-        PagePosition {
-            chapter,
-            page: start,
-            slice: (start, end)
-        }
-    }
-}
 
-pub fn rebuild_rendered_text(text: &str) -> Vector<RichText> {
+pub fn rebuild_rendered_text(text: &str, epub_settings: &EpubSettings) -> Vector<RichText> {
     let mut current_pos = 0;
     let mut builder = druid::text::RichTextBuilder::new();
     let mut token_stack: Vec<(usize, HtmlTag)> = Vec::new();
@@ -568,7 +561,7 @@ pub fn rebuild_rendered_text(text: &str) -> Vector<RichText> {
                         continue;
                     }
 
-                    tk.add_attribute_for_token(builder.add_attributes_for_range(pos..current_pos));
+                    tk.add_attribute_for_token(builder.add_attributes_for_range(pos..current_pos), epub_settings);
 
                     if tk != HtmlTag::Unhandled && tk.add_newline_after_tag() {
                         //current_pos += 1;
@@ -643,11 +636,3 @@ pub fn rebuild_rendered_text(text: &str) -> Vector<RichText> {
     richtexts
 }
 
-
-//#[derive(Clone, Lens, Data)]
-//pub struct PageItem {
-//    pub page_number: u32,
-//    pub plain_text: ArcStr,
-//    pub html_text: ArcStr,
-//    pub page_text: RichText,
-//}
