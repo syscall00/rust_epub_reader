@@ -1,17 +1,18 @@
 
 
-use druid::widget::{ViewSwitcher, Flex, TextBox, Split, Axis};
-use druid::{WidgetPod, WidgetExt, Data};
+use druid::widget::{ViewSwitcher, TextBox, Axis, Flex, Controller};
+use druid::{WidgetPod, WidgetExt, Data, Key, Code};
 use druid::{
-    BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
-    LifeCycleCtx, PaintCtx, Point, RenderContext, Size, UpdateCtx,
+    BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle,
+    LifeCycleCtx, PaintCtx, Point, Size, UpdateCtx,
     Widget,
 };
 
-use crate::appstate::{EpubData, AppState};
+use crate::appstate::{EpubData};
 
 
-use crate::core::commands::{REQUEST_EDIT, VisualizationMode, SAVE_EPUB};
+use crate::core::commands::{REQUEST_EDIT, SAVE_EPUB, INTERNAL_COMMAND, self};
+use crate::sidebar::InternalUICommand;
 use crate::widgets::epub_page::navbar::NavigationBar;
 use crate::widgets::epub_page::textcontainer::{TextContainer};
 use crate::widgets::epub_page::toolbar::Toolbar;
@@ -177,7 +178,7 @@ impl Widget<EpubData> for EditPage {
         self.text_field.lifecycle(ctx, event, data, env);
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _: &EpubData, data: &EpubData, env: &Env) {
         self.text_field.update(ctx, data, env);
     }
 
@@ -198,6 +199,48 @@ impl Widget<EpubData> for EditPage {
 pub struct EpubPage {
     view_switcher: WidgetPod<EpubData, Box<dyn Widget<EpubData>>>,
 }
+pub struct EditWindowController;
+
+impl Controller<EpubData, Flex<EpubData>> for EditWindowController {
+    fn event(&mut self, child: &mut Flex<EpubData>, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
+        match event {
+            Event::KeyDown(k) => {
+                match k.code {
+                    Code::Escape => {
+                        println!("Exiting");
+                        //ctx.submit_command(commands::CLOSE_WINDOW.to(data.window_id));
+                    }
+                    // If crtl + s is pressed, save the file
+                    Code::KeyS => {
+                        if k.mods.ctrl() {
+                            println!("Saving");
+                            ctx.submit_command(INTERNAL_COMMAND.with(InternalUICommand::SaveModification(data.visualized_chapter.clone())));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            Event::WindowCloseRequested => {
+                println!("Exiting");
+                //ctx.submit_command(commands::CLOSE_WINDOW.to(data.window_id));
+            }
+            _ => {}
+        }
+        child.event(ctx, event, data, env);
+    }
+    
+}
+
+
+pub fn generate_ui_edit() -> impl Widget<EpubData> {
+    Flex::column()
+    .with_child(Toolbar::new())
+    .with_flex_child(TextBox::multiline().expand().lens(EpubData::visualized_chapter), 1.)
+    .controller(EditWindowController{})
+} 
+
+
 
 impl EpubPage {
     pub fn new(_data : EpubData) -> Self {
@@ -205,31 +248,34 @@ impl EpubPage {
         let view_switcher = WidgetPod::new(ViewSwitcher::new(
             |data: &EpubData, _env: &Env| data.edit_mode,
             |edit_mode, _, _env| {
-                if !*edit_mode {
+                if true {
 
                     let visualization_mode_switcher = TextContainer::new().expand().boxed();
 
                     let c = Container::new()
-                    .with_child(Toolbar::new())
                     .with_child(visualization_mode_switcher);
-                    if !(false) {
-                        c.with_widget_and_origin(NavigationBar::new(), Point::new(0.0, -50.0))
-                    } else {
-                        c
-                    }
-                    .boxed()
+                    //if !(false) {
+                    //    c.with_widget_and_origin(NavigationBar::new(), Point::new(0.0, -50.0))
+                    //} else {
+                    //    c
+                    //}
+                    c.boxed()
 
                 } else {
-                    Container::new()
-                    .with_child(Toolbar::new())
-                    .with_child(EditPage::new())
+                    //Container::new()
+                    //.with_child(Toolbar::new())
+                    //.with_child(generate_ui_edit())
+                    generate_ui_edit()
                     .boxed()
-                    
+
                 }
             },
         )).boxed();
+        let switcher = Flex::column()
+        .with_flex_child(TextContainer::new().expand(), 1.);
+        //.with_child(NavigationBar::new().with_height(50.));
         EpubPage {
-            view_switcher
+            view_switcher : WidgetPod::new(switcher.boxed()),
         }
     }
 }
@@ -240,9 +286,60 @@ impl Widget<EpubData> for EpubPage {
 
         match event {
             Event::Command(cmd) => {
-                if let Some(_) = cmd.get(REQUEST_EDIT) {
-                    data.edit_mode = !data.edit_mode;
-                    ctx.request_update();
+                if let Some(_) = cmd.get(INTERNAL_COMMAND) {
+                    match cmd.get(INTERNAL_COMMAND).unwrap() {
+                        InternalUICommand::OpenEditDialog => {
+                            if !data.edit_mode {
+                                data.edit_mode = true;
+                                // share data between current window and subwindow
+
+                                //ctx.new_window(druid::WindowDesc::new(generate_ui_edit()));
+                                let tb = TextBox::new().lens(EpubData::visualized_chapter);//lens(SubState::my_stuff);
+                    
+                                ctx.new_sub_window(
+                                    druid::WindowConfig::default()
+                                        .show_titlebar(true)
+                                        .set_level(druid::WindowLevel::AppWindow),
+                                    generate_ui_edit(),
+                                    data.clone(),
+                                    env.clone(),
+                                );
+                    
+                                //ctx.new_sub_window(
+                                //        druid::WindowConfig::default()
+                                //        .set_level(druid::WindowLevel::Tooltip(ctx.window().clone()))
+                                //         //.window_size_policy(druid::WindowSizePolicy::Content)
+                                //         //.set_level(druid::WindowLevel::Tooltip(ctx.window().clone()))
+                                //         .show_titlebar(true),
+//
+                                //         generate_ui_edit(),
+                                //     data.clone(),
+                                //     env.clone(),
+                                //);
+
+
+
+
+                            //    ctx.new_sub_window(
+                            //        druid::WindowConfig::default()
+                            //        .set_level(druid::WindowLevel::Tooltip(ctx.window().clone()))
+                            //    
+                            //    , generate_ui_edit(), 
+                            //        data.clone(), env.clone());
+                            }
+                            //data.edit_mode = !data.edit_mode;
+                            //ctx.request_layout();
+                        }
+                        InternalUICommand::SaveModification(edit_data) => {
+                            println!("saving modification");
+                            data.visualized_chapter = edit_data.clone();
+                            data.save_new_epub();
+                            data.edit_mode = !data.edit_mode;
+                            ctx.request_update();
+                            ctx.set_handled();
+                                }
+                        _ => {}
+                    }
                     ctx.set_handled();
                 }
                 else if cmd.is(SAVE_EPUB) {

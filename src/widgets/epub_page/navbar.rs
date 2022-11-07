@@ -2,7 +2,7 @@
 use druid::{
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
     LifeCycleCtx, PaintCtx, RenderContext, Size, UpdateCtx,
-    Widget, Rect, Point, WidgetPod, piet::{Text, TextLayoutBuilder, TextLayout}, Selector,
+    Widget, Rect, Point, WidgetPod, piet::{Text, TextLayoutBuilder, TextLayout, ColorParseError},
 };
 
 use crate::{appstate::EpubData, core::commands::CHANGE_PAGE};
@@ -11,11 +11,10 @@ use crate::{appstate::EpubData, core::commands::CHANGE_PAGE};
 pub struct NavigationBar {
     navigation_buttons : Vec<WidgetPod<EpubData, NavigationButton>>,
 
-
-
     height : f64,
-    //chapter_slider : WidgetPod<EpubData, Slider>,
 }
+
+const COLOR_DARK_BACKG : Result<Color, ColorParseError> = Color::from_hex_str("#36494e");
 
 impl NavigationBar {
     pub fn new() -> Self {
@@ -86,7 +85,6 @@ impl Widget<EpubData> for NavigationBar {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
-        let COLOR_DARK_BACKG = Color::from_hex_str("#36494e").unwrap();
         let mut is_hot = false;
         for button in self.navigation_buttons.iter_mut() {
             button.paint(ctx, data, env);
@@ -95,7 +93,7 @@ impl Widget<EpubData> for NavigationBar {
 
         if is_hot || ctx.is_hot() {
             let size = ctx.size();
-            ctx.fill(size.to_rect(), &COLOR_DARK_BACKG.with_alpha(0.3));
+            ctx.fill(size.to_rect(), &COLOR_DARK_BACKG.unwrap().with_alpha(0.3));
 
             let vec = vec!["Reading percentage", "Page number", "Page pos"];
 
@@ -160,13 +158,13 @@ impl Widget<EpubData> for NavigationButton {
 
     fn lifecycle(&mut self, _: &mut LifeCycleCtx, _: &LifeCycle, _: &EpubData, _: &Env) {}
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, env: &Env) { }
+    fn update(&mut self, _: &mut UpdateCtx, _: &EpubData, _: &EpubData, _: &Env) { }
 
     fn layout(&mut self, _: &mut LayoutCtx, _: &BoxConstraints, _: &EpubData, _: &Env) -> Size {
         Size::new(50., 50.)
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, _: &EpubData, _: &Env) {
         
         // Draw arrow here!!!
         let r = Rect::from_origin_size(Point::new(0., 0.), ctx.size());

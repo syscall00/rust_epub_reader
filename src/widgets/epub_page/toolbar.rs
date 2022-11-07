@@ -1,7 +1,7 @@
 
 use std::sync::Arc;
 
-use druid::widget::{TextBox, Button, Flex};
+use druid::widget::{Button, Flex};
 use druid::{
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
     LifeCycleCtx, PaintCtx, Point, RenderContext, Size, UpdateCtx,
@@ -9,12 +9,15 @@ use druid::{
 };
 
 use crate::appstate::{EpubData};
-use crate::core::commands::{REQUEST_EDIT, VisualizationMode};
+use crate::core::commands::{REQUEST_EDIT};
+use crate::core::style::{self, SECONDARY_DARK};
 use crate::tool::Tool;
 
 
+const TOOLBAR_COLOR : Result<Color, druid::piet::ColorParseError> = Color::from_hex_str("#7EA0B7");//.unwrap();
+
 // Create a base widget for styling toolbar buttons
-pub enum ToolbarWidget {
+pub enum _ToolbarWidget {
     EditText,
     EditRender,
     EditFontSize,
@@ -37,25 +40,25 @@ impl ToolbarController {
 }
 
 impl Widget<EpubData> for ToolbarController {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
+    fn event(&mut self, _: &mut EventCtx, event: &Event, _: &mut EpubData, _: &Env) {
         match event {
             _ => {
             }
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, env: &Env) {
+    fn lifecycle(&mut self, _: &mut LifeCycleCtx, _: &LifeCycle, _: &EpubData, _: &Env) {
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, env: &Env) {
+    fn update(&mut self, _: &mut UpdateCtx, _: &EpubData, _: &EpubData, _: &Env) {
     }
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &EpubData, env: &Env) -> Size {
+    fn layout(&mut self, _: &mut LayoutCtx, bc: &BoxConstraints, _: &EpubData, _: &Env) -> Size {
         let s = bc.max();
         s
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, _: &EpubData, _: &Env) {
         let size = ctx.size();
         let rect = size.to_rect();
         ctx.fill(rect, &Color::rgb8(0x00, 0x00, 0x00));
@@ -92,17 +95,12 @@ impl Toolbar {
         let expanded = true;
         //let tools = Vec::new();
         let tools = Flex::row()
-        .with_flex_child(Button::new("Edit Page".to_string())            
-        .on_click(|ctx, data: &mut EpubData, env| {
-            ctx.submit_command(REQUEST_EDIT.with(()));
-        }), 1.)
-        .with_default_spacer()
 
-        .with_flex_child(Button::new("Save".to_string()).on_click(|ctx, data, env| {
+        .with_flex_child(Button::new("Save".to_string()).on_click(|ctx, _, _| {
             ctx.submit_command(crate::core::commands::SAVE_EPUB.with(()));
         }), 0.1)
         .with_default_spacer()
-        .with_flex_child(Button::new("Marker".to_string()).on_click(|ctx, data: &mut EpubData, env| {
+        .with_flex_child(Button::new("Marker".to_string()).on_click(|_, data: &mut EpubData, _| {
             if data.selected_tool == Tool::Marker {
                 data.selected_tool = Tool::default();
             }
@@ -137,7 +135,7 @@ impl Widget<EpubData> for Toolbar {
         self.toolbar_controller.lifecycle(ctx, event, data, env);
     }
 
-    fn update(&mut self, ctx: &mut druid::UpdateCtx, old_data: &EpubData, data: &EpubData, env: &druid::Env) {
+    fn update(&mut self, ctx: &mut druid::UpdateCtx, _: &EpubData, data: &EpubData, env: &druid::Env) {
 
         self.tools.update(ctx, data, env);
         self.toolbar_controller.update(ctx, data, env);
@@ -157,10 +155,10 @@ impl Widget<EpubData> for Toolbar {
     }
 
     fn paint(&mut self, ctx: &mut druid::PaintCtx, data: &EpubData, env: &druid::Env) {
-        let TOOLBAR_COLOR : Color = Color::from_hex_str("#7EA0B7").unwrap();
         let size = ctx.size();
         let rect = size.to_rect();
-        ctx.fill(rect, &TOOLBAR_COLOR);
+        ctx.fill(rect, &style::get_color_unchecked(SECONDARY_DARK));
+
 
         self.tools.paint(ctx, data, env);
         self.toolbar_controller.paint(ctx, data, env);

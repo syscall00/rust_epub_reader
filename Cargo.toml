@@ -25,6 +25,8 @@ lipsum = "0.8.2"
 rand = "0.8.5"
 
 
+druid-material-icons = "0.1.0"
+
 zip = "0.6.3"
 #druid-widget-nursery = { git = "https://github.com/linebender/druid-widget-nursery", features = ["material-icons"]}
 #[dependencies.druid]

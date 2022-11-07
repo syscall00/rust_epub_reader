@@ -5,9 +5,7 @@ use druid::{
     commands, AppDelegate, ArcStr, Command, Data, DelegateCtx, Env, Handled, Lens, Target,
 };
 use serde::{Serialize, Deserialize};
-use zip::ZipArchive;
 use std::fs::File;
-use std::iter::Zip;
 use std::sync::Arc;
 
 use crate::PageType;
@@ -25,7 +23,10 @@ pub struct AppState {
     pub epub_data : EpubData,
     pub home_page_data: HomePageData,
     pub active_page : PageType,
+
 }
+
+
 
 
 // usize indicates for Next and Prev the offset to the next or prev page
@@ -48,13 +49,14 @@ pub struct HomePageData {
 #[derive(Clone, Data, Lens, Serialize, Deserialize, Debug)]
 pub struct Recent {
     pub path: String,
+    pub reached_position : usize
     //pub image_data: Vector<u8>,
 }
 impl Recent {
-    pub fn new(name: String, path: String) -> Self {
+    pub fn new(path: String, reached_position: usize) -> Self {
         Recent {
             path,
-            //image_data,
+            reached_position
         }
     }
 }
@@ -118,7 +120,8 @@ impl AppDelegate<AppState> for Delegate {
 
 impl AppState {
     pub fn new() -> Self {
-
+   
+    
         AppState {
             home_page_data: HomePageData::new(),
             epub_data: EpubData::empty_epub_data(),
@@ -145,7 +148,7 @@ impl AppState {
         let doc = EpubDoc::new(&file_path);
         
         assert!(doc.is_ok());
-        let mut doc = doc.unwrap();
+        let doc = doc.unwrap();
 
         self.epub_data = EpubData::new(pages, doc);
 
@@ -392,7 +395,7 @@ impl EpubData {
     }
     
 
-    pub fn add_book_highlight(&mut self, start : usize, end: usize) {
+    pub fn add_book_highlight(&mut self, _start : usize, _end: usize) {
     //    let text = utf8_slice::slice(&self.visualized_page.as_str(), start as usize, end as usize);
     //    let page_position = PagePosition::new(self.epub_metrics.current_chapter, start, end);
     //    let value = Arc::new(page_position);
@@ -609,7 +612,7 @@ pub fn rebuild_rendered_text(text: &str, epub_settings: &EpubSettings) -> Vector
                 }
                 
             }
-            xmlparser::Token::Attribute { prefix: _, local: loc, value : val , span : span } => {
+            xmlparser::Token::Attribute { prefix: _, local: _, value : _ , span : _ } => {
                 //println!("attr: {:?} = {:?}", loc, val);
                 continue;
             },

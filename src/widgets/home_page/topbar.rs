@@ -17,30 +17,30 @@ impl Topbar {
 }
 
 impl Widget<AppState> for Topbar {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut AppState, env: &Env) {
+    fn event(&mut self, _: &mut EventCtx, event: &Event, _: &mut AppState, _: &Env) {
         match event {
             _ => {
             }
         }
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &AppState, env: &Env) {
+    fn lifecycle(&mut self, _: &mut LifeCycleCtx, event: &LifeCycle, _: &AppState, _: &Env) {
         match event {
             _ => {
             }
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &AppState, data: &AppState, env: &Env) {
+    fn update(&mut self, _: &mut UpdateCtx, _: &AppState, _: &AppState, _: &Env) {
 
     }
 
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &AppState, env: &Env) -> Size {
+    fn layout(&mut self, _: &mut LayoutCtx, bc: &BoxConstraints, _: &AppState, _: &Env) -> Size {
 
         bc.max()
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &AppState, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, _: &AppState, _: &Env) {
 
         let size = ctx.size();
         

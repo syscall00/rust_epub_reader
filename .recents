@@ -1,13 +1,16 @@
 
 [
   {
-    "path": "examples/1.epub"
+    "path": "examples/1.epub",
+    "reached_position": 0
   },
   {
-    "path": "examples/3.epub"
+    "path": "examples/3.epub",
+    "reached_position": 0
   },
   {
-    "path": "examples/2.epub"
+    "path": "examples/2.epub",
+    "reached_position": 0
   }
 
  ]

@@ -4,18 +4,18 @@ use std::{path::PathBuf};
 use appstate::{AppState, HomePageData, Recent, EpubData};
 use druid::{
     widget::{
-        Button, Flex, List, Image, FillStrat, ViewSwitcher, Split},
-    AppLauncher, Color, Selector, WidgetExt,
-    WindowDesc, EventCtx, FileInfo, WidgetPod, Event, Env, LifeCycleCtx, LifeCycle, UpdateCtx, BoxConstraints, LayoutCtx, PaintCtx, Size, Point, Data,
+        Button, Flex, List, Image, FillStrat, ViewSwitcher, Scroll,},
+    AppLauncher, Color, WidgetExt,
+    WindowDesc, EventCtx, FileInfo, WidgetPod, Event, Env, LifeCycleCtx, LifeCycle, UpdateCtx, BoxConstraints, LayoutCtx, PaintCtx, Size, Point, Data, TextLayout, RenderContext,
 };
 
 use druid::Widget;
 // use druid_widget_nursery::material_icons::{Icon, normal::action::ALARM_ADD};
 
 use epub::doc::EpubDoc;
-use epub_page::{EpubPage, Container};
+use epub_page::{EpubPage};
 use sidebar::Sidebar;
-use widgets::epub_page::toolbar;
+use widgets::epub_page::textcontainer::Icon;
 mod widgets;
 mod tool;
 mod epub_page;
@@ -35,14 +35,12 @@ fn main() {
     let data = AppState::new();
     let window = WindowDesc::new(navigator(data.clone())).title("Navigation").window_size((1000.0, 800.0));
 
-    
     AppLauncher::with_window(window)
         .log_to_console()
         .delegate(appstate::Delegate)
         .launch(data)
         .unwrap();
 }
-
 
 pub fn navigator(data : AppState) -> Box<dyn Widget<AppState>> {
     let _topbar = crate::widgets::home_page::topbar::Topbar::new();
@@ -112,36 +110,40 @@ impl Widget<AppState> for MainContainer {
 
 pub fn read_ebook(data : EpubData) -> Box<dyn Widget<AppState>> {
 
-    //let epub_page = EpubPage::new(data).lens(AppState::epub_data);
-
-
-    ////Flex::row()
-    ////    .with_flex_child(Sidebar::new().lens(AppState::epub_data), 0.2)
-    ////    .with_child(EpubPage::new(data).lens(AppState::epub_data))
-    ////    .boxed()
-    ////
-    Container::column()
-    .with_child_and_size(Sidebar::new(),0.25)
-    .with_child(EpubPage::new(data))
-    .lens(AppState::epub_data)
-    .boxed()
-    
+    Flex::row()
+        .with_child(Sidebar::new().lens(AppState::epub_data))
+        .with_flex_child(EpubPage::new(data)
+        .lens(AppState::epub_data), 1.)
+        .boxed()
 }
 
 
 struct ListItems {
-    layout: druid::TextLayout<String>,
+    title_label: druid::TextLayout<String>,
+    creator_label: TextLayout<String>,
+    publisher_label: TextLayout<String>,
+    position_in_book_label: TextLayout<String>,
+    
     image : WidgetPod<Recent, Image>,
 } 
 
 impl ListItems {
     pub fn new() -> Self {
-        let layout = druid::TextLayout::default();
+        let title_label = druid::TextLayout::default();
+        let creator_label = druid::TextLayout::default();
+        let publisher_label = druid::TextLayout::default();
+        let position_in_book_label = druid::TextLayout::default();
         
         let img_buf = druid::ImageBuf::empty();
         let image = WidgetPod::new(Image::new(img_buf)
             .fill_mode(FillStrat::Fill));
-        ListItems{ layout, image }
+        ListItems{ 
+            title_label,
+            creator_label,
+            publisher_label,
+            position_in_book_label,
+            image 
+        }
     }
 
 }
@@ -149,20 +151,17 @@ impl ListItems {
 impl Widget<Recent> for ListItems {
     fn event(&mut self, ctx: &mut EventCtx, event: &druid::Event, data: &mut Recent, _env: &druid::Env) {
         match event {
-            //druid::Event::WindowSize(_) => todo!(),
-            druid::Event::MouseDown(_) => {
+            druid::Event::MouseUp(_) => {
                 ctx.set_handled();
                 let f = FileInfo { path: PathBuf::from(data.path.clone()), format: None };
                 ctx.submit_command(druid::Command::new(druid::commands::OPEN_FILE, f, druid::Target::Auto));
 
                 ctx.submit_command(NAVIGATE_TO.with(PageType::Reader));
             }
-            //druid::Event::MouseUp(_) => todo!(),
             druid::Event::MouseMove(_) => {
                 ctx.set_handled();
                 ctx.set_cursor(&druid::Cursor::Pointer);
             },
-            //druid::Event::Wheel(_) => todo!(),
             _ => {}
         
         }
@@ -174,11 +173,29 @@ impl Widget<Recent> for ListItems {
                 druid::LifeCycle::WidgetAdded => {
                     let mut ep = EpubDoc::new(data.path.clone()).unwrap();
                     const UNTITLED_BOOK : &str = "Untitled";
+                    const UNKNOWN_CREATOR_OR_PUBLISHER : &str = "Unknown";
 
+                    
                     let title = ep.mdata("title").unwrap_or(UNTITLED_BOOK.to_string()).to_string();
-                    self.layout.set_text(title);
-                    self.layout.set_text_color(Color::WHITE);
-                    ep = EpubDoc::new(data.path.clone()).unwrap();
+                    let creator = ep.mdata("creator").unwrap_or(UNKNOWN_CREATOR_OR_PUBLISHER.to_string()).to_string();
+                    let publisher = ep.mdata("publisher").unwrap_or(UNKNOWN_CREATOR_OR_PUBLISHER.to_string()).to_string();
+                  
+
+                    self.title_label.set_text(title);
+                    self.title_label.set_text_size(18.);
+                    self.title_label.set_text_color(Color::WHITE);
+
+                    self.creator_label.set_text(creator);
+                    self.creator_label.set_text_size(14.);
+                    self.creator_label.set_text_color(Color::WHITE);
+
+                    self.publisher_label.set_text(publisher);
+                    self.publisher_label.set_text_size(14.);
+                    self.publisher_label.set_text_color(Color::WHITE);
+
+                    self.position_in_book_label.set_text(data.reached_position.to_string());
+                    self.position_in_book_label.set_text_size(14.);
+                    self.position_in_book_label.set_text_color(Color::WHITE);
 
                     let binding = ep.get_cover();
                     let img_data = binding.as_ref().unwrap();
@@ -198,61 +215,64 @@ impl Widget<Recent> for ListItems {
     }
 
     fn layout(&mut self, ctx: &mut druid::LayoutCtx, bc: &druid::BoxConstraints, data: &Recent, env: &druid::Env) -> druid::Size {
-        //if self.layout.needs_rebuild() {
+        const IMAGE_HEIGHT : f64 = 180.;
+        const TITLE_TEXT_WRAP : f64 = 150.;
             
-            self.layout.set_wrap_width(130.);
+        self.title_label.set_wrap_width(TITLE_TEXT_WRAP);
+        self.title_label.layout();
+        self.title_label.rebuild_if_needed(ctx.text(), env);
 
-            self.layout.layout();
+        self.creator_label.set_wrap_width(TITLE_TEXT_WRAP);
+        self.creator_label.layout();
+        self.creator_label.rebuild_if_needed(ctx.text(), env);
 
-        self.layout.rebuild_if_needed(ctx.text(), env);
+        self.publisher_label.set_wrap_width(TITLE_TEXT_WRAP);
+        self.publisher_label.layout();
+        self.publisher_label.rebuild_if_needed(ctx.text(), env);
 
-        self.image.layout(ctx, &BoxConstraints::tight(Size::new(130., 180.)), data, env);
-        self.image.set_origin(ctx, data, env, Point::ORIGIN);
-        druid::Size::new(130., 200.)
+        self.position_in_book_label.set_wrap_width(TITLE_TEXT_WRAP);
+        self.position_in_book_label.layout();
+        self.position_in_book_label.rebuild_if_needed(ctx.text(), env);
 
 
+        self.image.layout(ctx, &BoxConstraints::tight(Size::new(130., IMAGE_HEIGHT)), data, env);
+        self.image.set_origin(ctx, data, env, Point::new(10., 10., ));
+        druid::Size::new(bc.max().width, 200.)
 
-        //druid::Size::new(self.layout.size().width, self.layout.size().height+ 180.)    
     }
 
     fn paint(&mut self, ctx: &mut druid::PaintCtx, _data: &Recent, _env: &druid::Env) {
+        let size = ctx.size();
+        ctx.fill(size.to_rect(), &Color::RED);
+        const LABEL_PADDING: f64 = 5.;
 
-        // This is the builder-style way of drawing text.
-        self.layout.draw(ctx, Point::new(0., 180.));
-        //let ret  = druid::Rect::new(20., 20., 150. , 200.);
-        //let img_data = epub::doc::EpubDoc::new(_data.path.to_string()).unwrap().get_cover().unwrap();
+        let mut y = 15.;
+        self.title_label.draw(ctx, Point::new(150., y));
+        y+= self.title_label.size().height + LABEL_PADDING;
+        self.creator_label.draw(ctx, Point::new(150., y));
+        y+= self.creator_label.size().height + LABEL_PADDING;
 
-        //let a = druid::ImageBuf::from_data(&img_data).unwrap();
+        self.publisher_label.draw(ctx, Point::new(150., y));
+        y+= self.publisher_label.size().height + LABEL_PADDING;
+
+        self.position_in_book_label.draw(ctx, Point::new(150., y));
         self.image.paint(ctx, _data, _env);
 
 
-        //let image = a.to_image(ctx.render_ctx);
-        //ctx.draw_image(&image, ret, druid::piet::InterpolationMode::Bilinear);
     }
 }
 // main page and contains list view of contacts
 // notice that this must return Box<dyn Widget<YourState>> instead of impl Widget<YourState>
 // navigator needs Boxed widgets in order to store the widgets
 
-pub fn home_page(data : AppState) -> impl Widget<HomePageData> {
+pub fn home_page(_ : AppState) -> impl Widget<HomePageData> {
     
-    let list = List::new(|| {
-        //|item: &Recent, _env: &_| -> Box<dyn Widget<Recent>>{
-        //    let list_items = ListItems::new();
-        //    list_items.boxed()
-        //}
-        //druid::widget::Label::new(|item: &Recent, _env: &_| item.name.clone())
-        //    .padding(5.0)
-        //    .background(Color::rgb8(0x80, 0x80, 0x80))
-        //    .expand_width()
-        //    .center()
+    let list = Scroll::new(List::new(|| {
          ListItems::new()
-         .align_vertical(druid::UnitPoint::LEFT)
-         .padding(10.0)
-         
-         //.background(Color::rgb(0.5, 0.5, 0.5))
-         
-    }).lens(HomePageData::recents);
+         .padding(5.0)
+         .expand_width()
+                  
+    })).vertical().lens(HomePageData::recents);
 
 
     let open_epub = Button::new("Open new epub".to_string())
@@ -270,10 +290,11 @@ pub fn home_page(data : AppState) -> impl Widget<HomePageData> {
     
                
     let layout = Flex::column()
-        .with_flex_child(open_epub, 1.)
-        .with_flex_child(list, 1.);//.lens(AppState::home_page_data);
+        .with_child(open_epub)
+        .with_child(list);
         layout
-    //Container::new(layout).background(Color::WHITE)
+
+        
 }
 
 
