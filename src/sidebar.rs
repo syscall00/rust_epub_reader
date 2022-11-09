@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use druid::{
     piet::{Text, TextLayoutBuilder},
-    widget::{Button, Flex, Label, List, Scroll, Slider, Svg, SvgData, TextBox},
+    widget::{Button, Flex, Label, List, Scroll, Slider, Svg, SvgData, TextBox, ControllerHost},
     ArcStr, BoxConstraints, Color, Data, Env, Event, EventCtx, FontFamily, LayoutCtx, LensExt,
     LifeCycle, LifeCycleCtx, PaintCtx, Point, RenderContext, Size, TextLayout, UpdateCtx, Widget,
     WidgetExt, WidgetPod,
@@ -18,9 +18,9 @@ use crate::{
             MIN_PARAGRAPH_SPACING,
         },
         style::{self, COMPLEMENTARY_DARK, PRIMARY_DARK},
-    }, widgets::epub_page::textcontainer::Icon,
+    },
+    widgets::{epub_page::textcontainer::Icon, tooltip::TooltipController},
 };
-
 
 const ICON_SIZE: f64 = 32.;
 #[derive(Debug)]
@@ -31,9 +31,7 @@ pub enum InternalUICommand {
     SaveModification(String),
 }
 
-
 pub trait ButtonTrait {
-
     fn icon(&self) -> IconPaths;
     fn hint(&self) -> String;
     fn command(&self) -> InternalUICommand;
@@ -42,16 +40,15 @@ pub trait ButtonTrait {
 pub enum PanelButton {
     Toc,
     Search,
-    Highlights,
+    //Highlights,
     Settings,
-
 }
 impl PanelButton {
     pub fn title(&self) -> String {
         match self {
             PanelButton::Toc => "Table of Contents".to_string(),
             PanelButton::Search => "Search".to_string(),
-            PanelButton::Highlights => "Highlights".to_string(),
+            //PanelButton::Highlights => "Highlights".to_string(),
             PanelButton::Settings => "Settings".to_string(),
         }
     }
@@ -73,13 +70,12 @@ impl PanelButton {
                 .boxed(),
             ),
 
-            PanelButton::Highlights => Scroll::new(
-                List::new(|| ClickableLabel::new())
-                    .lens(EpubData::sidebar_data.then(SidebarData::book_highlights)),
-            )
-            .vertical()
-            .boxed(),
-
+            //PanelButton::Highlights => Scroll::new(
+            //    List::new(|| ClickableLabel::new())
+            //        .lens(EpubData::sidebar_data.then(SidebarData::book_highlights)),
+            //)
+            //.vertical()
+            //.boxed(),
             PanelButton::Settings => Scroll::new(
                 Flex::column()
                     .with_child(
@@ -100,7 +96,7 @@ impl PanelButton {
                                 },
                             )),
                     )
-                    .with_spacer(10.)
+                    .with_spacer(20.)
                     .with_child(
                         Flex::column()
                             .with_child(Label::new(|data: &EpubData, _env: &_| {
@@ -159,30 +155,27 @@ impl PanelButton {
             .boxed(),
         }
     }
-
-
 }
 impl ButtonTrait for PanelButton {
     fn icon(&self) -> IconPaths {
         match self {
             PanelButton::Toc => druid_material_icons::normal::communication::LIST_ALT,
             PanelButton::Search => druid_material_icons::normal::action::FIND_IN_PAGE,
-            PanelButton::Highlights => druid_material_icons::normal::action::SETTINGS,
+            //PanelButton::Highlights => druid_material_icons::normal::action::SETTINGS,
             PanelButton::Settings => druid_material_icons::normal::action::SETTINGS,
         }
     }
-    fn hint(&self) -> String{
+    fn hint(&self) -> String {
         match self {
             PanelButton::Toc => "Table of Contents".to_string(),
             PanelButton::Search => "Search".to_string(),
-            PanelButton::Highlights => "Highlights".to_string(),
+            //PanelButton::Highlights => "Highlights".to_string(),
             PanelButton::Settings => "Settings".to_string(),
         }
     }
     fn command(&self) -> InternalUICommand {
         InternalUICommand::SwitchTab(self.clone())
     }
-    
 }
 
 pub enum ActionButton {
@@ -198,7 +191,7 @@ impl ButtonTrait for ActionButton {
             ActionButton::EditBook => druid_material_icons::normal::editor::EDIT_NOTE,
         }
     }
-    fn hint(&self) -> String{
+    fn hint(&self) -> String {
         match self {
             ActionButton::CloseBook => "Close Book".to_string(),
             ActionButton::EditBook => "Edit Book".to_string(),
@@ -210,7 +203,6 @@ impl ButtonTrait for ActionButton {
             ActionButton::EditBook => InternalUICommand::OpenEditDialog,
         }
     }
-
 }
 
 pub struct CustomButton<T: ButtonTrait> {
@@ -224,10 +216,14 @@ pub struct CustomButton<T: ButtonTrait> {
 impl<T: ButtonTrait> CustomButton<T> {
     pub fn new(kind: T) -> Self {
 
+        let hint = kind.hint();
         let icon_data = kind.icon();
         Self {
             kind,
-            icon: WidgetPod::new(Icon::new(icon_data).boxed()),
+            icon: WidgetPod::new(ControllerHost::new(
+                Icon::new(icon_data),
+                TooltipController::new(hint),
+            ).boxed()),
             font: FontFamily::default(),
             open: false,
             clickable: true,
@@ -235,7 +231,7 @@ impl<T: ButtonTrait> CustomButton<T> {
     }
 }
 
-impl<T: ButtonTrait> Widget<EpubData> for CustomButton<T>{
+impl<T: ButtonTrait> Widget<EpubData> for CustomButton<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
         match event {
             Event::MouseDown(_) => {
@@ -290,9 +286,6 @@ impl<T: ButtonTrait> Widget<EpubData> for CustomButton<T>{
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
-
-
-        
         // with save, rotate context, paint icon and restore context
         ctx.with_save(|ctx| {
             // rotate of 180 degree
@@ -302,12 +295,8 @@ impl<T: ButtonTrait> Widget<EpubData> for CustomButton<T>{
         });
         //self.icon.paint(ctx, data, env);
         // rotate icon
-        
-
     }
 }
-
-
 
 struct ClickableLabel {
     layout: TextLayout<ArcStr>,
@@ -370,7 +359,7 @@ impl Widget<IndexedText> for ClickableLabel {
     fn layout(
         &mut self,
         ctx: &mut LayoutCtx,
-        _: &BoxConstraints,
+        bc: &BoxConstraints,
         _: &IndexedText,
         env: &Env,
     ) -> Size {
@@ -379,9 +368,10 @@ impl Widget<IndexedText> for ClickableLabel {
         //self.layout.set_wrap_width(f64::INFINITY);
         let text_metrics = self.layout.layout_metrics();
         ctx.set_baseline_offset(text_metrics.size.height - text_metrics.first_baseline);
-
+        println!("layout {:?}", text_metrics.size);
         //bc.constrain(size)
-        Size::new(150., 23.)
+
+        Size::new(bc.max().width, 23.)
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, _: &IndexedText, _: &Env) {
@@ -416,10 +406,10 @@ impl Sidebar {
         for kind in vec![
             PanelButton::Toc,
             PanelButton::Search,
-            PanelButton::Highlights,
+            //PanelButton::Highlights,
             PanelButton::Settings,
         ] {
-            if let PanelButton::Search = kind  {
+            if let PanelButton::Search = kind {
                 panels.push(WidgetPod::new(
                     (Panel::new(&&kind.title(), kind.to_widget()))
                         .with_input_widget()
@@ -430,11 +420,10 @@ impl Sidebar {
                     (Panel::new(&kind.title(), kind.to_widget())).boxed(),
                 ))
             }
-            
+
             let other_but = CustomButton::new(kind).boxed();
             side_buttons.push(WidgetPod::new(other_but));
         }
-
 
         for actions in vec![ActionButton::CloseBook, ActionButton::EditBook] {
             let other_but = CustomButton::new(actions).boxed();
@@ -448,7 +437,6 @@ impl Sidebar {
             opened_tab: None,
         }
     }
-
 
     pub fn get_active_panel(&mut self) -> &mut WidgetPod<EpubData, Box<dyn Widget<EpubData>>> {
         if !self.opened_tab.is_some() {
@@ -479,7 +467,7 @@ impl Widget<EpubData> for Sidebar {
                             ctx.set_handled();
 
                             ctx.request_layout();
-                        },
+                        }
                         _ => {}
                     }
                 }
@@ -497,7 +485,7 @@ impl Widget<EpubData> for Sidebar {
         if self.opened_tab.is_some() {
             self.get_active_panel().event(ctx, event, data, env);
         }
-        
+
         for button in self.action_buttons.iter_mut() {
             button.event(ctx, event, data, env);
         }
@@ -548,45 +536,48 @@ impl Widget<EpubData> for Sidebar {
         data: &EpubData,
         env: &druid::Env,
     ) -> druid::Size {
+        const PADDING_BETWEEN_BUTTONS: f64 = 5.0;
+        const ITEM_BAR_SIZE: f64 = 40.;
         const PANEL_PADDING: f64 = 0.;
         let max_size = bc.max();
-        let closed_size = Size::new(ICON_SIZE, max_size.height);
-        let mut prev_height = Point::new(0., 0.);
+        let closed_size = Size::new(ITEM_BAR_SIZE, max_size.height);
+        let mut prev_height = Point::new(5., PADDING_BETWEEN_BUTTONS);
+
         for button in self.side_buttons.iter_mut() {
             button.layout(ctx, &BoxConstraints::tight(max_size), data, env);
             button.set_origin(ctx, data, env, prev_height);
 
-            prev_height.y += button.layout_rect().height();
+            prev_height.y += button.layout_rect().height() + PADDING_BETWEEN_BUTTONS;
         }
-        
-
         // draw action buttons starting from the bottom
-        let mut prev_height = Point::new(0., max_size.height-ICON_SIZE);
+        let mut prev_height = Point::new(5., max_size.height - ICON_SIZE);
         for button in self.action_buttons.iter_mut() {
             button.layout(ctx, &BoxConstraints::tight(max_size), data, env);
             button.set_origin(ctx, data, env, prev_height);
 
-            prev_height.y -= button.layout_rect().height();
+            prev_height.y -= button.layout_rect().height() - PADDING_BETWEEN_BUTTONS;
         }
-
 
         if self.opened_tab.is_some() {
             self.get_active_panel().layout(
                 ctx,
-                &BoxConstraints::tight(Size::new(ICON_SIZE * 6., max_size.height - PANEL_PADDING)),
+                &BoxConstraints::tight(Size::new(
+                    ITEM_BAR_SIZE * 5.,
+                    max_size.height - PANEL_PADDING,
+                )),
                 data,
                 env,
             );
             self.get_active_panel()
-                .set_origin(ctx, data, env, Point::new(ICON_SIZE, 0.));
-            Size::new(ICON_SIZE * 6., max_size.height)
+                .set_origin(ctx, data, env, Point::new(ITEM_BAR_SIZE, 0.));
+            Size::new(ITEM_BAR_SIZE * 5. + ITEM_BAR_SIZE, max_size.height)
         } else {
             closed_size
         }
     }
 
     fn paint(&mut self, ctx: &mut druid::PaintCtx, data: &EpubData, env: &druid::Env) {
-        let rect = Size::new(ICON_SIZE, ctx.size().height).to_rect();
+        let rect = Size::new(40., ctx.size().height).to_rect();
         ctx.fill(rect, &style::get_color_unchecked(PRIMARY_DARK));
 
         for button in self.side_buttons.iter_mut() {
@@ -597,21 +588,18 @@ impl Widget<EpubData> for Sidebar {
             button.paint(ctx, data, env);
         }
 
+        // Draw panel and side line if some is opened
         if self.opened_tab.is_some() {
             self.get_active_panel().paint(ctx, data, env);
 
             let mut rect = Size::new(2., ICON_SIZE).to_rect();
             let num = *self.opened_tab.as_ref().unwrap() as usize;
-            rect.y0 = num as f64 * ICON_SIZE;
-            rect.y1 = rect.y0 + ICON_SIZE;
+            rect.y0 = num as f64 * ICON_SIZE + 7.;
+            rect.y1 = rect.y0 + ICON_SIZE + 7.;
             ctx.fill(rect, &Color::WHITE);
         }
-        
     }
 }
-
-
-
 
 pub struct Panel {
     header: TextLayout<ArcStr>,
@@ -684,8 +672,10 @@ impl Widget<EpubData> for Panel {
         data: &EpubData,
         env: &Env,
     ) -> Size {
+        const PANEL_COMPONENT_PADDING: f64 = 7.;
         let size = bc.max();
-        let mut widget_size = Size::new(size.width, size.height - 30.);
+        let mut widget_size =
+            Size::new(size.width - PANEL_COMPONENT_PADDING * 2., size.height - 30.);
         let mut input_widget_size = Size::new(size.width, 0.);
         if self.input_widget.is_some() {
             input_widget_size = self.input_widget.as_mut().unwrap().layout(
@@ -694,10 +684,12 @@ impl Widget<EpubData> for Panel {
                 data,
                 env,
             );
-            self.input_widget
-                .as_mut()
-                .unwrap()
-                .set_origin(ctx, data, env, Point::new(0., 30.));
+            self.input_widget.as_mut().unwrap().set_origin(
+                ctx,
+                data,
+                env,
+                Point::new(PANEL_COMPONENT_PADDING, 30.),
+            );
             widget_size.height -= 25.;
         }
 
@@ -709,7 +701,7 @@ impl Widget<EpubData> for Panel {
             ctx,
             data,
             env,
-            Point::new(0., 30. + input_widget_size.height),
+            Point::new(PANEL_COMPONENT_PADDING, 30. + input_widget_size.height),
         );
 
         size
@@ -717,7 +709,7 @@ impl Widget<EpubData> for Panel {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
         let size = ctx.size();
-        ctx.fill(size.to_rect(), &COMPLEMENTARY_DARK.unwrap());
+        ctx.fill(size.to_rect(), &Color::GRAY); //&COMPLEMENTARY_DARK.unwrap());
         self.header.draw(ctx, (5., 5.));
         if self.input_widget.is_some() {
             self.input_widget.as_mut().unwrap().paint(ctx, data, env);

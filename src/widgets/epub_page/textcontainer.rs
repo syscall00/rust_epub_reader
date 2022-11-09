@@ -207,7 +207,7 @@ impl Widget<EpubData> for PageSplitter {
                     let direction = cmd.get_unchecked(CHANGE_PAGE).clone();
                     let starting_point;
                     if direction {
-                        if (self.visualized_range.is_empty() || self.visualized_range.end() >= data.get_current_chap().len()) && data.has_next_chapter() {
+                        if (self.visualized_range.end() >= data.get_current_chap().len()-1) && data.has_next_chapter() {
 
                             data.next_chapter();
                             
@@ -221,7 +221,7 @@ impl Widget<EpubData> for PageSplitter {
                         }
                     }
                     else {
-                        if (self.visualized_range.is_empty() || self.visualized_range.start() == 0) && data.has_prev_chapter() {
+                        if (self.visualized_range.start() == 0) && data.has_prev_chapter() {
 
                             data.previous_chapter();
 
@@ -394,9 +394,11 @@ impl Widget<EpubData> for PageSplitter {
 }
 
 
+
 pub struct TextContainer {   
-    label_text_lines: WidgetPod<EpubData, Box<dyn Widget<EpubData>>>,
+    label_text_lines: WidgetPod<EpubData, PageSplitter>,
     navigation_buttons : Vec<WidgetPod<EpubData, Box<dyn Widget<EpubData>>>>,
+    
     
 
 }
@@ -407,12 +409,13 @@ impl TextContainer {
             WidgetPod::new(NavigationButton::new(true).boxed()),
         ];
         Self {
-            label_text_lines : WidgetPod::new(PageSplitter::new().boxed()),
+            label_text_lines : WidgetPod::new(PageSplitter::new()),
             navigation_buttons,
         }
     }
 
 }
+
 impl Widget<EpubData> for TextContainer {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
         self.label_text_lines.event(ctx, event, data, env);
@@ -422,6 +425,10 @@ impl Widget<EpubData> for TextContainer {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, env: &Env) {
+        match event {
+            //LifeCycle::BuildFocusChain => ctx.register_for_focus(),
+            _ => {}
+        }
         self.label_text_lines.lifecycle(ctx, event, data, env);
         for nav_button in self.navigation_buttons.iter_mut() {
             nav_button.lifecycle(ctx, event, data, env);
@@ -442,7 +449,7 @@ impl Widget<EpubData> for TextContainer {
             &BoxConstraints::tight(Size::new(bc.max().width, bc.max().height)), data, env);
         self.label_text_lines.set_origin(ctx, data, env, Point::ORIGIN);
 
-        let mut x = 30.0;
+        let mut x = 10.0;
         for nav_button in self.navigation_buttons.iter_mut() {
             nav_button.layout(ctx, bc, data, env);
             nav_button.set_origin(ctx, data, env, Point::new(x, size.height-100.));
@@ -459,21 +466,24 @@ impl Widget<EpubData> for TextContainer {
         for nav_button in self.navigation_buttons.iter_mut() {
             nav_button.paint(ctx, data, env);
         }
-        
-        if data.epub_settings.visualization_mode == VisualizationMode::SinglePage {
-            let text = "Page 1/1";
-            let layout = ctx.text().new_text_layout(text).build().unwrap();
+        let label_text = self.label_text_lines.widget_mut();
+        let number_of_labels = label_text.text.len() as isize -1;
+        let range = label_text.visualized_range.get_page(0);
+        let text = range.start.to_string() + "-" + &range.end.to_string() + "/" + &number_of_labels.to_string();
+        let layout = ctx.text().new_text_layout(text).build().unwrap();
 
-            ctx.draw_text(&layout, Point::new(size.width/2.-PAGE_LABEL_DISTANCE_FROM_CENTER, size.height-PAGE_LABEL_Y_PADDING));
+        let mut origin = Point::new(size.width/2.-PAGE_LABEL_DISTANCE_FROM_CENTER, size.height-PAGE_LABEL_Y_PADDING);
+        if data.epub_settings.visualization_mode == VisualizationMode::SinglePage {
+            ctx.draw_text(&layout, origin);
+
         }
         else {
-            let text = "Page 1/2";
-            let layout = ctx.text().new_text_layout(text).build().unwrap();
-
-            let mut origin = Point::new(size.width/2.-size.width/4.-PAGE_LABEL_DISTANCE_FROM_CENTER, size.height-PAGE_LABEL_Y_PADDING);
+            origin.x = size.width/2.-size.width/4.-PAGE_LABEL_DISTANCE_FROM_CENTER;
             ctx.draw_text(&layout, origin);
-            let text = "Page 2/2";
 
+
+            let range = label_text.visualized_range.get_page(1);
+            let text = range.start.to_string() + "-" + &range.end.to_string() + "/" + &number_of_labels.to_string();
             let layout = ctx.text().new_text_layout(text).build().unwrap();
 
             origin.x = size.width/2.+size.width/4.-PAGE_LABEL_DISTANCE_FROM_CENTER;
@@ -639,7 +649,7 @@ Handle selection
 
 
 
-
+//
 
 pub use druid_material_icons::{normal, IconPaths};
 

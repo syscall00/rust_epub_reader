@@ -316,7 +316,7 @@ impl EpubData {
             edit_mode : false,
             sidebar_data: SidebarData::new(toc),
 
-            
+                
             rich_chapters,
             selected_tool : Tool::default(),
             epub_settings
