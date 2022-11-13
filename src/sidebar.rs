@@ -28,6 +28,7 @@ pub enum InternalUICommand {
     SwitchTab(PanelButton),
     GoToMenu,
     OpenEditDialog,
+    OpenOCRDialog,
     SaveModification(String),
 }
 
@@ -70,12 +71,6 @@ impl PanelButton {
                 .boxed(),
             ),
 
-            //PanelButton::Highlights => Scroll::new(
-            //    List::new(|| ClickableLabel::new())
-            //        .lens(EpubData::sidebar_data.then(SidebarData::book_highlights)),
-            //)
-            //.vertical()
-            //.boxed(),
             PanelButton::Settings => Scroll::new(
                 Flex::column()
                     .with_child(
@@ -181,6 +176,7 @@ impl ButtonTrait for PanelButton {
 pub enum ActionButton {
     CloseBook,
     EditBook,
+    OCROpen,
 }
 
 impl ButtonTrait for ActionButton {
@@ -189,18 +185,21 @@ impl ButtonTrait for ActionButton {
             // Check if can rotate
             ActionButton::CloseBook => druid_material_icons::normal::action::EXIT_TO_APP,
             ActionButton::EditBook => druid_material_icons::normal::editor::EDIT_NOTE,
+            ActionButton::OCROpen => druid_material_icons::normal::editor::EDIT_NOTE,
         }
     }
     fn hint(&self) -> String {
         match self {
             ActionButton::CloseBook => "Close Book".to_string(),
             ActionButton::EditBook => "Edit Book".to_string(),
+            ActionButton::OCROpen => "Find using OCR".to_string(),
         }
     }
     fn command(&self) -> InternalUICommand {
         match self {
             ActionButton::CloseBook => InternalUICommand::GoToMenu,
             ActionButton::EditBook => InternalUICommand::OpenEditDialog,
+            ActionButton::OCROpen => InternalUICommand::OpenOCRDialog,
         }
     }
 }
@@ -333,6 +332,7 @@ impl Widget<IndexedText> for ClickableLabel {
         match event {
             LifeCycle::WidgetAdded => {
                 self.layout.set_text(data.key.clone());
+                self.layout.set_text_size(13.);
                 self.layout.rebuild_if_needed(ctx.text(), env);
             }
             LifeCycle::HotChanged(_) => {
@@ -368,7 +368,6 @@ impl Widget<IndexedText> for ClickableLabel {
         //self.layout.set_wrap_width(f64::INFINITY);
         let text_metrics = self.layout.layout_metrics();
         ctx.set_baseline_offset(text_metrics.size.height - text_metrics.first_baseline);
-        println!("layout {:?}", text_metrics.size);
         //bc.constrain(size)
 
         Size::new(bc.max().width, 23.)
@@ -382,7 +381,7 @@ impl Widget<IndexedText> for ClickableLabel {
             ctx.fill(rect, &Color::BLUE);
         }
         //println!("painting : {:?}", size);
-        ctx.clip(size.to_rect());
+        ctx.clip((size-Size::new(15., 0.)).to_rect());
 
         self.layout.draw(ctx, (5., 0.));
     }
@@ -425,7 +424,7 @@ impl Sidebar {
             side_buttons.push(WidgetPod::new(other_but));
         }
 
-        for actions in vec![ActionButton::CloseBook, ActionButton::EditBook] {
+        for actions in vec![ActionButton::CloseBook, ActionButton::EditBook, ActionButton::OCROpen] {
             let other_but = CustomButton::new(actions).boxed();
             action_buttons.push(WidgetPod::new(other_but));
         }
@@ -442,7 +441,7 @@ impl Sidebar {
         if !self.opened_tab.is_some() {
             panic!("Sidebar is not opened");
         }
-        &mut self.panels[*self.opened_tab.as_ref().unwrap() as usize]
+        &mut self.panels[self.opened_tab.clone().unwrap() as usize]
     }
 }
 
@@ -593,7 +592,7 @@ impl Widget<EpubData> for Sidebar {
             self.get_active_panel().paint(ctx, data, env);
 
             let mut rect = Size::new(2., ICON_SIZE).to_rect();
-            let num = *self.opened_tab.as_ref().unwrap() as usize;
+            let num = self.opened_tab.clone().unwrap() as usize;
             rect.y0 = num as f64 * ICON_SIZE + 7.;
             rect.y1 = rect.y0 + ICON_SIZE + 7.;
             ctx.fill(rect, &Color::WHITE);
@@ -631,6 +630,8 @@ impl Widget<EpubData> for Panel {
                 Event::KeyUp(key) => {
                     if key.code == druid::Code::Enter {
                         data.search_string_in_book();
+                        let pos = data.search_with_ocr_input("/home/drivesec/Desktop/photo_2022-11-12_17-39-49.jpg");
+                        ctx.submit_command(GO_TO_POS.with(pos));
                         ctx.request_update();
                         ctx.request_layout();
                     }

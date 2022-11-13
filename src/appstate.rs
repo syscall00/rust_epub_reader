@@ -49,14 +49,18 @@ pub struct HomePageData {
 #[derive(Clone, Data, Lens, Serialize, Deserialize, Debug)]
 pub struct Recent {
     pub path: String,
-    pub reached_position : usize
-    //pub image_data: Vector<u8>,
+    pub reached_position : Option<PageIndex>,
+
+    pub epub_settings : EpubSettings,
+
+
 }
 impl Recent {
-    pub fn new(path: String, reached_position: usize) -> Self {
+    pub fn new(path: String) -> Self {
         Recent {
             path,
-            reached_position
+            reached_position: None,
+            epub_settings : EpubSettings::default(),
         }
     }
 }
@@ -79,8 +83,8 @@ impl HomePageData {
           std::fs::read_to_string(recents_fname).unwrap()
 
         };
-        
-
+        let mut recent  = Recent::new("".to_string());
+        recent.reached_position = Some(PageIndex::IndexPosition { chapter: 0, richtext_number: 10 });
         let recents : Vec<Recent> = serde_json::from_str(&recents_string).unwrap();
         recents.into()
     }
@@ -107,8 +111,8 @@ impl AppDelegate<AppState> for Delegate {
         _env: &Env,
     ) -> Handled {
 
-        if let Some(file_info) = cmd.get(commands::OPEN_FILE) {
-            data.open_file(file_info.path().to_str().unwrap().to_string());
+        if let Some(file_info) = cmd.get(crate::core::commands::OPEN_RECENT) {
+            data.open_file(file_info);
 
 
             return Handled::Yes;
@@ -143,14 +147,19 @@ impl AppState {
         pages
     }
 
-    pub fn open_file(&mut self, file_path: String) {
-        let pages = AppState::load_file(&file_path);
-        let doc = EpubDoc::new(&file_path);
+    pub fn open_file(&mut self, file_info: &Recent) {
+        let pages = AppState::load_file(&file_info.path);
+        let doc = EpubDoc::new(&file_info.path);
         
         assert!(doc.is_ok());
         let doc = doc.unwrap();
 
         self.epub_data = EpubData::new(pages, doc);
+        self.epub_data.epub_settings = file_info.epub_settings.to_owned();
+        if let Some(page_index) = &file_info.reached_position {
+            self.epub_data.page_position = page_index.to_owned();
+        }
+        //self.epub_data.reached_position = file_info.reached_position;
 
     }
 
@@ -161,7 +170,6 @@ impl AppState {
 pub struct EpubMetrics {
     pub num_chapters: usize,
     pub current_chapter: usize,
-
 }
 
 impl EpubMetrics {
@@ -213,8 +221,8 @@ pub struct EpubData {
     pub chapters: Vector<ArcStr>,
     pub rich_chapters: Vector<Vector<RichText>>,
 
-    //pub left_text : RichText,
-    //pub right_text : RichText,
+
+    pub page_position: PageIndex,
     pub visualized_chapter : String,
     pub sidebar_data : SidebarData,
     pub edit_mode : bool,
@@ -226,7 +234,7 @@ pub struct EpubData {
     
 }
 
-#[derive(Lens, Clone, Data)]
+#[derive(Lens, Clone, Data, Serialize, Deserialize, Debug)]
 pub struct EpubSettings {
     
     pub font_size: f64,
@@ -239,9 +247,6 @@ impl EpubSettings {
     pub fn new() -> Self {
         EpubSettings::default()
     }
-
-
-
 
 }
 
@@ -284,6 +289,8 @@ impl EpubData {
             edit_mode : false,
             selected_tool : Tool::default(),
             epub_settings: EpubSettings::default(),
+            page_position : PageIndex::IndexPosition { chapter: 0, richtext_number: 0}
+            
             
         }
     }
@@ -316,13 +323,19 @@ impl EpubData {
             edit_mode : false,
             sidebar_data: SidebarData::new(toc),
 
-                
+            page_position : PageIndex::IndexPosition { chapter: 0, richtext_number: 0},
             rich_chapters,
             selected_tool : Tool::default(),
             epub_settings
             
         }
         
+    }
+
+    pub fn save_current_position(&mut self, richtext_number: usize) {
+        let chapter = self.epub_metrics.current_chapter;
+        
+        self.sidebar_data.table_of_contents[chapter].value = Arc::new(PageIndex::IndexPosition { chapter, richtext_number });
     }
 
     pub fn save_new_epub(&mut self) {
@@ -360,11 +373,102 @@ impl EpubData {
         return self.epub_metrics.current_chapter > 0;
     }
 
+
+    pub fn search_with_ocr_input(&mut self, image_path : &str) -> PageIndex {
+        let mut lt = leptess::LepTess::new(None, "eng").unwrap();
+        lt.set_image(image_path).unwrap();
+
+        let recognized_text = lt.get_utf8_text().unwrap().chars().filter(|c| c.is_alphanumeric() || c.is_whitespace()).collect::<String>();
+
+        /*
+        Search for recognized text in this way:
+            1. Clean the recognized text from special and unknown characters
+            2. Divide the chapters in chunks big as the recognized text
+            3. Generate a vector of (word, count) for the recognized text
+            4. Spawn a thread from a thread pool for each chunk
+            5. For each chunk, generate a vector of (word, count) and compare it with the recognized text
+            6. If the two vectors are similar, return the starting index of the chunk with a percentage of similarity
+        */
+    // test tantity search on a lorem ipsum text
+    let mut schema_builder = tantivy::schema::Schema::builder();
+    let title = schema_builder.add_text_field("title", tantivy::schema::TEXT | tantivy::schema::STORED);
+    let chapter = schema_builder.add_u64_field("chapter", tantivy::schema::FAST | tantivy::schema::STORED);
+    let position = schema_builder.add_u64_field("start_pos", tantivy::schema::FAST | tantivy::schema::STORED);
+    let schema = schema_builder.build();
+        
+    
+    let index = tantivy::Index::create_in_ram(schema);    
+    let mut index_writer = index.writer(50_000_000).unwrap();
+    
+    let chapt2 = self.rich_chapters[3].iter().map(|r| r.as_str().clone()).collect::<String>();
+
+    for i in 0..self.rich_chapters.len() {
+
+        // For each richtext in the chapter, when size is greater than 1000, create a new document
+        for (j, richtext) in self.rich_chapters[i].iter().enumerate() {
+            let mut doc = tantivy::Document::default();
+            doc.add_text(title, &richtext.as_str());
+            doc.add_u64(chapter, i as u64);
+            doc.add_u64(position, j as u64);
+            index_writer.add_document(doc);
+        }
+    }
+
+    //let splitted = chapt2.as_bytes().chunks(recognized_text.len()).map(|c| std::str::from_utf8(c).unwrap());
+    //println!("Splitted: {:?}", chapt2);
+    //for split in splitted {
+    //    index_writer.add_document(tantivy::doc!(
+    //        title => split,
+    //        chapter => 2 as u64,
+    //        position => 0 as u64
+    //    )).unwrap();
+    //}
+    //return;
+    index_writer.commit().unwrap();
+    let reader = index.reader().unwrap();
+    let searcher = reader.searcher();
+    let query_parser = tantivy::query::QueryParser::for_index(&index, vec![tantivy::schema::Field::from_field_id(0)]);
+
+
+
+    let query = query_parser.parse_query(&recognized_text).unwrap();
+    
+    let top_docs = searcher.search(&query, &tantivy::collector::TopDocs::with_limit(3)).unwrap();
+    println!("Found {} documents.", top_docs.len());
+    //for (score, doc_address) in top_docs {
+    //    let retrieved_doc = searcher.doc(doc_address).unwrap();
+    //    let chapter = retrieved_doc.get_first(chapter).unwrap();
+    //    let position = retrieved_doc.get_first(position).unwrap();
+    //    println!("Document: {:?} in chapter {:?} position {:?} with score {}", retrieved_doc, chapter, position, score);
+    //    println!("\n\n\n");
+//
+    //    
+    //}
+    //// get the first document
+    // get the chapter and position
+
+    let doc_address = top_docs[0].1;
+    let retrieved_doc = searcher.doc(doc_address).unwrap();
+    let chapter = retrieved_doc.get_first(chapter).unwrap();
+    let position = retrieved_doc.get_first(position).unwrap();
+
+    println!("Document: {:?} in chapter {} position {} with score {}", retrieved_doc, chapter.as_u64().unwrap(), position.as_u64().unwrap(), top_docs[0].0);
+
+
+    PageIndex::IndexPosition { chapter: chapter.as_u64().unwrap() as usize, richtext_number: position.as_u64().unwrap() as usize }
+
+}
+
+
     // Search the match in all text and 
     // return a tuple with a string containing 5 words near match result referring to the match
+    
     pub fn search_string_in_book(&mut self) {
         const MAX_SEARCH_RESULTS : usize = 100;
+        const BEFORE_MATCH : usize = 13;
         let mut results = Vector::new();
+    
+
         if !self.sidebar_data.search_input.is_empty() {
             let search_lenght = self.sidebar_data.search_input.len();
          
@@ -372,11 +476,18 @@ impl EpubData {
                 for (j, richtext) in chapter.iter().enumerate() {
                     let matches : Vec<usize> = richtext.as_str().match_indices(&self.sidebar_data.search_input).map(|(i, _)|i).collect();
                     for occ_match in matches {
-                        let range_position = PageIndex::RangePosition { chapter: i, richtext_number: j, range: occ_match..search_lenght };
+                        let range_position = PageIndex::RangePosition { chapter: i, richtext_number: j, range: occ_match..occ_match+search_lenght };
 
                         //let page_position = PagePosition::new(i, start, end);
-                        let text = ArcStr::from(utf8_slice::slice(&richtext.as_str(), occ_match, search_lenght));
-                        //let text = ArcStr::from(richtext.as_str().chars().skip(occ_match as usize).take((search_lenght-occ_match) as usize).collect::<String>());
+                        let start = if occ_match > BEFORE_MATCH { occ_match - BEFORE_MATCH } else { 0 };
+                        let end = if occ_match + search_lenght + BEFORE_MATCH < richtext.as_str().len() { occ_match + search_lenght + BEFORE_MATCH } else { richtext.as_str().len() };
+                        //
+
+                        // find end of word 
+                        let text = ArcStr::from(utf8_slice::slice(&richtext.as_str(), start, end));
+
+                        //let text = ArcStr::from(richtext.as_str()[start..end].to_string());
+                        //let text = ArcStr::from(richtext.as_str().chars().skip(occ_match as usize).take((occ_match) as usize).collect::<String>());
                         let value = Arc::new(range_position);
                         let search_result = IndexedText::new(ArcStr::from(text.to_string()), value);
                         results.push_back(search_result);
@@ -515,7 +626,7 @@ impl HtmlTag {
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, Data, Debug, Serialize, Deserialize)]
 pub enum PageIndex {
     IndexPosition {chapter: usize, richtext_number: usize },
     RangePosition {chapter : usize, richtext_number: usize, range: std::ops::Range<usize> }

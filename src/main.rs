@@ -32,6 +32,7 @@ pub enum PageType {
 
 
 fn main() {
+
     // starting from icon_action file, create a widget list with all the icons
     // read file icons_action
 
@@ -57,6 +58,8 @@ fn main() {
 
 // gear druid_material_icons::normal::image::TUNE
 
+
+    //return;
     let data = AppState::new();
     let window = WindowDesc::new(navigator(data.clone())).title("Navigation").window_size((1000.0, 800.0));
 
@@ -74,7 +77,6 @@ fn main() {
      
     //let mut icons_from_file = 
     let v = vec![0];
-    //let v = vec![druid_material_icons::normal::notification::ACCOUNT_TREE,druid_material_icons::normal::notification::ADB,druid_material_icons::normal::notification::ADD_CALL,druid_material_icons::normal::notification::AIRLINE_SEAT_FLAT,druid_material_icons::normal::notification::AIRLINE_SEAT_FLAT_ANGLED,druid_material_icons::normal::notification::AIRLINE_SEAT_INDIVIDUAL_SUITE,druid_material_icons::normal::notification::AIRLINE_SEAT_LEGROOM_EXTRA,druid_material_icons::normal::notification::AIRLINE_SEAT_LEGROOM_NORMAL,druid_material_icons::normal::notification::AIRLINE_SEAT_LEGROOM_REDUCED,druid_material_icons::normal::notification::AIRLINE_SEAT_RECLINE_EXTRA,druid_material_icons::normal::notification::AIRLINE_SEAT_RECLINE_NORMAL,druid_material_icons::normal::notification::BLUETOOTH_AUDIO,druid_material_icons::normal::notification::CONFIRMATION_NUMBER,druid_material_icons::normal::notification::DIRECTIONS_OFF,druid_material_icons::normal::notification::DISC_FULL,druid_material_icons::normal::notification::DO_DISTURB,druid_material_icons::normal::notification::DO_DISTURB_ALT,druid_material_icons::normal::notification::DO_DISTURB_OFF,druid_material_icons::normal::notification::DO_DISTURB_ON,druid_material_icons::normal::notification::DO_NOT_DISTURB,druid_material_icons::normal::notification::DO_NOT_DISTURB_ALT,druid_material_icons::normal::notification::DO_NOT_DISTURB_OFF,druid_material_icons::normal::notification::DO_NOT_DISTURB_ON,druid_material_icons::normal::notification::DRIVE_ETA,druid_material_icons::normal::notification::ENHANCED_ENCRYPTION,druid_material_icons::normal::notification::EVENT_AVAILABLE,druid_material_icons::normal::notification::EVENT_BUSY,druid_material_icons::normal::notification::EVENT_NOTE,druid_material_icons::normal::notification::FOLDER_SPECIAL,druid_material_icons::normal::notification::IMAGESEARCH_ROLLER,druid_material_icons::normal::notification::LIVE_TV,druid_material_icons::normal::notification::MMS,druid_material_icons::normal::notification::MORE,druid_material_icons::normal::notification::NETWORK_CHECK,druid_material_icons::normal::notification::NETWORK_LOCKED,druid_material_icons::normal::notification::NO_ENCRYPTION,druid_material_icons::normal::notification::NO_ENCRYPTION_GMAILERRORRED,druid_material_icons::normal::notification::ONDEMAND_VIDEO,druid_material_icons::normal::notification::PERSONAL_VIDEO,druid_material_icons::normal::notification::PHONE_BLUETOOTH_SPEAKER,druid_material_icons::normal::notification::PHONE_CALLBACK,druid_material_icons::normal::notification::PHONE_FORWARDED,druid_material_icons::normal::notification::PHONE_IN_TALK,druid_material_icons::normal::notification::PHONE_LOCKED,druid_material_icons::normal::notification::PHONE_MISSED,druid_material_icons::normal::notification::PHONE_PAUSED,druid_material_icons::normal::notification::POWER,druid_material_icons::normal::notification::POWER_OFF,druid_material_icons::normal::notification::PRIORITY_HIGH,druid_material_icons::normal::notification::RUNNING_WITH_ERRORS,druid_material_icons::normal::notification::SD_CARD,druid_material_icons::normal::notification::SD_CARD_ALERT,druid_material_icons::normal::notification::SIM_CARD_ALERT,druid_material_icons::normal::notification::SMS,druid_material_icons::normal::notification::SMS_FAILED,druid_material_icons::normal::notification::SUPPORT_AGENT,druid_material_icons::normal::notification::SYNC,druid_material_icons::normal::notification::SYNC_DISABLED,druid_material_icons::normal::notification::SYNC_LOCK,druid_material_icons::normal::notification::SYNC_PROBLEM,druid_material_icons::normal::notification::SYSTEM_UPDATE,druid_material_icons::normal::notification::TAP_AND_PLAY,druid_material_icons::normal::notification::TIME_TO_LEAVE,druid_material_icons::normal::notification::TV_OFF,druid_material_icons::normal::notification::VIBRATION,druid_material_icons::normal::notification::VOICE_CHAT,druid_material_icons::normal::notification::VPN_LOCK,druid_material_icons::normal::notification::WC,druid_material_icons::normal::notification::WIFI,druid_material_icons::normal::notification::WIFI_OFF,];
     for i in 0..v.len() {
         flex.add_child(Flex::row().with_child(Icon::new(v[i])).with_child(druid::widget::Label::new(i.to_string())));
     }
@@ -192,8 +194,8 @@ impl Widget<Recent> for ListItems {
             druid::Event::MouseUp(_) => {
                 ctx.set_handled();
                 let f = FileInfo { path: PathBuf::from(data.path.clone()), format: None };
-                ctx.submit_command(druid::Command::new(druid::commands::OPEN_FILE, f, druid::Target::Auto));
-
+                //ctx.submit_command(druid::Command::new(druid::commands::OPEN_FILE, f, druid::Target::Auto));
+                ctx.submit_command(druid::Command::new(crate::core::commands::OPEN_RECENT, data.clone(), druid::Target::Auto));
                 ctx.submit_command(NAVIGATE_TO.with(PageType::Reader));
             }
             druid::Event::MouseMove(_) => {
@@ -231,15 +233,18 @@ impl Widget<Recent> for ListItems {
                     self.publisher_label.set_text_size(14.);
                     self.publisher_label.set_text_color(Color::WHITE);
 
-                    self.position_in_book_label.set_text(data.reached_position.to_string());
+                    self.position_in_book_label.set_text("".to_owned());//data.reached_position.to_string());
                     self.position_in_book_label.set_text_size(14.);
                     self.position_in_book_label.set_text_color(Color::WHITE);
 
                     let binding = ep.get_cover();
-                    let img_data = binding.as_ref().unwrap();
-                    let img_buf = druid::ImageBuf::from_data(&img_data).unwrap();
 
-                    self.image.widget_mut().set_image_data(img_buf);
+                    if binding.is_ok() {
+                        let img_data = binding.as_ref().unwrap();
+                        let img_buf = druid::ImageBuf::from_data(&img_data).unwrap();
+
+                        self.image.widget_mut().set_image_data(img_buf);
+                    }
 
                 }
                 _ => {} 
