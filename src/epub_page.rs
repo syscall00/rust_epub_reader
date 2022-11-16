@@ -1,153 +1,19 @@
-use druid::widget::{Axis, Controller, Flex, TextBox, ViewSwitcher};
+use druid::widget::{Controller, Flex, TextBox};
 use druid::{
     BoxConstraints, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Point,
     Size, UpdateCtx, Widget,
 };
 use druid::{Code, Data, Key, WidgetExt, WidgetPod};
 
+use crate::PageType;
 use crate::appstate::EpubData;
 
-use crate::core::commands::{self, INTERNAL_COMMAND, REQUEST_EDIT, SAVE_EPUB};
-use crate::sidebar::InternalUICommand;
-use crate::widgets::epub_page::navbar::NavigationBar;
+use crate::core::commands::{NAVIGATE_TO};
+use crate::core::constants::commands::{INTERNAL_COMMAND, InternalUICommand};
 use crate::widgets::epub_page::textcontainer::TextContainer;
 use crate::widgets::epub_page::toolbar::Toolbar;
 
-pub struct Container<T> {
-    widgets: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
-    widget_origins: Vec<Point>,
-    widget_size: Vec<f64>,
-    axis: Axis,
-}
 
-impl<T> Container<T> {
-    pub fn new() -> Self {
-        Self {
-            widgets: Vec::new(),
-            widget_origins: Vec::new(),
-            widget_size: Vec::new(),
-            axis: Axis::Horizontal,
-        }
-    }
-
-    fn for_axis(axis: Axis) -> Self {
-        Self {
-            widgets: Vec::new(),
-            widget_origins: Vec::new(),
-            widget_size: Vec::new(),
-            axis,
-        }
-    }
-
-    pub fn column() -> Self {
-        Self::for_axis(Axis::Vertical)
-    }
-    pub fn row() -> Self {
-        Self::for_axis(Axis::Horizontal)
-    }
-
-    pub fn with_child(mut self, child: impl Widget<T> + 'static) -> Self {
-        self.widgets.push(WidgetPod::new(Box::new(child)));
-        self.widget_origins.push(Point::ORIGIN);
-        self.widget_size.push(1.);
-        self
-    }
-
-    pub fn with_child_and_size(mut self, child: impl Widget<T> + 'static, size: f64) -> Self {
-        self.widgets.push(WidgetPod::new(Box::new(child)));
-        self.widget_origins.push(Point::ORIGIN);
-        self.widget_size.push(size);
-
-        self
-    }
-    pub fn with_widget_and_origin(
-        mut self,
-        child: impl Widget<T> + 'static,
-        origin: Point,
-    ) -> Self {
-        self.widgets.push(WidgetPod::new(Box::new(child)));
-        self.widget_origins.push(origin);
-        self.widget_size.push(1.);
-
-        self
-    }
-    pub fn add_child(&mut self, child: impl Widget<T> + 'static) {
-        self.widgets.push(WidgetPod::new(Box::new(child)));
-        self.widget_origins.push(Point::ORIGIN);
-        self.widget_size.push(1.);
-    }
-    pub fn add_widget_and_origin(&mut self, child: impl Widget<T> + 'static, origin: Point) {
-        self.widgets.push(WidgetPod::new(Box::new(child)));
-        self.widget_origins.push(origin);
-        self.widget_size.push(1.);
-    }
-}
-
-impl<T: Data> Widget<T> for Container<T> {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        for widget in self.widgets.iter_mut() {
-            widget.event(ctx, event, data, env);
-        }
-    }
-
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-        for widget in self.widgets.iter_mut() {
-            widget.lifecycle(ctx, event, data, env);
-        }
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, _old: &T, data: &T, env: &Env) {
-        for widget in self.widgets.iter_mut() {
-            widget.update(ctx, data, env);
-        }
-    }
-
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-        let size = bc.max();
-
-        let mut zero_origin = Size::ZERO;
-        for (widget, (origin, wid_size)) in self
-            .widgets
-            .iter_mut()
-            .zip((self.widget_origins.iter()).zip(self.widget_size.iter()))
-        {
-            let siz = Size::new(size.width * wid_size, size.height) - zero_origin;
-            let widget_size = widget.layout(ctx, &BoxConstraints::tight(siz), data, env);
-            
-            let mut orig = *origin;
-
-            if orig.x < 0. {
-                orig.x = size.width + orig.x;
-            }
-            if origin.y < 0. {
-                orig.y = size.height + origin.y;
-            }
-
-            // If the widget has origin 0, place it accounting others 0-origin widgets
-            if *origin == Point::ORIGIN {
-                match self.axis {
-                    Axis::Vertical => {
-                        widget.set_origin(ctx, data, env, Point::new(zero_origin.width, 0.));
-                        zero_origin.width += widget_size.width;
-                    }
-                    Axis::Horizontal => {
-                        widget.set_origin(ctx, data, env, Point::new(0., zero_origin.height));
-                        zero_origin.height += widget_size.height;
-                    }
-                }
-            } else {
-                widget.set_origin(ctx, data, env, orig);
-            }
-        }
-        size
-    }
-
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        for widget in self.widgets.iter_mut() {
-            widget.paint(ctx, data, env);
-        }
-    }
-}
 
 pub struct EditPage {
     text_field: WidgetPod<EpubData, Box<dyn Widget<EpubData>>>,
@@ -199,6 +65,10 @@ pub struct EpubPage {
 }
 pub struct EditWindowController;
 
+
+
+
+
 impl Controller<EpubData, Flex<EpubData>> for EditWindowController {
     fn event(
         &mut self,
@@ -221,9 +91,10 @@ impl Controller<EpubData, Flex<EpubData>> for EditWindowController {
                             println!("Saving");
                             ctx.submit_command(INTERNAL_COMMAND.with(
                                 InternalUICommand::SaveModification(
-                                    data.visualized_chapter.clone(),
-                                )
-                            ));
+                                        data.visualized_chapter.clone(),
+                                    )
+                                ).to(druid::Target::Global)
+                            );
                             ctx.request_update();
                         }
                     }
@@ -274,28 +145,7 @@ pub fn generate_ui_ocr() -> impl Widget<EpubData> {
 
 impl EpubPage {
     pub fn new(_data: EpubData) -> Self {
-        let view_switcher = WidgetPod::new(ViewSwitcher::new(
-            |data: &EpubData, _env: &Env| data.edit_mode,
-            |edit_mode, _, _env| {
-                if true {
-                    let visualization_mode_switcher = TextContainer::new().expand().boxed();
-
-                    let c = Container::new().with_child(visualization_mode_switcher);
-                    //if !(false) {
-                    //    c.with_widget_and_origin(NavigationBar::new(), Point::new(0.0, -50.0))
-                    //} else {
-                    //    c
-                    //}
-                    c.boxed()
-                } else {
-                    //Container::new()
-                    //.with_child(Toolbar::new())
-                    //.with_child(generate_ui_edit())
-                    generate_ui_edit().boxed()
-                }
-            },
-        ))
-        .boxed();
+        
         let switcher = Flex::column().with_flex_child(TextContainer::new().expand(), 1.);
         //.with_child(NavigationBar::new().with_height(50.));
         EpubPage {
@@ -320,6 +170,9 @@ impl Widget<EpubData> for EpubPage {
                                 env.clone(),
                             );
                         }
+                        InternalUICommand::GoToMenu => {
+                            ctx.submit_command(NAVIGATE_TO.with(PageType::Home));
+                        }
                         InternalUICommand::OpenEditDialog => {
                             if !data.edit_mode {
                                 data.edit_mode = true;
@@ -334,7 +187,7 @@ impl Widget<EpubData> for EpubPage {
                                     druid::WindowConfig::default()
                                         .show_titlebar(true)
                                         .set_level(druid::WindowLevel::AppWindow),
-                                        tb,
+                                        generate_ui_edit(),
                                     data.clone(),
                                     env.clone(),
                                 );
@@ -372,13 +225,7 @@ impl Widget<EpubData> for EpubPage {
                         _ => {}
                     }
                     ctx.set_handled();
-                } else if cmd.is(SAVE_EPUB) {
-                    // first, save epup; then go to visualization mode
-                    data.save_new_epub();
-                    data.edit_mode = !data.edit_mode;
-                    ctx.request_update();
-                    ctx.set_handled();
-                }
+                } 
             }
             _ => {}
         }

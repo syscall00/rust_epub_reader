@@ -8,8 +8,11 @@ use druid::{
     LifeCycleCtx, PaintCtx, Point, RenderContext, Size, UpdateCtx,
     Widget, WidgetPod, TextLayout, WidgetExt, Rect, LinearGradient, UnitPoint, FontDescriptor, FontFamily, Data,
 };
-use crate::appstate::{EpubData, PageIndex, EpubSettings};
-use crate::core::commands::{GO_TO_POS, CHANGE_PAGE, VisualizationMode};
+use crate::appstate::{EpubData, PageIndex};
+use crate::core::commands::{GO_TO_POS, CHANGE_PAGE};
+use crate::core::style::SECONDARY_DARK;
+use crate::data::epub::settings::{EpubSettings, VisualizationMode};
+use crate::widgets::widgets::RoundButton;
 
 
 use druid::text::{RichText, Selection};
@@ -153,7 +156,7 @@ impl PageSplitter {
         for (i, label) in it {
             
 
-            current_height -= label.size().height + paragraph_spacing;
+            current_height -= label.size().height;//+ paragraph_spacing;
             if current_height <= 0. {
                 break;
             }
@@ -168,7 +171,7 @@ impl PageSplitter {
 
     }
     fn get_current_range(&mut self, mut current_height: f64, direction: bool, starting_point : usize, epub_settings: &EpubSettings) -> PageSplitterRanges {
-        current_height-= TEXT_BOTTOM_PADDING+TEXT_Y_PADDING;
+        //current_height-= TEXT_BOTTOM_PADDING+TEXT_Y_PADDING;
         let page_1 = self.range(current_height, direction, starting_point, epub_settings.paragraph_spacing);
 
         if !direction && page_1.start == 0 {
@@ -433,9 +436,13 @@ pub struct TextContainer {
 impl TextContainer {
     pub fn new() -> Self {
         let navigation_buttons = vec![
-            WidgetPod::new(NavigationButton::new(false).boxed()),
-            WidgetPod::new(NavigationButton::new(true).boxed()),
-        ];
+            WidgetPod::new(RoundButton::new(ARROW_CIRCLE_LEFT).with_click_handler(
+                |ctx, _, _| { ctx.submit_command(CHANGE_PAGE.with(false)); }
+            ).with_color(crate::core::style::get_color_unchecked(crate::core::style::PRIMARY_LIGHT)).boxed()),
+            WidgetPod::new(RoundButton::new(ARROW_CIRCLE_RIGHT).with_click_handler(
+                |ctx, _, _| { ctx.submit_command(CHANGE_PAGE.with(true)); }
+            ).with_color(crate::core::style::get_color_unchecked(crate::core::style::PRIMARY_LIGHT)).boxed()),        
+            ];
         Self {
             label_text_lines : WidgetPod::new(PageSplitter::new()),
             navigation_buttons,
@@ -524,59 +531,6 @@ impl Widget<EpubData> for TextContainer {
 
 
 
-struct NavigationButton {
-    direction : bool, 
-    icon: WidgetPod<(), Box<dyn Widget<()>>>
-}
-
-impl NavigationButton {
-    pub fn new(direction : bool) -> Self {
-        let path = if direction { ARROW_CIRCLE_RIGHT} else { ARROW_CIRCLE_LEFT };
-        let icon = WidgetPod::new(Icon::new(path).boxed());
-        Self {
-            direction,
-            icon 
-        }
-    }
-}
-
-impl Widget<EpubData> for NavigationButton {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, _data: &mut EpubData, env: &Env) {
-        match event {
-            Event::MouseUp(_) => {
-                ctx.set_handled();
-                ctx.submit_command(CHANGE_PAGE.with(self.direction));
-
-            }
-            _ => { } 
-        }
-        self.icon.event(ctx, event, &mut (), env);
-    }
-
-    //fn lifecycle(&mut self, : &mut LifeCycleCtx, _: &LifeCycle, _: &EpubData, _: &Env) { self.icon.lifecycle(ctx, event, data, env) }
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _s: &EpubData, env: &Env) {
-        self.icon.lifecycle(ctx, event, &(), env);
-    }
-
-
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &EpubData, _: &EpubData, env: &Env) {
-        self.icon.update(ctx, &(), env);
-    }
-
-    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, _: &EpubData, env: &Env) -> Size {
-        let size = self.icon.layout(ctx, &BoxConstraints::tight(Size::new(40.,40.)), &(), env);
-        self.icon.set_origin(ctx, &(), env, Point::ORIGIN);
-        Size::new(40., 40.)
-    }
-    fn paint(&mut self, ctx: &mut PaintCtx, _: &EpubData, env: &Env) {
-        
-        let alpha = if ctx.is_hot() { 1.0 } else { 0.5 };
-        let r = Rect::from_origin_size(Point::new(0., 0.), ctx.size()).to_rounded_rect(50.);
-        ctx.fill(r, &Color::BLACK.with_alpha(alpha));
-        self.icon.paint(ctx, &(), env);
-
-    }
-}
 
 
 
@@ -670,81 +624,3 @@ Handle selection
 */
 
 
-
-
-
-
-
-
-
-//
-
-pub use druid_material_icons::{normal, IconPaths};
-
-use druid::{
-    kurbo::{Affine}, KeyOrValue,
-};
-
-/// A widget that draws one of the material icons.
-///
-/// # Examples
-///
-/// ```
-/// # use druid::Color;
-/// use druid_widget_nursery::material_icons::{Icon, normal::action::ALARM_ADD};
-/// let icon = Icon::new(ALARM_ADD)
-///     // optional - defaults to text color
-///     .with_color(Color::WHITE);
-/// // use `icon` as you would any widget...
-/// ```
-#[derive(Debug, Clone)]
-pub struct Icon {
-    paths: IconPaths,
-    color: KeyOrValue<Color>,
-}
-
-impl Icon {
-    #[inline]
-    pub fn new(paths: IconPaths) -> Self {
-        Self {
-            paths,
-            color: KeyOrValue::from(druid::theme::TEXT_COLOR),
-        }
-    }
-
-    pub fn with_color(mut self, color: impl Into<KeyOrValue<Color>>) -> Self {
-        self.color = color.into();
-        self
-    }
-}
-
-impl<T: Data> Widget<T> for Icon {
-    fn event(&mut self, _ctx: &mut EventCtx, _event: &Event, _data: &mut T, _env: &Env) {
-        // no events
-    }
-    fn lifecycle(&mut self, _ctx: &mut LifeCycleCtx, _event: &LifeCycle, _data: &T, _env: &Env) {
-        // no lifecycle
-    }
-    fn update(&mut self, _ctx: &mut UpdateCtx, _old_data: &T, _data: &T, _env: &Env) {
-        // no update
-    }
-    fn layout(&mut self, _ctx: &mut LayoutCtx, bc: &BoxConstraints, _data: &T, _env: &Env) -> Size {
-        // Try to preserve aspect ratio if possible, but if not then allow non-uniform scaling.
-        bc.constrain_aspect_ratio(self.paths.size.aspect_ratio(), self.paths.size.width)
-    }
-    fn paint(&mut self, ctx: &mut PaintCtx, _data: &T, env: &Env) {
-        let color = self.color.resolve(env);
-        let Size { width, height } = ctx.size();
-        let Size {
-            width: icon_width,
-            height: icon_height,
-        } = self.paths.size;
-        ctx.transform(Affine::scale_non_uniform(
-            width * icon_width.recip(),
-            height * icon_height.recip(),
-        ));
-        for path in self.paths.paths {
-            ctx.fill(path, &color);
-        }
-    }
-}

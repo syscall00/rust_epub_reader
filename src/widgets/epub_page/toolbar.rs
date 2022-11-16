@@ -3,10 +3,11 @@
 use druid::widget::{Button, Flex};
 use druid::{
     Point, RenderContext, Size,
-    Widget, WidgetPod,
+    Widget, WidgetPod, Event,
 };
 
 use crate::appstate::{EpubData};
+use crate::core::constants::commands::{InternalUICommand, INTERNAL_COMMAND};
 use crate::core::style::{self, SECONDARY_DARK};
 
 
@@ -27,10 +28,8 @@ impl Toolbar {
     pub fn new() -> Self {
         // default expanded 
         let tools = Flex::row()
+        .with_child(Button::new("Edit"))
 
-        .with_flex_child(Button::new("Save".to_string()).on_click(|ctx, _, _| {
-            ctx.submit_command(crate::core::commands::SAVE_EPUB.with(()));
-        }), 0.1)
         .with_default_spacer();
                 
         Self {
@@ -43,7 +42,13 @@ impl Toolbar {
 impl Widget<EpubData> for Toolbar {
     fn event(&mut self, ctx: &mut druid::EventCtx, event: &druid::Event, data: &mut EpubData, env: &druid::Env) {
         
-
+        match event {
+            Event::MouseUp(_) => {
+                ctx.submit_command(INTERNAL_COMMAND.with(InternalUICommand::SaveModification(data.visualized_chapter.clone())));
+            }
+            _ => {}
+        }
+        //
         self.tools.event(ctx, event, data, env);
     }
 

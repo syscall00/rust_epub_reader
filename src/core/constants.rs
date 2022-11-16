@@ -18,3 +18,23 @@ pub(crate) mod epub_settings {
 
 }
 
+
+pub(crate) mod commands {
+    use druid::Selector;
+
+    use crate::sidebar::PanelButton;
+    
+    pub const INTERNAL_COMMAND: Selector<InternalUICommand> =
+    Selector::new("epub_reader.ui_command");
+
+    #[derive(Debug)]
+    pub enum InternalUICommand {
+        SwitchTab(PanelButton),
+        GoToMenu,
+        OpenEditDialog,
+        OpenOCRDialog,
+        SaveModification(String),
+
+        RemoveBook
+    }
+}

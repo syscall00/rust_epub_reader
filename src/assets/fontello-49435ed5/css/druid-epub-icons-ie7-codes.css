@@ -1,9 +1,0 @@
-
-.icon-list-bullet { *zoom: expression( this.runtimeStyle['zoom'] = '1', this.innerHTML = '&#xa000;&nbsp;'); }
-.icon-search { *zoom: expression( this.runtimeStyle['zoom'] = '1', this.innerHTML = '&#xa001;&nbsp;'); }
-.icon-floppy { *zoom: expression( this.runtimeStyle['zoom'] = '1', this.innerHTML = '&#xa002;&nbsp;'); }
-.icon-edit { *zoom: expression( this.runtimeStyle['zoom'] = '1', this.innerHTML = '&#xa003;&nbsp;'); }
-.icon-pencil { *zoom: expression( this.runtimeStyle['zoom'] = '1', this.innerHTML = '&#xa004;&nbsp;'); }
-.icon-doc-text { *zoom: expression( this.runtimeStyle['zoom'] = '1', this.innerHTML = '&#xa005;&nbsp;'); }
-.icon-book-open { *zoom: expression( this.runtimeStyle['zoom'] = '1', this.innerHTML = '&#xa006;&nbsp;'); }
-.icon-attach { *zoom: expression( this.runtimeStyle['zoom'] = '1', this.innerHTML = '&#xe803;&nbsp;'); }

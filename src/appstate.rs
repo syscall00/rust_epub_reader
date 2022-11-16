@@ -2,16 +2,16 @@ use druid::im::{Vector};
 use druid::piet::TextStorage;
 use druid::text::RichText;
 use druid::{
-    commands, AppDelegate, ArcStr, Command, Data, DelegateCtx, Env, Handled, Lens, Target,
+    AppDelegate, ArcStr, Command, Data, DelegateCtx, Env, Handled, Lens, Target, ImageBuf,
 };
 use serde::{Serialize, Deserialize};
 use std::fs::File;
 use std::sync::Arc;
 
 use crate::PageType;
-use crate::core::commands::VisualizationMode;
-use crate::core::constants;
 use crate::core::style::LINK_COLOR;
+use crate::data::epub::settings::EpubSettings;
+use crate::data::home::HomePageData;
 use crate::tool::Tool;
 use epub::doc::EpubDoc;
 
@@ -28,24 +28,6 @@ pub struct AppState {
 
 
 
-
-// usize indicates for Next and Prev the offset to the next or prev page
-// in goto indicates the correct position to go to
-pub enum NavigationDirection {
-    Next(usize), 
-    Prev(usize),
-    Goto(usize),
-}
-
-
-
-#[derive(Clone, Data, Lens)]
-pub struct HomePageData {
-    // Use a string for save paths in order to make
-    // data more easy
-    pub recents: Vector<Recent>,
-}
-
 #[derive(Clone, Data, Lens, Serialize, Deserialize, Debug)]
 pub struct Recent {
     pub path: String,
@@ -54,6 +36,10 @@ pub struct Recent {
     pub epub_settings : EpubSettings,
 
 
+    // ignore this field for serialization
+    #[serde(skip)]
+    pub image_data : Option<ImageBuf>,
+
 }
 impl Recent {
     pub fn new(path: String) -> Self {
@@ -61,43 +47,11 @@ impl Recent {
             path,
             reached_position: None,
             epub_settings : EpubSettings::default(),
+            image_data: None,
         }
     }
 }
 
-impl HomePageData {
-    pub fn new() -> Self {
-        let recents = HomePageData::load_from_state_file();
-        HomePageData { recents }
-    }
-
-    fn load_from_state_file() -> Vector<Recent> {
-        let recents_fname = ".recents";
-        let md = std::fs::metadata(recents_fname);
-        // file does not exists!!!
-        let recents_string = if md.is_err() {
-            std::fs::File::create(recents_fname).unwrap();
-            return Vector::default();
-
-        } else {
-          std::fs::read_to_string(recents_fname).unwrap()
-
-        };
-        let mut recent  = Recent::new("".to_string());
-        recent.reached_position = Some(PageIndex::IndexPosition { chapter: 0, richtext_number: 10 });
-        let recents : Vec<Recent> = serde_json::from_str(&recents_string).unwrap();
-        recents.into()
-    }
-
-    pub fn with_recents(mut self, recents: Vector<Recent>) -> Self {
-        self.recents = recents;
-        self
-    }
-
-    pub fn add_to_recents(&mut self, r: Recent) {
-        self.recents.push_back(r.to_owned());
-    }
-}
 
 pub struct Delegate;
 
@@ -110,7 +64,13 @@ impl AppDelegate<AppState> for Delegate {
         data: &mut AppState,
         _env: &Env,
     ) -> Handled {
-
+        if let Some(file_info) = cmd.get(druid::commands::OPEN_FILE) {
+            // generate new recent from file_info
+            let recent = Recent::new(file_info.path().to_str().unwrap().to_string());
+            data.open_file(&recent);
+            data.home_page_data.recents.push_back(recent);
+            data.active_page = PageType::Reader;
+        }
         if let Some(file_info) = cmd.get(crate::core::commands::OPEN_RECENT) {
             data.open_file(file_info);
 
@@ -234,33 +194,7 @@ pub struct EpubData {
     
 }
 
-#[derive(Lens, Clone, Data, Serialize, Deserialize, Debug)]
-pub struct EpubSettings {
-    
-    pub font_size: f64,
-    pub margin: f64,
-    pub paragraph_spacing: f64,
 
-    pub visualization_mode: VisualizationMode,
-}
-impl EpubSettings {
-    pub fn new() -> Self {
-        EpubSettings::default()
-    }
-
-}
-
-impl Default for EpubSettings {
-    fn default() -> Self {
-        EpubSettings {
-            font_size: constants::epub_settings::DEFAULT_FONT_SIZE,
-            margin: constants::epub_settings::DEFAULT_MARGIN,
-            paragraph_spacing: constants::epub_settings::DEFAULT_PARAGRAPH_SPACING,
-
-            visualization_mode: VisualizationMode::SinglePage,
-        }
-    }
-}
 
 #[derive(Clone, Lens, Data)]
 pub struct IndexedText {
@@ -400,17 +334,56 @@ impl EpubData {
     let index = tantivy::Index::create_in_ram(schema);    
     let mut index_writer = index.writer(50_000_000).unwrap();
     
-    let chapt2 = self.rich_chapters[3].iter().map(|r| r.as_str().clone()).collect::<String>();
 
     for i in 0..self.rich_chapters.len() {
-
+        let mut texta = String::new();
         // For each richtext in the chapter, when size is greater than 1000, create a new document
         for (j, richtext) in self.rich_chapters[i].iter().enumerate() {
+
+            // texta should contain recognized_text.len() character, starting from j richtext and ending at most at j + 1 richtext
+            let rich_text = richtext.as_str();
+            if rich_text.len() >= recognized_text.len() {
+                texta = utf8_slice::slice(rich_text, 0, recognized_text.len()).to_string();
+                let mut doc = tantivy::Document::default();
+                doc.add_text(title, &texta);
+                doc.add_u64(chapter, i as u64);
+                doc.add_u64(position, j as u64);
+                index_writer.add_document(doc);
+                texta.clear();
+            }
+            else if rich_text.len() + texta.len() >= recognized_text.len() {
+                texta = utf8_slice::slice(rich_text, 0, recognized_text.len()).to_string();
+                let mut doc = tantivy::Document::default();
+                doc.add_text(title, &texta);
+                doc.add_u64(chapter, i as u64);
+                doc.add_u64(position, j as u64);
+                index_writer.add_document(doc);
+                texta.clear();
+            }
+            else {
+                texta.push_str(rich_text);
+            }
+            
+            //if texta.len() >= recognized_text.len() {
+            //    let mut doc = tantivy::Document::default();
+            //    doc.add_text(title, &texta);
+            //    doc.add_u64(chapter, i as u64);
+            //    doc.add_u64(position, j as u64);
+            //    index_writer.add_document(doc);
+            //    texta.clear();
+            //}
+            //else {
+            //    texta.push_str(&richtext.as_str());
+            //}
+
+        }
+        if texta.len() > 0 {
             let mut doc = tantivy::Document::default();
-            doc.add_text(title, &richtext.as_str());
+            doc.add_text(title, &texta);
             doc.add_u64(chapter, i as u64);
-            doc.add_u64(position, j as u64);
+            doc.add_u64(position, 0 as u64);
             index_writer.add_document(doc);
+            texta.clear();
         }
     }
 
@@ -447,15 +420,17 @@ impl EpubData {
     //// get the first document
     // get the chapter and position
 
-    let doc_address = top_docs[0].1;
-    let retrieved_doc = searcher.doc(doc_address).unwrap();
-    let chapter = retrieved_doc.get_first(chapter).unwrap();
-    let position = retrieved_doc.get_first(position).unwrap();
+    if top_docs.len() > 0 {
+        let (score, doc_address) = top_docs[0];
+        let retrieved_doc = searcher.doc(doc_address).unwrap();
+        let chapter = retrieved_doc.get_first(chapter).unwrap();
+        let position = retrieved_doc.get_first(position).unwrap();
+        println!("Document: {:?} in chapter {:?} position {:?} with score {}", retrieved_doc, chapter, position, score);
+        println!("\n\n\n");
+        return PageIndex::IndexPosition { chapter: chapter.as_u64().unwrap() as usize, richtext_number: position.as_u64().unwrap() as usize };
+    }
 
-    println!("Document: {:?} in chapter {} position {} with score {}", retrieved_doc, chapter.as_u64().unwrap(), position.as_u64().unwrap(), top_docs[0].0);
-
-
-    PageIndex::IndexPosition { chapter: chapter.as_u64().unwrap() as usize, richtext_number: position.as_u64().unwrap() as usize }
+    PageIndex::IndexPosition { chapter: 0, richtext_number: 0 }
 
 }
 
@@ -713,7 +688,6 @@ pub fn rebuild_rendered_text(text: &str, epub_settings: &EpubSettings) -> Vector
                 if inner_tag.should_tag_be_written() || text.trim().is_empty() {
                     continue;
                 } else {
-
 
                     let t = text.as_str().replace("\n", "");
                     current_pos = current_pos + t.len();
