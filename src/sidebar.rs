@@ -1,6 +1,6 @@
 use druid::{
-    piet::{Text, TextLayoutBuilder},
-    widget::{Button, Flex, Label, List, Scroll, Slider, TextBox, ControllerHost},
+    piet::Text,
+    widget::{ControllerHost, Flex, Label, List, Scroll, Slider, TextBox},
     ArcStr, BoxConstraints, Color, Data, Env, Event, EventCtx, FontFamily, LayoutCtx, LensExt,
     LifeCycle, LifeCycleCtx, PaintCtx, Point, RenderContext, Size, TextLayout, UpdateCtx, Widget,
     WidgetExt, WidgetPod,
@@ -10,14 +10,18 @@ use druid_material_icons::IconPaths;
 use crate::{
     appstate::{EpubData, IndexedText, SidebarData},
     core::{
-        commands::{GO_TO_POS},
-        constants::{epub_settings::{
-            MAX_FONT_SIZE, MAX_MARGIN, MAX_PARAGRAPH_SPACING, MIN_FONT_SIZE, MIN_MARGIN,
-            MIN_PARAGRAPH_SPACING,
-        }, commands::{InternalUICommand, INTERNAL_COMMAND}},
-        style::{self, COMPLEMENTARY_DARK, PRIMARY_DARK},
+        commands::GO_TO_POS,
+        constants::{
+            commands::{InternalUICommand, INTERNAL_COMMAND},
+            epub_settings::{
+                MAX_FONT_SIZE, MAX_MARGIN, MAX_PARAGRAPH_SPACING, MIN_FONT_SIZE, MIN_MARGIN,
+                MIN_PARAGRAPH_SPACING,
+            },
+        },
+        style::{self, PRIMARY_DARK},
     },
-    widgets::{widgets::{Icon, RoundButton}, tooltip::TooltipController}, data::epub::settings::{EpubSettings, VisualizationMode},
+    data::epub::settings::{EpubSettings, VisualizationMode},
+    widgets::{Icon, RoundButton, TooltipController},
 };
 
 const ICON_SIZE: f64 = 32.;
@@ -28,20 +32,24 @@ pub struct GroupButton<T> {
     active: usize,
 }
 
-impl <T : Data> GroupButton<T> {
+impl<T: Data> GroupButton<T> {
     pub fn new(buttons: Vec<RoundButton<T>>) -> Self {
         Self {
-            buttons: buttons.into_iter().map(|button| WidgetPod::new(button)).collect(),
+            buttons: buttons
+                .into_iter()
+                .map(|button| WidgetPod::new(button))
+                .collect(),
             active: 0,
         }
     }
+    #[allow(dead_code)]
     pub fn with_active(mut self, active: usize) -> Self {
         self.active = active;
         self
     }
 }
 
-impl <T : Data> Widget<T> for GroupButton<T> {
+impl<T: Data> Widget<T> for GroupButton<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
         match event {
             Event::MouseDown(mouse_event) => {
@@ -50,7 +58,10 @@ impl <T : Data> Widget<T> for GroupButton<T> {
                     if rect.contains(mouse_event.pos) {
                         let mut index = 0;
                         for button in &mut self.buttons {
-                            let button_rect = druid::Rect::from_origin_size(Point::ORIGIN, button.layout_rect().size());
+                            let button_rect = druid::Rect::from_origin_size(
+                                Point::ORIGIN,
+                                button.layout_rect().size(),
+                            );
                             if button_rect.contains(mouse_event.pos) {
                                 self.active = index;
                                 ctx.request_paint();
@@ -74,19 +85,18 @@ impl <T : Data> Widget<T> for GroupButton<T> {
         }
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &T, data: &T, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _: &T, data: &T, env: &Env) {
         for button in &mut self.buttons {
             button.update(ctx, data, env);
         }
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
-
         const PADDING_BETWEEN_BUTTONS: f64 = 8.;
         // positionate buttons consecutively
         let mut x = 0.;
-        let mut y = 0.;
-        let mut max_height : f64 = 0.;
+        let y = 0.;
+        let mut max_height: f64 = 0.;
         for button in &mut self.buttons {
             let size = button.layout(ctx, bc, data, env);
             button.set_origin(ctx, data, env, Point::new(x, y));
@@ -97,12 +107,15 @@ impl <T : Data> Widget<T> for GroupButton<T> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let mut index = 0;
+        let index = 0;
         for button in &mut self.buttons {
             // create a shadow for active button
             if index == self.active {
-                let rect = druid::Rect::from_origin_size(Point::ORIGIN, button.layout_rect().size());
-                let shadow = ctx.render_ctx.solid_brush(Color::rgb8(0, 0, 0).with_alpha(0.2));
+                let rect =
+                    druid::Rect::from_origin_size(Point::ORIGIN, button.layout_rect().size());
+                let shadow = ctx
+                    .render_ctx
+                    .solid_brush(Color::rgb8(0, 0, 0).with_alpha(0.2));
                 ctx.render_ctx.fill(rect, &shadow);
             }
 
@@ -110,8 +123,6 @@ impl <T : Data> Widget<T> for GroupButton<T> {
         }
     }
 }
-
-
 
 pub trait ButtonTrait {
     fn icon(&self) -> IconPaths;
@@ -122,7 +133,6 @@ pub trait ButtonTrait {
 pub enum PanelButton {
     Toc,
     Search,
-    //Highlights,
     Settings,
 }
 impl PanelButton {
@@ -156,29 +166,37 @@ impl PanelButton {
                 Flex::column()
                     .with_child(
                         GroupButton::new(vec![
-                            RoundButton::new(druid_material_icons::normal::content::AMP_STORIES),
-                                //.with_tooltip("Dark Mode")
-                                //.with_command(InternalUICommand::ToggleDarkMode),
+                            RoundButton::new(druid_material_icons::normal::content::AMP_STORIES)
+                                .with_click_handler(|ctx, data: &mut EpubData, _env| {
+                                    data.epub_settings.visualization_mode =
+                                        VisualizationMode::SinglePage;
+                                    ctx.request_paint();
+                                }),
+                            //.with_tooltip("Dark Mode")
+                            //.with_command(InternalUICommand::ToggleDarkMode),
                             RoundButton::new(druid_material_icons::normal::image::AUTO_STORIES)
-                                //.with_tooltip("Light Mode")
-                                //.with_command(InternalUICommand::ToggleLightMode),
-                        ])
-                        // Create three button able to change visualization mode
-                        //Flex::row()
-                        //    .with_child(Button::new("Single").on_click(
-                        //        |ctx, data: &mut EpubData, _env| {
-                        //            data.epub_settings.visualization_mode =
-                        //                VisualizationMode::SinglePage;
-                        //            ctx.request_paint();
-                        //        },
-                        //    ))
-                        //    .with_child(Button::new("Two").on_click(
-                        //        |ctx, data: &mut EpubData, _env| {
-                        //            data.epub_settings.visualization_mode =
-                        //                VisualizationMode::TwoPage;
-                        //            ctx.request_paint();
-                        //        },
-                        //    )),
+                                .with_click_handler(|ctx, data: &mut EpubData, _env| {
+                                    data.epub_settings.visualization_mode =
+                                        VisualizationMode::TwoPage;
+                                    ctx.request_paint();
+                                }),
+                            //.with_command(InternalUICommand::ToggleLightMode),
+                        ]), // Create three button able to change visualization mode
+                            //Flex::row()
+                            //    .with_child(Button::new("Single").on_click(
+                            //        |ctx, data: &mut EpubData, _env| {
+                            //            data.epub_settings.visualization_mode =
+                            //                VisualizationMode::SinglePage;
+                            //            ctx.request_paint();
+                            //        },
+                            //    ))
+                            //    .with_child(Button::new("Two").on_click(
+                            //        |ctx, data: &mut EpubData, _env| {
+                            //            data.epub_settings.visualization_mode =
+                            //                VisualizationMode::TwoPage;
+                            //            ctx.request_paint();
+                            //        },
+                            //    )),
                     )
                     .with_spacer(20.)
                     .with_child(
@@ -245,7 +263,6 @@ impl ButtonTrait for PanelButton {
         match self {
             PanelButton::Toc => druid_material_icons::normal::communication::LIST_ALT,
             PanelButton::Search => druid_material_icons::normal::action::FIND_IN_PAGE,
-            //PanelButton::Highlights => druid_material_icons::normal::action::SETTINGS,
             PanelButton::Settings => druid_material_icons::normal::action::SETTINGS,
         }
     }
@@ -253,7 +270,6 @@ impl ButtonTrait for PanelButton {
         match self {
             PanelButton::Toc => "Table of Contents".to_string(),
             PanelButton::Search => "Search".to_string(),
-            //PanelButton::Highlights => "Highlights".to_string(),
             PanelButton::Settings => "Settings".to_string(),
         }
     }
@@ -281,7 +297,7 @@ impl ButtonTrait for ActionButton {
         match self {
             ActionButton::CloseBook => "Close Book".to_string(),
             ActionButton::EditBook => "Edit Book".to_string(),
-            ActionButton::OCROpen => "Find using OCR".to_string(),
+            ActionButton::OCROpen => "Search using OCR".to_string(),
         }
     }
     fn command(&self) -> InternalUICommand {
@@ -303,15 +319,13 @@ pub struct CustomButton<T: ButtonTrait> {
 
 impl<T: ButtonTrait> CustomButton<T> {
     pub fn new(kind: T) -> Self {
-
         let hint = kind.hint();
         let icon_data = kind.icon();
         Self {
             kind,
-            icon: WidgetPod::new(ControllerHost::new(
-                Icon::new(icon_data),
-                TooltipController::new(hint),
-            ).boxed()),
+            icon: WidgetPod::new(
+                ControllerHost::new(Icon::new(icon_data), TooltipController::new(hint)).boxed(),
+            ),
             font: FontFamily::default(),
             open: false,
             clickable: true,
@@ -470,7 +484,7 @@ impl Widget<IndexedText> for ClickableLabel {
             ctx.fill(rect, &Color::BLUE);
         }
         //println!("painting : {:?}", size);
-        ctx.clip((size-Size::new(15., 0.)).to_rect());
+        ctx.clip((size - Size::new(15., 0.)).to_rect());
 
         self.layout.draw(ctx, (5., 0.));
     }
@@ -513,7 +527,11 @@ impl Sidebar {
             side_buttons.push(WidgetPod::new(other_but));
         }
 
-        for actions in vec![ActionButton::CloseBook, ActionButton::EditBook, ActionButton::OCROpen] {
+        for actions in vec![
+            ActionButton::CloseBook,
+            ActionButton::EditBook,
+            ActionButton::OCROpen,
+        ] {
             let other_but = CustomButton::new(actions).boxed();
             action_buttons.push(WidgetPod::new(other_but));
         }
@@ -799,7 +817,10 @@ impl Widget<EpubData> for Panel {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
         let size = ctx.size();
-        ctx.fill(size.to_rect(), &style::get_color_unchecked(style::PRIMARY_LIGHT)); //&COMPLEMENTARY_DARK.unwrap());
+        ctx.fill(
+            size.to_rect(),
+            &style::get_color_unchecked(style::PRIMARY_LIGHT),
+        ); //&COMPLEMENTARY_DARK.unwrap());
         self.header.draw(ctx, (5., 5.));
         if self.input_widget.is_some() {
             self.input_widget.as_mut().unwrap().paint(ctx, data, env);

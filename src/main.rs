@@ -3,32 +3,27 @@ use crate::core::constants::commands::{InternalUICommand, INTERNAL_COMMAND};
 use crate::core::commands::NAVIGATE_TO;
 use crate::core::style;
 
-use appstate::{AppState, EpubData, Recent};
+use appstate::{AppState, Recent};
 use data::home::HomePageData;
 use druid::{
-    widget::{Button, Controller, Flex, List, Scroll, ViewSwitcher},
-    AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx,
-    Point, RenderContext, Size, TextLayout, WidgetExt,
-    WidgetPod, WindowDesc,
+    widget::{Controller, Flex, List, Scroll, ViewSwitcher},
+    AppLauncher, BoxConstraints, Color, Data, Env, Event, EventCtx, Point, RenderContext, Size,
+    TextLayout, WidgetExt, WidgetPod, WindowDesc,
 };
 
 use druid::Widget;
-// use druid_widget_nursery::material_icons::{Icon, normal::action::ALARM_ADD};
 
 use epub::doc::EpubDoc;
-use epub_page::EpubPage;
 use sidebar::Sidebar;
 mod appstate;
 mod core;
 mod data;
 mod epub_page;
 mod sidebar;
-mod tool;
 mod widgets;
 
-
-use druid_material_icons::normal::action::*;
-use widgets::widgets::RoundButton;
+//use druid_material_icons::normal::action::*;
+use widgets::{EditWidget, RoundButton};
 #[derive(Data, PartialEq, Clone, Copy)]
 pub enum PageType {
     Home,
@@ -63,10 +58,9 @@ fn main() {
 
     //return;
     let data = AppState::new();
-    let window = WindowDesc::new(navigator(data.clone()))
+    let window = WindowDesc::new(navigator())
         .title("Navigation")
         .window_size((1000.0, 800.0));
-
 
     //let window = WindowDesc::new(build_ui());
     AppLauncher::with_window(window)
@@ -76,7 +70,6 @@ fn main() {
         //.launch(())
         .unwrap();
 }
-
 
 //pub fn build_ui() -> impl Widget<()> {
 //    let mut flex = Flex::column();
@@ -89,17 +82,20 @@ fn main() {
 //    Scroll::new(flex)
 //}
 
-pub fn navigator(data: AppState) -> impl Widget<AppState> {
+pub fn navigator() -> impl Widget<AppState> {
     let _topbar = crate::widgets::home_page::topbar::Topbar::new();
 
     ViewSwitcher::new(
         |data: &AppState, _env| data.active_page,
         move |active_page, _data, _env| match active_page {
             PageType::Home => home_page().lens(AppState::home_page_data).boxed(),
-            PageType::Reader => read_ebook(data.epub_data.clone()).boxed(),
+            PageType::Reader => read_ebook().boxed(),
         },
     )
     .controller(MainController {})
+    .env_scope(|env, _: &AppState| {
+        style::add_to_env(env);
+    })
 }
 
 struct MainController;
@@ -117,6 +113,7 @@ impl Controller<AppState, ViewSwitcher<AppState, PageType>> for MainController {
             Event::Command(cmd) if cmd.is(NAVIGATE_TO) => {
                 let page = cmd.get_unchecked(NAVIGATE_TO);
                 data.active_page = page.to_owned();
+
                 ctx.request_layout();
             }
             _ => {}
@@ -125,11 +122,81 @@ impl Controller<AppState, ViewSwitcher<AppState, PageType>> for MainController {
     }
 }
 
-pub fn read_ebook(data: EpubData) -> Box<dyn Widget<AppState>> {
-    Flex::row()
+pub fn read_ebook() -> impl Widget<AppState> {
+    //let ret = Flex::row()
+    //    .with_child(Sidebar::new().lens(AppState::epub_data))
+    //    .with_flex_child(EpubPage::new().expand().lens(AppState::epub_data), 1.);
+    //Flex::column().with_flex_child(TextContainer::new().expand(), 1.);
+
+    //let ret = widgets::epub_page::textcontainer::TextContainer::new().lens(AppState::epub_data);
+    let ret = widgets::epub_page::textcontainer::TextContainer::new().lens(AppState::epub_data);
+
+    let flex = Flex::row()
         .with_child(Sidebar::new().lens(AppState::epub_data))
-        .with_flex_child(EpubPage::new(data).expand().lens(AppState::epub_data), 1.)
-        .boxed()
+        .with_flex_child(ret.expand(), 1.);
+    flex.controller(EpubPageController {})
+
+    //druid::widget::Container::new(ret)
+    //.background(style::THEME.primary_dark.clone())//(style::PRIMARY_DARK))
+}
+
+struct EpubPageController;
+
+impl Controller<AppState, Flex<AppState>> for EpubPageController {
+    fn event(
+        &mut self,
+        child: &mut Flex<AppState>,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut AppState,
+        env: &Env,
+    ) {
+        match event {
+            Event::Command(cmd) => {
+                if let Some(_) = cmd.get(INTERNAL_COMMAND) {
+                    match cmd.get(INTERNAL_COMMAND).unwrap() {
+                        InternalUICommand::OpenOCRDialog => {
+                            ctx.new_sub_window(
+                                druid::WindowConfig::default()
+                                    .show_titlebar(true)
+                                    .set_level(druid::WindowLevel::AppWindow),
+                                epub_page::generate_ui_ocr(),
+                                data.epub_data.clone(),
+                                env.clone(),
+                            );
+                        }
+                        InternalUICommand::GoToMenu => {
+                            // save position in the book
+                            data.epub_data.update_position();
+                            ctx.submit_command(NAVIGATE_TO.with(PageType::Home));
+                        }
+                        InternalUICommand::OpenEditDialog => {
+                            if !data.epub_data.edit_mode {
+                                data.epub_data.edit_mode = true;
+                                let window_config = druid::WindowConfig::default();
+
+                                ctx.new_sub_window(
+                                    window_config,
+                                    EditWidget::new().lens(AppState::epub_data),
+                                    data.clone(),
+                                    env.clone(),
+                                );
+                            }
+                        }
+                        InternalUICommand::SaveModification(path) => {
+                            data.epub_data.save_new_epub(path);
+                            ctx.request_update();
+                            ctx.set_handled();
+                        }
+                        _ => {}
+                    }
+                    ctx.set_handled();
+                }
+            }
+            _ => {}
+        }
+        child.event(ctx, event, data, env);
+    }
 }
 
 struct ListItems {
@@ -139,7 +206,7 @@ struct ListItems {
     position_in_book_label: TextLayout<String>,
 
     image: WidgetPod<Recent, Box<dyn Widget<Recent>>>,
-    remove_button : WidgetPod<(), Box<dyn Widget<()>>>,
+    remove_button: WidgetPod<Recent, Box<dyn Widget<Recent>>>,
 }
 
 impl ListItems {
@@ -167,11 +234,14 @@ impl ListItems {
 
         let remove_button = WidgetPod::new(
             RoundButton::new(druid_material_icons::normal::navigation::CANCEL)
-            .on_click(|ctx, _data, _env| {
-                ctx.submit_command(INTERNAL_COMMAND.with(InternalUICommand::RemoveBook));
-            })
-            .padding(5.0)
-            .boxed(),
+                .on_click(|ctx, data: &mut Recent, _env| {
+                    ctx.submit_command(
+                        INTERNAL_COMMAND.with(InternalUICommand::RemoveBook(data.path.clone())),
+                    );
+                    println!("Remove book: {:?}", data.path);
+                })
+                .padding(5.0)
+                .boxed(),
         );
         ListItems {
             title_label,
@@ -207,15 +277,15 @@ impl Widget<Recent> for ListItems {
                 }
             }
             druid::Event::MouseMove(mouse_event) => {
-                if mouse_event.pos.x < ctx.size().width / 2.0 {
-
-                    ctx.set_handled();
-                    ctx.set_cursor(&druid::Cursor::Pointer);
-                }
-                else {
-                    ctx.set_cursor(&druid::Cursor::Arrow);
-                }
+                let pointer = if mouse_event.pos.x < ctx.size().width / 2.0 {
+                    druid::Cursor::Pointer
+                } else {
+                    druid::Cursor::Arrow
+                };
+                ctx.set_cursor(&pointer);
+                ctx.request_paint();
             }
+
             druid::Event::Command(cmd) => {
                 if cmd.is(FINISH_SLOW_FUNCTION) {
                     data.image_data = Some(cmd.get_unchecked(FINISH_SLOW_FUNCTION).clone());
@@ -224,7 +294,7 @@ impl Widget<Recent> for ListItems {
             _ => {}
         }
         self.image.event(ctx, event, data, _env);
-        self.remove_button.event(ctx, event, &mut (), _env);
+        self.remove_button.event(ctx, event, data, _env);
     }
 
     fn lifecycle(
@@ -249,7 +319,6 @@ impl Widget<Recent> for ListItems {
                         img_data.to_owned(),
                         ctx.widget_id(),
                     );
-
                 }
 
                 let title = ep
@@ -265,6 +334,14 @@ impl Widget<Recent> for ListItems {
                     .unwrap_or(UNKNOWN_CREATOR_OR_PUBLISHER.to_string())
                     .to_string();
 
+                //let recent_data = RecentData {
+                //    title: ArcStr::from(title.clone()),
+                //    creator: ArcStr::from(creator.clone()),
+                //    publisher: ArcStr::from(publisher.clone()),
+                //    image_data: None,
+                //    position_in_book: 0,
+                //};
+                //data.set_recent_data(recent_data);
                 self.title_label.set_text(title);
                 self.title_label.set_text_size(18.);
                 self.title_label.set_text_color(Color::WHITE);
@@ -284,7 +361,7 @@ impl Widget<Recent> for ListItems {
             _ => {}
         }
         self.image.lifecycle(ctx, event, data, _env);
-        self.remove_button.lifecycle(ctx, event, &(), _env);
+        self.remove_button.lifecycle(ctx, event, data, _env);
     }
 
     fn update(
@@ -294,8 +371,45 @@ impl Widget<Recent> for ListItems {
         data: &Recent,
         env: &druid::Env,
     ) {
+        use downcast_rs::Downcast;
+
         if !old_data.same(data) {
-            self.image.update(ctx, data, env);
+            println!("Update data: {:?}", data.path);
+            //wrapped_slow_function(
+            //    ctx.get_external_handle(),
+            //    img_data.to_owned(),
+            //    ctx.widget_id(),
+            //);
+
+            if !data.image_data.same(&old_data.image_data) {
+                self.image.update(ctx, data, env);
+                // get image and dereference it as druid::widget::Image
+                if let Some(image_data) = &data.image_data {
+                    let image = self
+                        .image
+                        .widget_mut()
+                        .as_any_mut()
+                        .downcast_mut::<druid::widget::Image>();
+                    if let Some(image_dataa) = image {
+                        image_dataa.set_image_data(image_data.clone());
+                    } else {
+                        //println!("Image data is not an image");
+                    }
+                }
+            }
+            //self.remove_button.update(ctx, data, env);
+            ctx.request_layout();
+
+            if let Some(recent_data) = &data.recent_data {
+                self.title_label.set_text(recent_data.title.to_string());
+                self.creator_label.set_text(recent_data.creator.to_string());
+                self.publisher_label
+                    .set_text(recent_data.publisher.to_string());
+                self.position_in_book_label.set_text("".to_owned()); //data.reached_position.to_string());
+            }
+
+            ctx.request_layout();
+            ctx.request_paint();
         }
     }
 
@@ -334,16 +448,23 @@ impl Widget<Recent> for ListItems {
         );
         self.image.set_origin(ctx, data, env, Point::new(10., 10.));
 
-        let btn_size = self.remove_button.layout(ctx, bc, &(), env);
+        let btn_size = self.remove_button.layout(ctx, bc, data, env);
         // put remove button on the right side of the widget
-        self.remove_button
-            .set_origin(ctx, &(), env, Point::new(bc.max().width-btn_size.width, 100.-btn_size.height/2.));
+        self.remove_button.set_origin(
+            ctx,
+            data,
+            env,
+            Point::new(bc.max().width - btn_size.width, 100. - btn_size.height / 2.),
+        );
         druid::Size::new(bc.max().width, 200.)
     }
 
-    fn paint(&mut self, ctx: &mut druid::PaintCtx, _data: &Recent, _env: &druid::Env) {
+    fn paint(&mut self, ctx: &mut druid::PaintCtx, data: &Recent, _env: &druid::Env) {
         let size = ctx.size();
-        ctx.fill(size.to_rect(), &style::get_color_unchecked(style::PRIMARY_DARK));
+        ctx.fill(
+            size.to_rect(),
+            &style::get_color_unchecked(style::PRIMARY_DARK),
+        );
         const LABEL_PADDING: f64 = 5.;
 
         let mut y = 15.;
@@ -356,10 +477,10 @@ impl Widget<Recent> for ListItems {
         y += self.publisher_label.size().height + LABEL_PADDING;
 
         self.position_in_book_label.draw(ctx, Point::new(150., y));
-        self.image.paint(ctx, _data, _env);
+        self.image.paint(ctx, data, _env);
 
         if ctx.is_hot() {
-            self.remove_button.paint(ctx, &(), _env);
+            self.remove_button.paint(ctx, data, _env);
         }
     }
 }
@@ -391,50 +512,35 @@ fn wrapped_slow_function(
     });
 }
 pub fn home_page() -> impl Widget<HomePageData> {
-    //let list = Scroll::new(
-    //    SquaresGrid::new(|| 
-    //        ListItems::new().padding(5.0).expand_width()
-    //    )
-    //        .with_cell_size(Size::new(200.0, 240.0))
-    //        .with_spacing(20.0)
-    //        
-//
-    //)
-    //.vertical().lens(HomePageData::recents);
-    //.on_command(FINISH_SLOW_FUNCTION, |ctx, img_buf, data| {
-    //    println!("Received event");
-    //    data.image.set_image(img_buf);
-    //    ctx.request_layout();
-    //}
-    let list = Scroll::new(
-        List::new(|| {
-                ListItems::new()
-                .padding(5.0)
-                .expand_width()
-            }
-        )
-    ).vertical().lens(HomePageData::recents);
+    let list = Scroll::new(List::new(|| ListItems::new().padding(5.0).expand_width()))
+        .vertical()
+        .lens(HomePageData::recents);
 
     let title = druid::widget::Label::new("Rust Ebook Reader")
-        .with_text_size(24.0)
+        .with_text_size(26.0)
         .with_text_color(Color::WHITE)
-        .center()
-        .padding(10.0);
+        .center();
+    //.padding(10.0);
 
-    let open_epub =
-        RoundButton::new(druid_material_icons::normal::content::ADD_CIRCLE).with_click_handler(|event, _, _env| {
+    let open_epub = RoundButton::new(druid_material_icons::normal::content::ADD_CIRCLE)
+        .with_click_handler(|event, _, _env| {
             let filedialog = druid::FileDialogOptions::new();
 
             event.submit_command(druid::commands::SHOW_OPEN_PANEL.with(
                 filedialog.allowed_types(vec![druid::FileSpec::new("Epub (.epub)", &["epub"])]),
             ));
-        }).with_radius(40.);
+        })
+        .with_radius(40.);
 
     let layout = Flex::column()
-    .with_child(
-        Flex::row()
-        .main_axis_alignment(druid::widget::MainAxisAlignment::Start)
-        .with_child(title).with_child(open_epub)
-    ).with_child(list);
-    layout
+        .with_child(
+            Flex::row()
+                .main_axis_alignment(druid::widget::MainAxisAlignment::SpaceBetween)
+                .with_child(title)
+                .with_child(open_epub)
+                .expand_width(),
+        )
+        .with_flex_child(list, 1.);
+    druid::widget::Container::new(layout)
+        .background(style::get_color_unchecked(style::PRIMARY_DARK))
 }

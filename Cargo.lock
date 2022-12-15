@@ -594,7 +594,7 @@ checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
 [[package]]
 name = "druid"
 version = "0.7.0"
-source = "git+https://github.com/linebender/druid.git#2561615f53051eaf1bb5ce9903844f81a60e9923"
+source = "git+https://github.com/linebender/druid.git?rev=aed8892873d7a3151c20535fa8183293c739c867#aed8892873d7a3151c20535fa8183293c739c867"
 dependencies = [
  "console_error_panic_hook",
  "druid-derive",
@@ -617,7 +617,7 @@ dependencies = [
 [[package]]
 name = "druid-derive"
 version = "0.4.0"
-source = "git+https://github.com/linebender/druid.git#2561615f53051eaf1bb5ce9903844f81a60e9923"
+source = "git+https://github.com/linebender/druid.git?rev=aed8892873d7a3151c20535fa8183293c739c867#aed8892873d7a3151c20535fa8183293c739c867"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -636,7 +636,7 @@ dependencies = [
 [[package]]
 name = "druid-shell"
 version = "0.7.0"
-source = "git+https://github.com/linebender/druid.git#2561615f53051eaf1bb5ce9903844f81a60e9923"
+source = "git+https://github.com/linebender/druid.git?rev=aed8892873d7a3151c20535fa8183293c739c867#aed8892873d7a3151c20535fa8183293c739c867"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -659,7 +659,7 @@ dependencies = [
  "once_cell",
  "piet-common",
  "scopeguard",
- "time 0.3.16",
+ "time",
  "tracing",
  "wasm-bindgen",
  "web-sys",
@@ -700,15 +700,13 @@ dependencies = [
 
 [[package]]
 name = "epub"
-version = "1.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f4086fc0bc91524e0a88bc13fa622e3b9fce38d5a91454e0667db97a4f39dc3"
+version = "1.2.4"
 dependencies = [
  "anyhow",
  "percent-encoding",
  "regex",
  "xml-rs",
- "zip 0.5.13",
+ "zip",
 ]
 
 [[package]]
@@ -989,7 +987,7 @@ checksum = "c05aeb6a22b8f62540c194aac980f2115af067bfe15a0734d7277a768d396b31"
 dependencies = [
  "cfg-if",
  "libc",
- "wasi 0.11.0+wasi-snapshot-preview1",
+ "wasi",
 ]
 
 [[package]]
@@ -1774,9 +1772,9 @@ checksum = "478c572c3d73181ff3c2539045f6eb99e5491218eae919370993b890cdbdd98e"
 
 [[package]]
 name = "pest"
-version = "2.4.0"
+version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbc7bc69c062e492337d74d59b120c274fd3d261b6bf6d3207d499b4b379c41a"
+checksum = "5f400b0f7905bf702f9f3dc3df5a121b16c54e9e8012c082905fdf09a931861a"
 dependencies = [
  "thiserror",
  "ucd-trie",
@@ -2119,9 +2117,11 @@ dependencies = [
 name = "rust_druid_epub_reader"
 version = "0.1.0"
 dependencies = [
+ "downcast-rs",
  "druid",
  "druid-material-icons",
  "epub",
+ "lazy_static",
  "leptess",
  "lipsum",
  "open",
@@ -2133,7 +2133,7 @@ dependencies = [
  "tracing",
  "utf8_slice",
  "xmlparser",
- "zip 0.6.3",
+ "zip",
 ]
 
 [[package]]
@@ -2450,7 +2450,7 @@ dependencies = [
  "tantivy-query-grammar",
  "tempfile",
  "thiserror",
- "time 0.3.16",
+ "time",
  "uuid",
  "winapi",
 ]
@@ -2572,17 +2572,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5516c27b78311c50bf42c071425c560ac799b11c30b31f87e3081965fe5e0180"
 dependencies = [
  "once_cell",
-]
-
-[[package]]
-name = "time"
-version = "0.1.44"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6db9e6914ab8b1ae1c260a4ae7a49b6c5611b40328a735b21862567685e73255"
-dependencies = [
- "libc",
- "wasi 0.10.0+wasi-snapshot-preview1",
- "winapi",
 ]
 
 [[package]]
@@ -2936,12 +2925,6 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
 name = "wasi"
-version = "0.10.0+wasi-snapshot-preview1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a143597ca7c7793eff794def352d41792a93c481eb1042423ff7ff72ba2c31f"
-
-[[package]]
-name = "wasi"
 version = "0.11.0+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
@@ -3136,20 +3119,6 @@ checksum = "09041cd90cf85f7f8b2df60c646f853b7f535ce68f85244eb6731cf89fa498ec"
 
 [[package]]
 name = "zip"
-version = "0.5.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93ab48844d61251bb3835145c521d88aa4031d7139e8485990f60ca911fa0815"
-dependencies = [
- "byteorder",
- "bzip2",
- "crc32fast",
- "flate2",
- "thiserror",
- "time 0.1.44",
-]
-
-[[package]]
-name = "zip"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "537ce7411d25e54e8ae21a7ce0b15840e7bfcff15b51d697ec3266cc76bdf080"
@@ -3164,7 +3133,7 @@ dependencies = [
  "hmac",
  "pbkdf2",
  "sha1",
- "time 0.3.16",
+ "time",
  "zstd",
 ]
 

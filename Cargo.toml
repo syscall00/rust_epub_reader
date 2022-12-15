@@ -6,12 +6,11 @@ edition = "2021"
 
 
 [dependencies]
-druid = { git = "https://github.com/linebender/druid.git", features=["im", "svg", "image", "png", "jpeg"] }
+druid = { git = "https://github.com/linebender/druid.git", rev="aed8892873d7a3151c20535fa8183293c739c867", features=["im", "svg", "image", "png", "jpeg"] }
 open = "1.6"
 xmlparser = "0.13.3"
 tracing = "0.1.36"
-epub = "1.2.3"
-
+epub = {path = "../epub-rs" }
 strum = "0.24.1"
 
 
@@ -28,3 +27,8 @@ tantivy = "0.18.1"
 druid-material-icons = "0.1.0"
 
 zip = "0.6.3"
+
+
+downcast-rs = "1.2.0"
+
+lazy_static = "1.4.0"

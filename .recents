@@ -2,7 +2,7 @@
 [
   {
     "path": "examples/1.epub",
-    "reached_position":{"IndexPosition":{"chapter":3,"richtext_number":10}},
+    "reached_position":null, 
     "epub_settings":{"font_size":15.0,"margin":50.0,"paragraph_spacing":10.0,"visualization_mode":"TwoPage"}
 
   },

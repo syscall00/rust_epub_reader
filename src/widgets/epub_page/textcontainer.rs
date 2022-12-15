@@ -8,12 +8,43 @@ use druid::{
     LifeCycleCtx, PaintCtx, Point, RenderContext, Size, UpdateCtx,
     Widget, WidgetPod, TextLayout, WidgetExt, Rect, LinearGradient, UnitPoint, FontDescriptor, FontFamily, Data,
 };
-use crate::appstate::{EpubData, PageIndex};
+use crate::appstate::{EpubData, PagePosition};
 use crate::core::commands::{GO_TO_POS, CHANGE_PAGE};
-use crate::core::style::SECONDARY_DARK;
-use crate::data::epub::settings::{EpubSettings, VisualizationMode};
-use crate::widgets::widgets::RoundButton;
 
+use crate::data::epub::settings::{EpubSettings, VisualizationMode};
+use crate::widgets::round_button::RoundButton;
+
+
+#[allow(dead_code)]
+pub enum DebugLevel {
+    Error,
+    Verbose,
+    Debug,
+    Normal,
+    None
+}
+
+impl DebugLevel {
+    #[allow(dead_code)]
+    pub fn debug(&self, msg: &str) 
+    {
+        match DEBUG_ENABLED  {
+            DebugLevel::Debug => println!("{}", format!("[DEBUG] {}", msg)),
+            _ =>  {}
+        }
+        
+    }
+
+    pub fn verbose(msg: &str) 
+    {
+        match DEBUG_ENABLED  {
+            DebugLevel::Verbose => println!("{}", format!("[VERBOSE] {}", msg)),
+            _ =>  {}
+        }    
+    }
+}
+
+pub const DEBUG_ENABLED : DebugLevel = DebugLevel::Debug;
 
 use druid::text::{RichText, Selection};
 
@@ -24,7 +55,8 @@ enum PageSplitterRanges {
 }
 
 const TEXT_Y_PADDING: f64 = 15.0;
-const TEXT_BOTTOM_PADDING: f64 = 30.;
+//const TEXT_BOTTOM_PADDING: f64 = 30.;    
+
 
 // constants for Page Label in PageSplitter
 const PAGE_LABEL_DISTANCE_FROM_CENTER : f64 = 15.;
@@ -35,6 +67,8 @@ use druid_material_icons::normal::action::{ARROW_CIRCLE_RIGHT, ARROW_CIRCLE_LEFT
 
 
 impl PageSplitterRanges {
+
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         match self {
             PageSplitterRanges::OnePage(range) => range.is_empty(),
@@ -55,6 +89,7 @@ impl PageSplitterRanges {
                 } 
             }
         }
+        
     }
 
     pub fn start(&self) -> usize {
@@ -156,7 +191,7 @@ impl PageSplitter {
         for (i, label) in it {
             
 
-            current_height -= label.size().height;//+ paragraph_spacing;
+            current_height -= label.size().height+ paragraph_spacing;
             if current_height <= 0. {
                 break;
             }
@@ -170,7 +205,7 @@ impl PageSplitter {
         }
 
     }
-    fn get_current_range(&mut self, mut current_height: f64, direction: bool, starting_point : usize, epub_settings: &EpubSettings) -> PageSplitterRanges {
+    fn get_current_range(&mut self, current_height: f64, direction: bool, starting_point : usize, epub_settings: &EpubSettings) -> PageSplitterRanges {
         //current_height-= TEXT_BOTTOM_PADDING+TEXT_Y_PADDING;
         let page_1 = self.range(current_height, direction, starting_point, epub_settings.paragraph_spacing);
 
@@ -199,66 +234,54 @@ impl PageSplitter {
 }
 
 impl Widget<EpubData> for PageSplitter {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, _: &Env) {
+        // why cannot get key down?
         match event {
 
             Event::Command(cmd) => {
                 if cmd.is(CHANGE_PAGE) {
                     let direction = cmd.get_unchecked(CHANGE_PAGE).clone();
-                    let starting_point;
+
                     if direction {
                         if (data.get_current_chap().len() == 0 || (self.visualized_range.end() >= data.get_current_chap().len()-1)) && data.has_next_chapter() {
-
-                            data.next_chapter();
-                            
-                            self.generate_text(data.get_current_chap(), data.epub_settings.font_size);
-                            self.wrap_label_size(&ctx.size(), ctx.text(), data.epub_settings.margin, env);
-                            starting_point = 0;
-                            
+                            data.change_position(PagePosition::new(data.epub_metrics.current_chapter+1, 0))
                         }
                         else {
-                            starting_point = self.visualized_range.end();
+                            data.page_position.set_richtext_number(self.visualized_range.end());
+                            
+                            DebugLevel::verbose(&format!("current page: {}", data.page_position.richtext_number()))
+                            //starting_point = self.visualized_range.end();
                         }
                     }
                     else {
                         if (self.visualized_range.start() == 0) && data.has_prev_chapter() {
-
-                            data.previous_chapter();
-
-
-                            self.generate_text(data.get_current_chap(), data.epub_settings.font_size);
-                            self.wrap_label_size(&ctx.size(), ctx.text(), data.epub_settings.margin, env);
-                            starting_point = data.get_current_chap().len();
+                            data.change_position(PagePosition::new(data.epub_metrics.current_chapter-1, data.get_current_chap().len()))
                         }
                         else {
-                            starting_point = self.visualized_range.start();
+                            //starting_point = self.visualized_range.start();
+                            data.page_position.set_richtext_number(self.visualized_range.start());
+                            DebugLevel::verbose(&format!("current page: {}", data.page_position.richtext_number()))
+
+
                         }
                     }
-                    
-                    self.visualized_range = self.get_current_range(ctx.size().height, direction, starting_point, &data.epub_settings);
-
+                    ctx.request_update();
+                    ctx.request_layout();
+                    ctx.request_paint();
 
                 }
 
 
                 else if cmd.is(GO_TO_POS) {
                     let pos = cmd.get_unchecked(GO_TO_POS).clone();
-                    match pos {
-                        PageIndex::IndexPosition { chapter, richtext_number } | 
-                        PageIndex::RangePosition { chapter, richtext_number, range: _ } => {
-                            if data.epub_metrics.current_chapter != chapter || !self.visualized_range.contains(richtext_number) {
-                                data.epub_metrics.change_chapter(chapter);
-
-                                self.generate_text(data.get_current_chap(), data.epub_settings.font_size);
-                                self.wrap_label_size(&ctx.size(), ctx.text(), data.epub_settings.margin, env);
-            
-                                self.visualized_range = self.get_current_range(ctx.size().height, true, richtext_number, &data.epub_settings);
-       
-                            }
-                        }                        
+                    if data.epub_metrics.current_chapter != pos.chapter() || !self.visualized_range.contains(pos.richtext_number()) 
+                    {
+                        data.change_position(pos.clone());
                     }
-                    if let PageIndex::RangePosition { chapter: _, richtext_number, range } = pos {
-                        self.search_selection = Some((richtext_number, Selection::new(range.start, range.end)));
+
+                    if let Some(range) = pos.range() {
+                        self.search_selection = Some((pos.richtext_number(), Selection::new(range.start, range.end)));
+
                     }
                     ctx.request_update();
                     ctx.request_layout();
@@ -268,7 +291,10 @@ impl Widget<EpubData> for PageSplitter {
             },
             // when the window is going to be closed, save the current position
             Event::WindowDisconnected => {
-                data.save_current_position(self.visualized_range.start());
+                //data.save_current_position(self.visualized_range.start());
+            },
+            Event::Internal(_) => {
+                println!("internal event {:?}", event);
             },
             _ => {}
         }
@@ -286,7 +312,8 @@ impl Widget<EpubData> for PageSplitter {
             LifeCycle::Size(new_size) => {
 
                 self.visualized_range = 
-                    self.get_current_range(new_size.height, true, self.visualized_range.start(), &data.epub_settings);
+                    self.get_current_range(new_size.height, true, data.page_position.richtext_number(), &data.epub_settings);
+                    DebugLevel::verbose(&format!("Ctx size is {:?}", ctx.size()))
 
             }
             _ => {}
@@ -295,23 +322,68 @@ impl Widget<EpubData> for PageSplitter {
 
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, env: &Env) { 
-        if !(data.epub_settings.same(&old_data.epub_settings)) {
+        if !(data.same(&old_data)) {
+            println!("Updating settings");
+            if !data.visualized_chapter.same(&old_data.visualized_chapter)
+            {
+                println!("Updating chapter");
+                self.generate_text(data.get_current_chap(), data.epub_settings.font_size);
+                self.text_pos.clear();
+                self.text.clear();
+                let v  = crate::appstate::rebuild_rendered_text(&data.visualized_chapter, data.epub_settings.font_size);
+                for label in v.iter() {
+                    let mut text_layout = TextLayout::new();
+                    text_layout.set_text(label.clone());
+                    text_layout.set_font(FontDescriptor::new(FontFamily::SERIF) );
+                    text_layout.set_text_size(data.epub_settings.font_size);
+                    text_layout.set_text_color(Color::BLACK);
+                    self.text.push(text_layout);
+                }
+        
+                self.wrap_label_size(&ctx.size(), ctx.text(), data.epub_settings.margin, env);
+                self.visualized_range = 
+                    self.get_current_range(ctx.size().height, true, data.page_position.richtext_number(), &data.epub_settings);
+
+                    
+            }
+            
+            // if text changed, update the text
+
+
             // I have to regenerate the text only if the font size has changed
             // Could be possible to change the font size without regenerating the text
             // but using the set_font_size method of TextLayout, but Header have fixed font size
             // calculated from the starting font size of Paragraph elements
-            
-            if data.epub_settings.font_size != old_data.epub_settings.font_size {
+
+           
+
+            // must regenerate text if font size has changed or if the chapter has changed
+            if data.epub_metrics.current_chapter != old_data.epub_metrics.current_chapter ||
+                data.epub_settings.font_size != old_data.epub_settings.font_size {
                 self.generate_text(data.get_current_chap(), data.epub_settings.font_size);
             }
-            self.wrap_label_size(&ctx.size(), ctx.text(), data.epub_settings.margin, env);
-            self.visualized_range = self.get_current_range(ctx.size().height, true, self.visualized_range.start(), &data.epub_settings);
+    
+            //if !data.epub_settings.same(&old_data.epub_settings) {
+                self.wrap_label_size(&ctx.size(), ctx.text(), data.epub_settings.margin, env);
+            //}
+
+            
+            if !(data.page_position.same(&old_data.page_position)) {
+                // if true, going forward; if false, going backward
+                let direction = data.page_position.richtext_number() > old_data.page_position.richtext_number();
+                println!("Direction is {:?}", direction);
+                
+                self.visualized_range = self.get_current_range(ctx.size().height, direction, data.page_position.richtext_number(), &data.epub_settings);
+                
+            }
 
         }
         
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &EpubData, env: &Env) -> Size {
+        // 
+        println!("Layout");
         self.wrap_label_size(&bc.max(), ctx.text(), data.epub_settings.margin, env);
         bc.max()
     }
@@ -530,97 +602,5 @@ impl Widget<EpubData> for TextContainer {
 }
 
 
-
-
-
-
-/*PAINT METHOD
-
-        // paint selection
-        //if let Some(tuple) = self.selection.clone() {
-        //    let selection_lines = tuple.0.rects_for_range(tuple.1.range());
-        //    if !(data.selected_tool == crate::tool::Tool::Marker) {
-        //        self.paint_selection(ctx, selection_lines, &env.get(druid::theme::SELECTED_TEXT_BACKGROUND_COLOR), tuple.2);
-        //    }
-        //    else {
-        //        self.paint_selection(ctx, selection_lines,&Color::YELLOW, tuple.2);
-        //    }
-    //
-        //}
-        //for selection in data.sidebar_data.book_highlights.iter() {
-        //    if selection.value.chapter != data.epub_metrics.current_chapter {
-        //        continue;
-        //    }
-        //    for i in self.visualized_range.get_page(0) {
-        //        let text = &self.text[i];
-        //        let layout = text.layout().unwrap();
-        //        let bounds = layout.image_bounds();
-        //        let rect = Rect::from_origin_size(Point::new(0., y), Size::new(size.width, bounds.height()));
-        //        let rect = rect.inset(-5.);
-        //        let rect = rect.to_rounded_rect(5.);
-        //        ctx.fill(rect, &Color::YELLOW);
-        //        y += bounds.height();
-        //    }
-        //}
-
-*/
-
-/*
-Handle selection
-            //Event::MouseDown(e) => {
-            //    // found which richtext was clicked, then found the text position
-            //    // and set the selection
-            //    for i in self.visualized_range.start()..self.visualized_range.end() {
-            //        let label = &self.text[i];
-            //        let label_size = label.size();
-            //        let label_pos = self.text_pos[i];
-            //        let label_rect = Rect::from_origin_size(Point::new(0., label_pos), label_size);
-            //        if label_rect.contains(e.pos) {
-            //            let point = e.pos - Vec2::new(0., label_pos);
-            //            let pos = label.text_position_for_point(point);
-            //            let point = point - Vec2::new(LABEL_X_PADDING, 0.0);
-        //
-            //            let pos = label.text_position_for_point(point);
-            //            self.selection = Some((label.clone(), Selection::caret(pos), e.pos.y));
-            //            //if e.mods.shift() {
-            //            //    self.selection.active = pos;
-            //            //} else {
-            //            //    let Range { start, end } = pos..pos;
-            //            //    self.selection = Selection::new(start, end);
-            //            //}
-//
-            //            println!("Clicked on label {} at position {}", i, e.pos);
-            //            break;
-            //        }
-            //    }
-            //}
-            //Event::MouseMove(e) => {
-            //    if e.buttons.contains(druid::MouseButton::Left) {
-            //        for i in self.visualized_range.start()..self.visualized_range.end() {
-            //            let label = &self.text[i];
-            //            let label_size = label.size();
-            //            let label_pos = self.text_pos[i];
-            //            let label_rect = Rect::from_origin_size(Point::new(0., label_pos), label_size);
-            //            if label_rect.contains(e.pos) {
-            //                let point = e.pos - Vec2::new(0., label_pos);
-            //                let pos = label.text_position_for_point(point);
-            //                let _text = match label.text() {
-            //                    Some(text) => text,
-            //                    None => return,
-            //                };
-            //                if let Some((_, selection,_)) = &mut self.selection {
-            //                    selection.active = pos;
-            //                }
-            //                break;
-            //            }
-            //        }
-            //    }
-            //}
-            //Event::KeyUp(k) => {
-            //    print!("Key:{:?}", k);
-            //}
-
-
-*/
 
 

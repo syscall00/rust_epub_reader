@@ -31,7 +31,7 @@ impl HomePageData {
 
         };
         let mut recent  = Recent::new("".to_string());
-        recent.reached_position = Some(PageIndex::IndexPosition { chapter: 0, richtext_number: 10 });
+        recent.reached_position = Some(PagePosition::new(0, 10 ));
         let recents : Vec<Recent> = serde_json::from_str(&recents_string).unwrap();
         recents.into()
     }
