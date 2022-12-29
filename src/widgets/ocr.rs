@@ -1,6 +1,6 @@
 use druid::{widget::Either, Widget, WidgetExt, WidgetPod};
 
-use crate::appstate::{EpubData, OcrData};
+use crate::appstate::OcrData;
 
 pub struct OcrWidget {
     image_selector: WidgetPod<OcrData, Box<dyn Widget<OcrData>>>,

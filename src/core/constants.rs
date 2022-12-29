@@ -17,7 +17,7 @@ pub(crate) mod epub_settings {
 pub(crate) mod commands {
     use druid::{FileInfo, Selector};
 
-    use crate::{sidebar::PanelButton, widgets::PromptOption};
+    use crate::{widgets::{PromptOption, epub_page::sidebar::PanelButton}};
 
     pub const MODIFY_EPUB_PATH: Selector<FileInfo> = Selector::new("epub_reader.modify-epub");
 

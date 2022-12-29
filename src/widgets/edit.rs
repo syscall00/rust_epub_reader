@@ -8,8 +8,9 @@ use druid_material_icons::IconPaths;
 use crate::{
     appstate::EpubData,
     core::constants::commands::{InternalUICommand, INTERNAL_COMMAND, MODIFY_EPUB_PATH},
-    sidebar::CustomButton,
 };
+
+use super::epub_page::{icon_button::{IconButton, ButtonTrait}};
 
 pub struct EditWidget {
     dirty: bool,
@@ -262,7 +263,7 @@ impl Toolbar {
             ToolbarButton::SaveAs,
             ToolbarButton::Exit,
         ] {
-            buttons.push(WidgetPod::new(CustomButton::new(kind).boxed()));
+            buttons.push(WidgetPod::new(IconButton::new(kind).boxed()));
         }
 
         Toolbar { buttons }
@@ -320,7 +321,7 @@ pub enum ToolbarButton {
     Exit,
 }
 
-impl crate::sidebar::ButtonTrait for ToolbarButton {
+impl ButtonTrait for ToolbarButton {
     fn icon(&self) -> IconPaths {
         match self {
             ToolbarButton::Save => druid_material_icons::normal::communication::LIST_ALT,

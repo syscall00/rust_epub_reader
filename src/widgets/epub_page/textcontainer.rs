@@ -6,13 +6,13 @@ use druid::piet::{CairoText, Text, TextLayoutBuilder};
 use druid::{
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
     LifeCycleCtx, PaintCtx, Point, RenderContext, Size, UpdateCtx,
-    Widget, WidgetPod, TextLayout, WidgetExt, Rect, LinearGradient, UnitPoint, FontDescriptor, FontFamily, Data,
+    Widget, WidgetPod, TextLayout, Rect, LinearGradient, UnitPoint, FontDescriptor, FontFamily, Data, WidgetExt,
 };
 use crate::appstate::{EpubData, PagePosition};
 use crate::core::commands::{GO_TO_POS, CHANGE_PAGE};
 
 use crate::data::epub::settings::{EpubSettings, VisualizationMode};
-use crate::widgets::round_button::RoundButton;
+use crate::widgets::RoundButton;
 
 
 #[allow(dead_code)]
@@ -330,7 +330,7 @@ impl Widget<EpubData> for PageSplitter {
                 self.generate_text(data.get_current_chap(), data.epub_settings.font_size);
                 self.text_pos.clear();
                 self.text.clear();
-                let v  = crate::appstate::rebuild_rendered_text(&data.visualized_chapter, data.epub_settings.font_size);
+                let v  = crate::dom::rebuild_rendered_text(&data.visualized_chapter, data.epub_settings.font_size);
                 for label in v.iter() {
                     let mut text_layout = TextLayout::new();
                     text_layout.set_text(label.clone());

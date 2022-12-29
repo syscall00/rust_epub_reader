@@ -1,17 +1,22 @@
 pub mod epub_page;
 pub mod home_page;
 
-mod icon;
-mod round_button;
+
 mod tooltip;
 
 mod edit;
 mod ocr;
+mod common;
 
-pub use icon::Icon;
-pub use round_button::RoundButton;
+
+pub use common::icon::Icon;
+pub use common::round_button::RoundButton;
+pub use common::clickable_label::ClickableLabel;
+
 pub use tooltip::TooltipController;
 
 pub use edit::{EditWidget, PromptOption};
 
 pub use ocr::OcrWidget;
+pub use home_page::recent_item;
+
