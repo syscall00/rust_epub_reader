@@ -18,7 +18,7 @@ mod epub_page;
 mod widgets;
 
 mod dom;
-
+mod ocr;
 
 use widgets::{recent_item::RecentWidget, epub_page::sidebar::Sidebar};
 use widgets::RoundButton;
@@ -34,30 +34,6 @@ pub enum PageType {
 fn main() {
     // starting from icon_action file, create a widget list with all the icons
     // read file icons_action
-
-    // home, VERTICAL_SPLIT
-    // communicationh IMPORT_EXPORT / HUB
-    // device::SUMMARIZE
-    // editor::FORMAT_LIST_BULLETED (toc) ;
-
-    // druid_material_icons::normal::editor::TEXT_DECREASE
-    // druid_material_icons::normal::editor::TEXT_FIELDS
-    // druid_material_icons::normal::editor::TEXT_INCREASE
-
-    // druid_material_icons::normal::editor::FORMAT_INDENT_DECREASE
-    // druid_material_icons::normal::editor::FORMAT_INDENT_INCREASE
-    // druid_material_icons::normal::editor::FORMAT_LINE_SPACING
-
-    //druid_material_icons::normal::editor::VERTICAL_ALIGN_BOTTOM
-    //druid_material_icons::normal::editor::VERTICAL_ALIGN_CENTER
-    //druid_material_icons::normal::editor::VERTICAL_ALIGN_TOP
-
-    // two book druid_material_icons::normal::image::AUTO_STORIES
-    // one book? druid_material_icons::normal::image::CROP_PORTRAIT
-
-    // gear druid_material_icons::normal::image::TUNE
-
-    //return;
     let data = AppState::new();
     let window = WindowDesc::new(navigator())
         .title("Epub Rust Reader")
@@ -68,6 +44,7 @@ fn main() {
         .log_to_console()
         .delegate(appstate::Delegate)
         .launch(data)
+        //.launch(())
         .unwrap();
 }
 
@@ -75,9 +52,9 @@ fn main() {
 //    let mut flex = Flex::column();
 //
 //    //let mut icons_from_file =
-//    let v = vec![druid_material_icons::normal::toggle::CHECK_BOX, druid_material_icons::normal::toggle::CHECK_BOX_OUTLINE_BLANK, druid_material_icons::normal::toggle::INDETERMINATE_CHECK_BOX, druid_material_icons::normal::toggle::RADIO_BUTTON_CHECKED, druid_material_icons::normal::toggle::RADIO_BUTTON_UNCHECKED, druid_material_icons::normal::toggle::STAR, druid_material_icons::normal::toggle::STAR_BORDER, druid_material_icons::normal::toggle::STAR_BORDER_PURPLE500, druid_material_icons::normal::toggle::STAR_HALF, druid_material_icons::normal::toggle::STAR_OUTLINE, druid_material_icons::normal::toggle::STAR_PURPLE500, druid_material_icons::normal::toggle::TOGGLE_OFF, druid_material_icons::normal::toggle::TOGGLE_ON];
+//    let v = vec![];
 //    for i in 0..v.len() {
-//        flex.add_child(Flex::row().with_child(widgets::widgets::Icon::new(v[i])).with_child(druid::widget::Label::new(i.to_string())));
+//        flex.add_child(Flex::row().with_child(widgets::Icon::new(v[i])).with_child(druid::widget::Label::new(i.to_string())));
 //    }
 //    Scroll::new(flex)
 //}

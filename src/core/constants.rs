@@ -15,11 +15,17 @@ pub(crate) mod epub_settings {
 }
 
 pub(crate) mod commands {
-    use druid::{FileInfo, Selector};
+    use druid::{FileInfo, Selector, WidgetId};
 
-    use crate::{widgets::{PromptOption, epub_page::sidebar::PanelButton}};
+    use crate::{widgets::{PromptOption, epub_page::sidebar::PanelButton}, appstate::PagePosition};
 
     pub const MODIFY_EPUB_PATH: Selector<FileInfo> = Selector::new("epub_reader.modify-epub");
+
+    pub const OPEN_OCR_FILE: druid::Selector<druid::FileInfo> = druid::Selector::new("epub_reader.open-ocr-file");
+    pub const OPEN_REVERSE_OCR_1: druid::Selector<druid::FileInfo> = druid::Selector::new("epub_reader.open-reverse-ocr-1");
+    pub const OPEN_REVERSE_OCR_2: druid::Selector<druid::FileInfo> = druid::Selector::new("epub_reader.open-reverse-ocr-2");
+
+
 
     pub const INTERNAL_COMMAND: Selector<InternalUICommand> =
         Selector::new("epub_reader.ui_command");
@@ -31,6 +37,7 @@ pub(crate) mod commands {
         OpenOCRDialog,
 
         RemoveBook(String),
+        UpdateBookInfo(String), 
 
         OpenEditDialog,
         RequestSaveEdit,
@@ -38,5 +45,11 @@ pub(crate) mod commands {
         CloseEdit,
         SaveModification(String),
         PromptEditSave(PromptOption),
+        
+
+        RequestOCRSearch(String),
+        RequestReverseOCR((String, String)),
+        OCRSearchCompleted(PagePosition),
+        ReverseOCRCompleted(PagePosition),
     }
 }

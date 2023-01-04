@@ -1,15 +1,14 @@
 use druid::{WidgetPod, Data, Widget, EventCtx, Event, Env, Point, LifeCycleCtx, LifeCycle, UpdateCtx, LayoutCtx, BoxConstraints, Size, PaintCtx, Color, RenderContext};
 
-use super::round_button::RoundButton;
 
 // Create GroupButton; a group of buttons that can be toggled on and off
 pub struct GroupButton<T> {
-    buttons: Vec<WidgetPod<T, RoundButton<T>>>,
+    buttons: Vec<WidgetPod<T, Box< dyn Widget<T>>>>,
     active: usize,
 }
 
 impl<T: Data> GroupButton<T> {
-    pub fn new(buttons: Vec<RoundButton<T>>) -> Self {
+    pub fn new(buttons: Vec<Box< dyn Widget<T>>>) -> Self {
         Self {
             buttons: buttons
                 .into_iter()
@@ -34,11 +33,7 @@ impl<T: Data> Widget<T> for GroupButton<T> {
                     if rect.contains(mouse_event.pos) {
                         let mut index = 0;
                         for button in &mut self.buttons {
-                            let button_rect = druid::Rect::from_origin_size(
-                                Point::ORIGIN,
-                                button.layout_rect().size(),
-                            );
-                            if button_rect.contains(mouse_event.pos) {
+                            if button.layout_rect().contains(mouse_event.pos) {
                                 self.active = index;
                                 ctx.request_paint();
                                 break;
@@ -83,16 +78,14 @@ impl<T: Data> Widget<T> for GroupButton<T> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        let index = 0;
-        for button in &mut self.buttons {
+        for (index, button) in &mut self.buttons.iter_mut().enumerate() {
             // create a shadow for active button
             if index == self.active {
-                let rect =
-                    druid::Rect::from_origin_size(Point::ORIGIN, button.layout_rect().size());
                 let shadow = ctx
                     .render_ctx
                     .solid_brush(Color::rgb8(0, 0, 0).with_alpha(0.2));
-                ctx.render_ctx.fill(rect, &shadow);
+                    
+                ctx.render_ctx.fill(button.layout_rect(), &shadow);
             }
 
             button.paint(ctx, data, env);

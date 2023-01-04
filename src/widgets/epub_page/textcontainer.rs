@@ -1,6 +1,3 @@
-
-
-
 use druid::im::Vector;
 use druid::piet::{CairoText, Text, TextLayoutBuilder};
 use druid::{
@@ -11,40 +8,10 @@ use druid::{
 use crate::appstate::{EpubData, PagePosition};
 use crate::core::commands::{GO_TO_POS, CHANGE_PAGE};
 
+use crate::core::constants::commands::{INTERNAL_COMMAND, InternalUICommand};
 use crate::data::epub::settings::{EpubSettings, VisualizationMode};
+use crate::dom::Renderable;
 use crate::widgets::RoundButton;
-
-
-#[allow(dead_code)]
-pub enum DebugLevel {
-    Error,
-    Verbose,
-    Debug,
-    Normal,
-    None
-}
-
-impl DebugLevel {
-    #[allow(dead_code)]
-    pub fn debug(&self, msg: &str) 
-    {
-        match DEBUG_ENABLED  {
-            DebugLevel::Debug => println!("{}", format!("[DEBUG] {}", msg)),
-            _ =>  {}
-        }
-        
-    }
-
-    pub fn verbose(msg: &str) 
-    {
-        match DEBUG_ENABLED  {
-            DebugLevel::Verbose => println!("{}", format!("[VERBOSE] {}", msg)),
-            _ =>  {}
-        }    
-    }
-}
-
-pub const DEBUG_ENABLED : DebugLevel = DebugLevel::Debug;
 
 use druid::text::{RichText, Selection};
 
@@ -68,7 +35,6 @@ use druid_material_icons::normal::action::{ARROW_CIRCLE_RIGHT, ARROW_CIRCLE_LEFT
 
 impl PageSplitterRanges {
 
-    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         match self {
             PageSplitterRanges::OnePage(range) => range.is_empty(),
@@ -124,9 +90,8 @@ impl Default for PageSplitterRanges {
 
 pub struct PageSplitter {
     text: Vec<TextLayout<RichText>>,
-    text_pos: Vec<f64>,
+    //text_pos: Vec<f64>,
     visualized_range: PageSplitterRanges,
-    //selection : Option<(TextLayout<RichText>, Selection, f64)>,
     search_selection : Option<(usize, Selection)>,
 }
 
@@ -136,26 +101,32 @@ impl PageSplitter {
     pub fn new() -> Self {
         Self { 
             text: Vec::new(),
-            text_pos: Vec::new(),
+            //text_pos: Vec::new(),
             visualized_range: PageSplitterRanges::default(),
             //selection : None, 
             search_selection : None
         }
     }
-}
-impl PageSplitter {
-    fn generate_text(&mut self, chapter: &Vector<RichText>, font_size: f64)  {
+    fn generate_text(&mut self, chapter: &Vector<Renderable>, font_size: f64)  {
         self.text.clear();
 
-        self.text_pos.clear();
+        //self.text_pos.clear();
 
-        for label in chapter.iter() {
-            let mut text_layout = TextLayout::new();
-            text_layout.set_text(label.clone());
-            text_layout.set_font(FontDescriptor::new(FontFamily::SERIF) );
-            text_layout.set_text_size(font_size);
-            text_layout.set_text_color(Color::BLACK);
-            self.text.push(text_layout);
+        for renderable in chapter.iter() {
+
+            match renderable {
+                Renderable::Image(_) => {
+
+                },
+                Renderable::Text(text) => {
+                    let mut text_layout = TextLayout::new();
+                    text_layout.set_text(text.clone());
+                    text_layout.set_font(FontDescriptor::new(FontFamily::SERIF) );
+                    text_layout.set_text_size(font_size);
+                    text_layout.set_text_color(Color::BLACK);
+                    self.text.push(text_layout);
+                }
+            }
         }
     }
     
@@ -231,6 +202,84 @@ impl PageSplitter {
         PageSplitterRanges::OnePage(page_1)
     }
 
+
+    fn next_page(&mut self, mut current_height: f64, epub_settings: &EpubSettings) -> bool
+    {
+        let mut i = self.visualized_range.start();
+        current_height = if epub_settings.visualization_mode == VisualizationMode::TwoPage {
+            current_height * 2.
+        } else {
+            current_height
+        };
+        while i < self.text.len() && current_height- self.text[i].size().height + epub_settings.paragraph_spacing > 0. {
+            current_height -= self.text[i].size().height + epub_settings.paragraph_spacing;
+            i += 1;
+        }
+
+        // If we reached the end of the text elements, don't update the start_range
+        if i >= self.text.len() {
+            return false;
+        }
+        // Update the start_range to the next page
+        self.visualized_range = PageSplitterRanges::OnePage(i..i);   
+        true
+    }
+
+    
+
+    fn prev_page(&mut self, mut current_height: f64, epub_settings: &EpubSettings) -> bool {
+        if self.visualized_range.start() == 0 {
+            return false;
+        }
+        current_height = if epub_settings.visualization_mode == VisualizationMode::TwoPage {
+            current_height * 2.
+        } else {
+            current_height
+        };
+        // Calculate the total size of the text elements starting from the current start_range
+        let mut i = self.visualized_range.start();
+        while i > 0 && current_height - self.text[i].size().height + epub_settings.paragraph_spacing > 0. {
+            current_height -= self.text[i].size().height + epub_settings.paragraph_spacing;
+            i -= 1;
+
+        }
+
+        // Update the start_range to the previous page
+        self.visualized_range = PageSplitterRanges::OnePage(i..i);   
+        return true;
+    }
+
+    fn get_visible_elements(&mut self, window_size: f64, epub_settings: &EpubSettings) -> (Vec<TextLayout<RichText>>, Vec<TextLayout<RichText>>) {
+        let mut visible_elements = Vec::new();
+        let mut second_page = Vec::new();
+        let mut total_size = 0.0;
+        let mut i = self.visualized_range.start();
+        for element in self.text[self.visualized_range.start()..].iter() {
+            if total_size + element.size().height + epub_settings.paragraph_spacing > window_size  {
+                break;
+            }
+            visible_elements.push(element.clone());
+            total_size += element.size().height + epub_settings.paragraph_spacing;
+            i+=1;
+
+        }
+
+        total_size = 0.0;
+        if epub_settings.visualization_mode == VisualizationMode::TwoPage {
+            for element in self.text[i..].iter() {
+                if total_size + element.size().height + epub_settings.paragraph_spacing > window_size  {
+                    break;
+                }
+                second_page.push(element.clone());
+                total_size += element.size().height + epub_settings.paragraph_spacing;
+                i+=1;
+            }
+        }
+
+        self.visualized_range = PageSplitterRanges::OnePage(self.visualized_range.start()..i);
+        
+        (visible_elements, second_page)
+    }
 }
 
 impl Widget<EpubData> for PageSplitter {
@@ -241,30 +290,55 @@ impl Widget<EpubData> for PageSplitter {
             Event::Command(cmd) => {
                 if cmd.is(CHANGE_PAGE) {
                     let direction = cmd.get_unchecked(CHANGE_PAGE).clone();
-
+                    let mut page_position = data.page_position.clone();
+                    
                     if direction {
-                        if (data.get_current_chap().len() == 0 || (self.visualized_range.end() >= data.get_current_chap().len()-1)) && data.has_next_chapter() {
-                            data.change_position(PagePosition::new(data.epub_metrics.current_chapter+1, 0))
-                        }
-                        else {
-                            data.page_position.set_richtext_number(self.visualized_range.end());
-                            
-                            DebugLevel::verbose(&format!("current page: {}", data.page_position.richtext_number()))
-                            //starting_point = self.visualized_range.end();
+                        let next = self.next_page(ctx.size().height-50., &data.epub_settings);
+                        if !next {
+                            if data.has_next_chapter() {
+                                println!("Going forward");
+                                page_position.set_chapter(data.epub_metrics.current_chapter+1);
+                                page_position.set_richtext_number(0);
+                                self.visualized_range = PageSplitterRanges::OnePage(0..0);
+                            }
                         }
                     }
                     else {
-                        if (self.visualized_range.start() == 0) && data.has_prev_chapter() {
-                            data.change_position(PagePosition::new(data.epub_metrics.current_chapter-1, data.get_current_chap().len()))
+                        let prev = self.prev_page(ctx.size().height-50., &data.epub_settings);
+                        if !prev {
+                            if data.has_prev_chapter() {
+                                println!("Going backward");
+                                page_position.set_chapter(data.epub_metrics.current_chapter-1);
+                                page_position.set_richtext_number(data.get_chap_len(data.epub_metrics.current_chapter-1)-1);
+                                // TODO: set the visualized range to the last page of the previous chapter
+                                self.visualized_range = PageSplitterRanges::OnePage(page_position.richtext_number()..page_position.richtext_number());
+                            }
                         }
-                        else {
-                            //starting_point = self.visualized_range.start();
-                            data.page_position.set_richtext_number(self.visualized_range.start());
-                            DebugLevel::verbose(&format!("current page: {}", data.page_position.richtext_number()))
 
-
-                        }
                     }
+                    //if direction {
+                    //    if (data.get_current_chap().len() == 0 || (self.visualized_range.end() >= data.get_current_chap().len()-1)) && data.has_next_chapter() {
+                    //        page_position.set_chapter(data.epub_metrics.current_chapter+1);
+                    //        page_position.set_richtext_number(0);
+                    //        //data.change_position(PagePosition::new(data.epub_metrics.current_chapter+1, 0))
+                    //    }
+                    //    else {
+                    //        page_position.set_richtext_number(self.visualized_range.end());
+                    //        //data.page_position.set_richtext_number(self.visualized_range.end());
+                    //    }
+                    //}
+                    //else {
+                    //    if (self.visualized_range.start() == 0) && data.has_prev_chapter() {
+                    //        //data.change_position(PagePosition::new(data.epub_metrics.current_chapter-1, data.get_chap_len(data.epub_metrics.current_chapter-1)-1));
+                    //        page_position.set_chapter(data.epub_metrics.current_chapter-1);
+                    //        page_position.set_richtext_number(data.get_chap_len(data.epub_metrics.current_chapter-1)-1);
+                    //    }
+                    //    else {
+                    //        //data.page_position.set_richtext_number(self.visualized_range.start());
+                    //        page_position.set_richtext_number(self.visualized_range.start());
+                    //    }
+                    //}
+                    data.change_position(page_position);
                     ctx.request_update();
                     ctx.request_layout();
                     ctx.request_paint();
@@ -291,11 +365,9 @@ impl Widget<EpubData> for PageSplitter {
             },
             // when the window is going to be closed, save the current position
             Event::WindowDisconnected => {
-                //data.save_current_position(self.visualized_range.start());
+                ctx.submit_command(INTERNAL_COMMAND.with(InternalUICommand::UpdateBookInfo(data.book_path.clone())));
             },
-            Event::Internal(_) => {
-                println!("internal event {:?}", event);
-            },
+            
             _ => {}
         }
     }
@@ -311,10 +383,9 @@ impl Widget<EpubData> for PageSplitter {
             },
             LifeCycle::Size(new_size) => {
 
-                self.visualized_range = 
-                    self.get_current_range(new_size.height, true, data.page_position.richtext_number(), &data.epub_settings);
-                    DebugLevel::verbose(&format!("Ctx size is {:?}", ctx.size()))
-
+                //self.visualized_range = 
+                //    self.get_current_range(new_size.height, true, data.page_position.richtext_number(), &data.epub_settings);
+//
             }
             _ => {}
         }
@@ -324,26 +395,39 @@ impl Widget<EpubData> for PageSplitter {
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, env: &Env) { 
         if !(data.same(&old_data)) {
             println!("Updating settings");
-            if !data.visualized_chapter.same(&old_data.visualized_chapter)
+            if !data.visualized_chapter.same(&old_data.visualized_chapter) {
+                println!("Updating chapter");
+                self.generate_text(&crate::dom::generate_renderable_tree(&data.visualized_chapter, data.epub_settings.font_size), data.epub_settings.font_size);
+                //self.text.clear();
+                
+            }
+            if !data.page_position.chapter().same(&old_data.page_position.chapter())
             {
                 println!("Updating chapter");
                 self.generate_text(data.get_current_chap(), data.epub_settings.font_size);
-                self.text_pos.clear();
-                self.text.clear();
-                let v  = crate::dom::rebuild_rendered_text(&data.visualized_chapter, data.epub_settings.font_size);
-                for label in v.iter() {
-                    let mut text_layout = TextLayout::new();
-                    text_layout.set_text(label.clone());
-                    text_layout.set_font(FontDescriptor::new(FontFamily::SERIF) );
-                    text_layout.set_text_size(data.epub_settings.font_size);
-                    text_layout.set_text_color(Color::BLACK);
-                    self.text.push(text_layout);
-                }
+                //self.text.clear();
+                //let renderable = crate::dom::generate_renderable_tree(&data.visualized_chapter, data.epub_settings.font_size);
+//
+                //for label in renderable.iter() {
+//
+                //    match label {
+                //        Renderable::Image(_) => todo!(),
+                //        Renderable::Text(text) => {
+                //            let mut text_layout = TextLayout::new();
+                //            text_layout.set_text(text.clone());
+                //            text_layout.set_font(FontDescriptor::new(FontFamily::SERIF) );
+                //            text_layout.set_text_size(data.epub_settings.font_size);
+                //            text_layout.set_text_color(Color::BLACK);
+                //            self.text.push(text_layout);
+                //        }
+                //    }
+                //}
         
-                self.wrap_label_size(&ctx.size(), ctx.text(), data.epub_settings.margin, env);
-                self.visualized_range = 
-                    self.get_current_range(ctx.size().height, true, data.page_position.richtext_number(), &data.epub_settings);
-
+        
+                //self.wrap_label_size(&ctx.size(), ctx.text(), data.epub_settings.margin, env);
+                //self.visualized_range = 
+                //    self.get_current_range(ctx.size().height, true, data.page_position.richtext_number(), &data.epub_settings);
+//
                     
             }
             
@@ -358,24 +442,32 @@ impl Widget<EpubData> for PageSplitter {
            
 
             // must regenerate text if font size has changed or if the chapter has changed
-            if data.epub_metrics.current_chapter != old_data.epub_metrics.current_chapter ||
-                data.epub_settings.font_size != old_data.epub_settings.font_size {
-                self.generate_text(data.get_current_chap(), data.epub_settings.font_size);
-            }
+            //if data.epub_metrics.current_chapter != old_data.epub_metrics.current_chapter ||
+            //    data.epub_settings.font_size != old_data.epub_settings.font_size {
+            //    self.generate_text(data.get_current_chap(), data.epub_settings.font_size);
+            //}
     
             //if !data.epub_settings.same(&old_data.epub_settings) {
                 self.wrap_label_size(&ctx.size(), ctx.text(), data.epub_settings.margin, env);
-            //}
-
+            ////}
+//
+            //
+            //if !(data.page_position.same(&old_data.page_position)) {
+            //    // if true, going forward; if false, going backward
+            //    let direction = data.page_position.richtext_number() > old_data.page_position.richtext_number() || data.page_position.chapter() > old_data.page_position.chapter();
+            //    //println!("Direction is {:?}", direction);
+            //    //
+            //    //self.visualized_range = self.get_current_range(ctx.size().height, direction, data.page_position.richtext_number(), &data.epub_settings);
+            //    //
+            //    if direction {
+            //        self.next_page(0, ctx.size().height, &data.epub_settings)
+            //    }
+            //    else {
+            //        println!("Going backward");
+            //        self.prev_page(0, ctx.size().height, &data.epub_settings)
+            //    }
+            //}//
             
-            if !(data.page_position.same(&old_data.page_position)) {
-                // if true, going forward; if false, going backward
-                let direction = data.page_position.richtext_number() > old_data.page_position.richtext_number();
-                println!("Direction is {:?}", direction);
-                
-                self.visualized_range = self.get_current_range(ctx.size().height, direction, data.page_position.richtext_number(), &data.epub_settings);
-                
-            }
 
         }
         
@@ -392,7 +484,7 @@ impl Widget<EpubData> for PageSplitter {
 
         let size = ctx.size();
         let mut y = 0.0;
-        self.text_pos.clear();
+        //self.text_pos.clear();
 
         // draw text in this way:
         // if two side, draw two pages of size (size.width/2, size.height)
@@ -417,45 +509,57 @@ impl Widget<EpubData> for PageSplitter {
             0.0
         };
 
-
-
-        for i in self.visualized_range.get_page(0) {
-            let label = &self.text[i];
-            self.text_pos.push(y);
-                    // if self.selection exists, draw it
-            if let Some((richtext, selection)) = &self.search_selection {
-                if *richtext == i {
-                    let label = &self.text[i];
-                    label.rects_for_range(selection.range()).iter().for_each(|rect| {
-                        ctx.fill(*rect+druid::Vec2::new(x+data.epub_settings.margin, TEXT_Y_PADDING+y), &Color::YELLOW);
-                    });
-    
-                }
-            }
+        for label in self.get_visible_elements( ctx.size().height-50., &data.epub_settings).0
+        {
             label.draw(ctx, Point::new(x+data.epub_settings.margin, y+TEXT_Y_PADDING));
-
-            // label is the first label of the selection
-            y += label.size().height+  data.epub_settings.paragraph_spacing;
+            y += label.size().height + data.epub_settings.paragraph_spacing;
         }
+
+        //for i in self.visualized_range.get_page(0) {
+        //    let label = &self.text[i];
+        //    //self.text_pos.push(y);
+        //    // if self.selection exists, draw it
+        //    if let Some((richtext, selection)) = &self.search_selection {
+        //        if *richtext == i {
+        //            let label = &self.text[i];
+        //            label.rects_for_range(selection.range()).iter().for_each(|rect| {
+        //                ctx.fill(*rect+druid::Vec2::new(x+data.epub_settings.margin, TEXT_Y_PADDING+y), &Color::YELLOW);
+        //            });
+    //
+        //        }
+        //    }
+        //    label.draw(ctx, Point::new(x+data.epub_settings.margin, y+TEXT_Y_PADDING));
+//
+        //    // label is the first label of the selection
+        //    y += label.size().height+  data.epub_settings.paragraph_spacing;
+        //}
         
         if data.epub_settings.visualization_mode == VisualizationMode::TwoPage {
             y = 0.0;
-            for i in self.visualized_range.get_page(1) {
-                let label = &self.text[i];
-                if let Some((richtext, selection)) = &self.search_selection {
-                    if *richtext == i {
-                        let label = &self.text[i];
-                        label.rects_for_range(selection.range()).iter().for_each(|rect| {
-                            ctx.fill(*rect+druid::Vec2::new(size.width/2.+data.epub_settings.margin, TEXT_Y_PADDING+y), &Color::rgb8(255, 255, 0));
-                        });
-        
-                    }
-                }
+            println!("Drawing second page");
+            for label in self.get_visible_elements( ctx.size().height-50., &data.epub_settings).1
+            {
                 label.draw(ctx, Point::new(size.width/2.+data.epub_settings.margin, y+TEXT_Y_PADDING));
-                self.text_pos.push(y);
-                y += label.size().height+  data.epub_settings.paragraph_spacing;
-            }                    
-        }
+                y += label.size().height + data.epub_settings.paragraph_spacing;
+            }
+    
+    
+            //for i in self.visualized_range.get_page(1) {
+            //    let label = &self.text[i];
+            //    if let Some((richtext, selection)) = &self.search_selection {
+            //        if *richtext == i {
+            //            let label = &self.text[i];
+            //            label.rects_for_range(selection.range()).iter().for_each(|rect| {
+            //                ctx.fill(*rect+druid::Vec2::new(size.width/2.+data.epub_settings.margin, TEXT_Y_PADDING+y), &Color::rgb8(255, 255, 0));
+            //            });
+        //
+            //        }
+            //    }
+            //    label.draw(ctx, Point::new(size.width/2.+data.epub_settings.margin, y+TEXT_Y_PADDING));
+            //    //self.text_pos.push(y);
+            //    y += label.size().height+  data.epub_settings.paragraph_spacing;
+            //}                    
+        }//
 
 
         // draw a frame for the page
@@ -501,9 +605,6 @@ impl Widget<EpubData> for PageSplitter {
 pub struct TextContainer {   
     label_text_lines: WidgetPod<EpubData, PageSplitter>,
     navigation_buttons : Vec<WidgetPod<EpubData, Box<dyn Widget<EpubData>>>>,
-    
-    
-
 }
 impl TextContainer {
     pub fn new() -> Self {

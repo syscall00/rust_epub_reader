@@ -1,4 +1,4 @@
-use druid::{widget::prelude::*, WidgetPod, Color, Cursor, Point};
+use druid::{widget::prelude::*, WidgetPod, Color, Cursor, Point, WidgetExt};
 use druid_material_icons::IconPaths;
 use super::icon::Icon;
 
@@ -6,6 +6,7 @@ pub struct RoundButton<T> {
     icon: WidgetPod<T, Icon>,
     radius : f64,
     click_handler: Option<Box<dyn Fn(&mut EventCtx, &mut T, &Env)>>,
+    border_color: Color,
 
 }
 
@@ -15,6 +16,7 @@ impl <T : Data> RoundButton<T> {
             icon: WidgetPod::new(Icon::new(icon)),
             radius : 20.,
             click_handler: None,
+            border_color: Color::TRANSPARENT,
         }
     }
     pub fn with_radius(mut self, radius : f64) -> Self {
@@ -29,6 +31,11 @@ impl <T : Data> RoundButton<T> {
 
     pub fn with_click_handler(mut self, click_handler: impl Fn(&mut EventCtx, &mut T, &Env) + 'static) -> Self {
         self.click_handler = Some(Box::new(click_handler));
+        self
+    }
+
+    pub fn with_border_color(mut self, border_color: Color) -> Self {
+        self.border_color = border_color;
         self
     }
 }
@@ -90,6 +97,13 @@ impl <T : Data> Widget<T> for RoundButton<T> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
+
+        // color background of button with radius based on size
+        let rect = ctx.size().to_rect();
+        let rounded_rect = rect.to_rounded_rect(self.radius*0.3);
+        ctx.stroke(rounded_rect, &self.border_color, 1.);
+       
+
         self.icon.paint(ctx, data, env);
     }
 }

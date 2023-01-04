@@ -138,14 +138,6 @@ impl Widget<Recent> for RecentWidget {
                     .unwrap_or(UNKNOWN_CREATOR_OR_PUBLISHER.to_string())
                     .to_string();
 
-                //let recent_data = RecentData {
-                //    title: ArcStr::from(title.clone()),
-                //    creator: ArcStr::from(creator.clone()),
-                //    publisher: ArcStr::from(publisher.clone()),
-                //    image_data: None,
-                //    position_in_book: 0,
-                //};
-                //data.set_recent_data(recent_data);
                 self.title_label.set_text(title);
                 self.title_label.set_text_size(18.);
                 self.title_label.set_text_color(Color::WHITE);
@@ -158,7 +150,12 @@ impl Widget<Recent> for RecentWidget {
                 self.publisher_label.set_text_size(14.);
                 self.publisher_label.set_text_color(Color::WHITE);
 
-                self.position_in_book_label.set_text("".to_owned()); //data.reached_position.to_string());
+                
+                self.position_in_book_label.set_text(if let Some(pos) = &data.reached_position {
+                    pos.to_string()
+                } else {
+                    "Never opened".to_string()
+                });
                 self.position_in_book_label.set_text_size(14.);
                 self.position_in_book_label.set_text_color(Color::WHITE);
             }
@@ -203,15 +200,6 @@ impl Widget<Recent> for RecentWidget {
             }
             //self.remove_button.update(ctx, data, env);
             ctx.request_layout();
-
-            if let Some(recent_data) = &data.recent_data {
-                self.title_label.set_text(recent_data.title.to_string());
-                self.creator_label.set_text(recent_data.creator.to_string());
-                self.publisher_label
-                    .set_text(recent_data.publisher.to_string());
-                self.position_in_book_label.set_text("".to_owned()); //data.reached_position.to_string());
-            }
-
             ctx.request_layout();
             ctx.request_paint();
         }
@@ -293,7 +281,6 @@ impl Widget<Recent> for RecentWidget {
 // navigator needs Boxed widgets in order to store the widgets
 
 const FINISH_SLOW_FUNCTION: druid::Selector<druid::ImageBuf> = druid::Selector::new("asd");
-
 fn wrapped_slow_function(
     sink: druid::ExtEventSink,
     img_data: Vec<u8>,

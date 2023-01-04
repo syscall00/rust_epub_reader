@@ -51,7 +51,7 @@ impl PanelButton {
                                     data.epub_settings.visualization_mode =
                                         VisualizationMode::SinglePage;
                                     ctx.request_paint();
-                                }),
+                                }).boxed(),
                             //.with_tooltip("Dark Mode")
                             //.with_command(InternalUICommand::ToggleDarkMode),
                             RoundButton::new(druid_material_icons::normal::image::AUTO_STORIES)
@@ -59,7 +59,7 @@ impl PanelButton {
                                     data.epub_settings.visualization_mode =
                                         VisualizationMode::TwoPage;
                                     ctx.request_paint();
-                                }),
+                                }).boxed(),
                             //.with_command(InternalUICommand::ToggleLightMode),
                         ]), // Create three button able to change visualization mode
                             //Flex::row()
@@ -190,8 +190,6 @@ impl Widget<EpubData> for Panel {
                 Event::KeyUp(key) => {
                     if key.code == druid::Code::Enter {
                         data.search_string_in_book();
-                        let pos = data.search_with_ocr_input("photo_2022-11-12_17-39-49.jpg");
-                        ctx.submit_command(GO_TO_POS.with(pos));
                         ctx.request_update();
                         ctx.request_layout();
                     }

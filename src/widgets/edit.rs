@@ -324,9 +324,9 @@ pub enum ToolbarButton {
 impl ButtonTrait for ToolbarButton {
     fn icon(&self) -> IconPaths {
         match self {
-            ToolbarButton::Save => druid_material_icons::normal::communication::LIST_ALT,
-            ToolbarButton::SaveAs => druid_material_icons::normal::communication::LIST_ALT,
-            ToolbarButton::Exit => druid_material_icons::normal::communication::LIST_ALT,
+            ToolbarButton::Save => druid_material_icons::normal::content::SAVE,
+            ToolbarButton::SaveAs => druid_material_icons::normal::content::SAVE_AS,
+            ToolbarButton::Exit => druid_material_icons::normal::content::CLEAR,
         }
     }
 

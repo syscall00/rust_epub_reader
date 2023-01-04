@@ -21,7 +21,7 @@ impl ButtonTrait for ActionButton {
             // Check if can rotate
             ActionButton::CloseBook => druid_material_icons::normal::action::EXIT_TO_APP,
             ActionButton::EditBook => druid_material_icons::normal::editor::EDIT_NOTE,
-            ActionButton::OCROpen => druid_material_icons::normal::editor::EDIT_NOTE,
+            ActionButton::OCROpen => druid_material_icons::normal::image::IMAGE_SEARCH,
         }
     }
     fn hint(&self) -> String {
