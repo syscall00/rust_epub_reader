@@ -22,7 +22,6 @@ mod ocr;
 use widgets::{recent_item::RecentWidget, epub_page::sidebar::Sidebar};
 use widgets::RoundButton;
 
-//use druid_material_icons::normal::action::*;
 
 #[derive(Data, PartialEq, Clone, Copy)]
 pub enum PageType {
@@ -31,34 +30,17 @@ pub enum PageType {
 }
 
 fn main() {
-    // starting from icon_action file, create a widget list with all the icons
-    // read file icons_action
     let data = AppState::new();
     let window = WindowDesc::new(navigator())
         .title("Epub Rust Reader")
         .window_size((1000.0, 800.0));
 
-    //let window = WindowDesc::new(build_ui());
     AppLauncher::with_window(window)
         .log_to_console()
         .delegate(appstate::Delegate)
         .launch(data)
-        //.launch(())
         .unwrap();
 }
-
-//pub fn build_ui() -> impl Widget<()> {
-//    let mut flex = Flex::column();
-//
-//    //let mut icons_from_file =
-//    let v = vec![];
-//    for i in 0..v.len() {
-//        flex.add_child(Flex::row().with_child(widgets::Icon::new(v[i])).with_child(druid::widget::Label::new(i.to_string())));
-//    }
-//    Scroll::new(flex)
-//}
-
-
 
 // UI Builder functions
 pub fn navigator() -> impl Widget<AppState> {
