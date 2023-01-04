@@ -1,7 +1,7 @@
 use druid::{WidgetPod, Widget, Event, BoxConstraints, Size, Point, RenderContext, Color, widget::{Scroll, List, Flex, Label, Slider, TextBox}, LifeCycleCtx, Env, LifeCycle, EventCtx, TextLayout, ArcStr, UpdateCtx, LayoutCtx, PaintCtx, LensExt, WidgetExt, Data};
 use druid_material_icons::IconPaths;
 
-use crate::{appstate::{EpubData, SidebarData}, core::{constants::{commands::{InternalUICommand, INTERNAL_COMMAND}, epub_settings::{MIN_FONT_SIZE, MAX_FONT_SIZE, MIN_MARGIN, MAX_MARGIN, MIN_PARAGRAPH_SPACING, MAX_PARAGRAPH_SPACING}}, style::{self, PRIMARY_DARK}, commands::GO_TO_POS}, widgets::{common::GroupButton, RoundButton, ClickableLabel}, data::epub::settings::{VisualizationMode, EpubSettings}};
+use crate::{appstate::{EpubData, SidebarData}, core::{constants::{commands::{InternalUICommand, INTERNAL_COMMAND}, epub_settings::{MIN_FONT_SIZE, MAX_FONT_SIZE, MIN_MARGIN, MAX_MARGIN, MIN_PARAGRAPH_SPACING, MAX_PARAGRAPH_SPACING}}, style::{self, PRIMARY_DARK}}, widgets::{common::GroupButton, RoundButton, ClickableLabel}, data::epub::settings::{VisualizationMode, EpubSettings}};
 
 use super::icon_button::{IconButton, ButtonTrait, ActionButton};
 

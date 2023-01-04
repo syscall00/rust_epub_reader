@@ -15,9 +15,9 @@ pub(crate) mod epub_settings {
 }
 
 pub(crate) mod commands {
-    use druid::{FileInfo, Selector, WidgetId};
+    use druid::{FileInfo, Selector};
 
-    use crate::{widgets::{PromptOption, epub_page::sidebar::PanelButton}, appstate::PagePosition};
+    use crate::{widgets::{PromptOption, epub_page::sidebar::PanelButton}, appstate::PagePosition, data::Recent};
 
     pub const MODIFY_EPUB_PATH: Selector<FileInfo> = Selector::new("epub_reader.modify-epub");
 
@@ -36,6 +36,7 @@ pub(crate) mod commands {
         GoToMenu,
         OpenOCRDialog,
 
+        OpenRecent(Recent),
         RemoveBook(String),
         UpdateBookInfo(String), 
 
@@ -51,5 +52,7 @@ pub(crate) mod commands {
         RequestReverseOCR((String, String)),
         OCRSearchCompleted(PagePosition),
         ReverseOCRCompleted(PagePosition),
+
+        EpubGoToPos(PagePosition),
     }
 }

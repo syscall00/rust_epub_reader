@@ -1,7 +1,7 @@
-use druid::{TextLayout, WidgetPod, Widget, widget::Flex, WidgetExt, EventCtx, Color, Data, BoxConstraints, Point, Size, RenderContext};
+use druid::{TextLayout, WidgetPod, Widget, widget::Flex, WidgetExt, EventCtx, Color, BoxConstraints, Point, Size, RenderContext, Data};
 use epub::doc::EpubDoc;
 
-use crate::{appstate::Recent, widgets::RoundButton, core::{constants::commands::{INTERNAL_COMMAND, InternalUICommand}, commands::NAVIGATE_TO, style}, PageType};
+use crate::{widgets::RoundButton, core::{constants::commands::{INTERNAL_COMMAND, InternalUICommand}, commands::NAVIGATE_TO, style}, PageType, data::home::Recent};
 
 pub struct RecentWidget {
     title_label: druid::TextLayout<String>,
@@ -73,8 +73,8 @@ impl Widget<Recent> for RecentWidget {
                     ctx.set_handled();
 
                     ctx.submit_command(druid::Command::new(
-                        crate::core::commands::OPEN_RECENT,
-                        data.clone(),
+                        INTERNAL_COMMAND,
+                        InternalUICommand::OpenRecent(data.clone()),
                         druid::Target::Auto,
                     ));
                     ctx.submit_command(NAVIGATE_TO.with(PageType::Reader));

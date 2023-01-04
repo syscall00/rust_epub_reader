@@ -98,19 +98,6 @@ pub enum Renderable {
 }
 
 
-impl Renderable {
-    pub fn render(&self) {
-        match self {
-            Renderable::Image(img) => {
-                // Render image
-            }
-            Renderable::Text(ref text) => {
-                // Render text
-            }
-        }
-    }
-}
-
 pub fn generate_renderable_tree(text: &str, font_size: f64) -> Vector<Renderable> {
     let mut renderables: Vector<Renderable> = Vector::new();
     let mut current_pos = 0;
@@ -125,13 +112,13 @@ pub fn generate_renderable_tree(text: &str, font_size: f64) -> Vector<Renderable
         let token = tok_result.unwrap();
         match token {
             xmlparser::Token::ElementStart {
-                prefix,
+                prefix : _,
                 local,
                 span: _,
             } => {
                 token_stack.push((current_pos, HtmlTag::from(local.as_str())));
             }
-            xmlparser::Token::ElementEnd { end, span} => {
+            xmlparser::Token::ElementEnd { end, span : _} => {
                 match end {
                     xmlparser::ElementEnd::Open => {
                         continue;

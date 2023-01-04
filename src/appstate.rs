@@ -1,17 +1,17 @@
 use druid::im::Vector;
 use druid::piet::TextStorage;
-use druid::text::RichText;
 use druid::{
-    AppDelegate, ArcStr, Command, Data, DelegateCtx, Env, Handled, ImageBuf, Lens, Target,
+    AppDelegate, ArcStr, Command, Data, DelegateCtx, Env, Handled, Lens, Target,
 };
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::sync::{Arc, Mutex};
 
-use crate::core::constants::commands::INTERNAL_COMMAND;
+use crate::core::constants::commands::{INTERNAL_COMMAND, InternalUICommand};
+use crate::data::HomePageData;
 use crate::data::epub::settings::EpubSettings;
-use crate::data::home::HomePageData;
 use crate::PageType;
+use crate::data::home::Recent;
 use epub::doc::EpubDoc;
 
 use crate::dom::{generate_renderable_tree, Renderable};
@@ -21,46 +21,6 @@ pub struct AppState {
     pub epub_data: EpubData,
     pub home_page_data: HomePageData,
     pub active_page: PageType,
-}
-
-#[derive(Clone, Data, Lens, Debug)]
-pub struct RecentData {
-    pub image_data: Option<ImageBuf>,
-    pub title: ArcStr,
-    pub creator: ArcStr,
-    pub publisher: ArcStr,
-    pub position_in_book: usize,
-}
-
-#[derive(Clone, Data, Lens, Serialize, Deserialize, Debug)]
-pub struct Recent {
-    pub path: String,
-    pub reached_position: Option<PagePosition>,
-
-    pub epub_settings: EpubSettings,
-
-    // ignore this field for serialization
-    #[serde(skip)]
-    pub image_data: Option<ImageBuf>,
-
-    #[serde(skip)]
-    pub recent_data: Option<RecentData>,
-}
-
-impl Recent {
-    pub fn new(path: String) -> Self {
-        Recent {
-            path,
-            reached_position: None,
-            epub_settings: EpubSettings::default(),
-            image_data: None,
-            recent_data: None,
-        }
-    }
-
-    pub fn set_recent_data(&mut self, recent_data: RecentData) {
-        self.recent_data = Some(recent_data);
-    }
 }
 
 pub struct Delegate;
@@ -90,18 +50,14 @@ impl AppDelegate<AppState> for Delegate {
             }
             return Handled::Yes;
         }
-        else if let Some(file_info) = cmd.get(crate::core::commands::OPEN_RECENT) {
-            data.open_file(file_info);
-            return Handled::Yes;
-        } 
         else if let Some(command) = cmd.get(INTERNAL_COMMAND) {
             let ret = match command {
-                crate::core::constants::commands::InternalUICommand::RemoveBook(book_path) => {
+                InternalUICommand::RemoveBook(book_path) => {
                     // remove book from recent
                     data.home_page_data.remove_from_recents(book_path);
                     return Handled::Yes;
                 }
-                crate::core::constants::commands::InternalUICommand::UpdateBookInfo(book_path) => {
+                InternalUICommand::UpdateBookInfo(book_path) => {
                     let recent = data.home_page_data.get_recent(book_path);
                     let mut recent = if let Some(recent) = recent {
                         recent
@@ -116,6 +72,10 @@ impl AppDelegate<AppState> for Delegate {
 
                     return Handled::Yes;
                 }
+                InternalUICommand::OpenRecent(recent) => {
+                    data.open_file(recent);
+                    return Handled::Yes;
+                    }
                 _ => Handled::No,
             };
             return ret;
@@ -231,6 +191,9 @@ pub struct EpubData {
     pub doc: Arc<std::sync::Mutex<EpubDoc<std::io::BufReader<File>>>>,
 }
 
+
+pub const EMPTY_STRING: &str = "Please, choose an image";
+
 #[derive(Clone, Lens, Data)]
 pub struct OcrData {
     pub image_to_pos: String,
@@ -251,7 +214,6 @@ pub enum OcrMode {
     FindByPhoto,
     FindByVirtual,
 }
-pub const EMPTY_STRING: &str = "Please, choose an image";
 
 impl Default for OcrData {
     fn default() -> Self {

@@ -138,7 +138,13 @@ fn find_by_photo() -> impl Widget<OcrData> {
             .with_border_color(druid::Color::GRAY))
         .on_click(|ctx, data: &mut OcrData, _| {
             // go to pos
-
+            ctx.submit_command(
+                INTERNAL_COMMAND
+                    .with(InternalUICommand::EpubGoToPos(
+                        data.ocr_result.clone(),
+                    ))
+                    .to(druid::Target::Global),
+            );
             ctx.request_update();
         })
         .padding(10.0),

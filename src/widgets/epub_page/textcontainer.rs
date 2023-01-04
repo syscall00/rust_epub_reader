@@ -6,7 +6,7 @@ use druid::{
     Widget, WidgetPod, TextLayout, Rect, LinearGradient, UnitPoint, FontDescriptor, FontFamily, Data, WidgetExt,
 };
 use crate::appstate::{EpubData, PagePosition};
-use crate::core::commands::{GO_TO_POS, CHANGE_PAGE};
+use crate::core::commands::CHANGE_PAGE;
 
 use crate::core::constants::commands::{INTERNAL_COMMAND, InternalUICommand};
 use crate::data::epub::settings::{EpubSettings, VisualizationMode};
@@ -346,20 +346,25 @@ impl Widget<EpubData> for PageSplitter {
                 }
 
 
-                else if cmd.is(GO_TO_POS) {
-                    let pos = cmd.get_unchecked(GO_TO_POS).clone();
-                    if data.epub_metrics.current_chapter != pos.chapter() || !self.visualized_range.contains(pos.richtext_number()) 
-                    {
-                        data.change_position(pos.clone());
-                    }
+                else if let Some(internal) = cmd.get(INTERNAL_COMMAND) {
+                    match internal {
+                        InternalUICommand::EpubGoToPos(pos) => {
+                            if data.epub_metrics.current_chapter != pos.chapter() || !self.visualized_range.contains(pos.richtext_number()) 
+                            {
+                                data.change_position(pos.clone());
+                            }
+        
+                            if let Some(range) = pos.range() {
+                                self.search_selection = Some((pos.richtext_number(), Selection::new(range.start, range.end)));
+        
+                            }
+                            ctx.request_update();
+                            ctx.request_layout();
+                            ctx.request_paint();
 
-                    if let Some(range) = pos.range() {
-                        self.search_selection = Some((pos.richtext_number(), Selection::new(range.start, range.end)));
-
+                        },
+                        _ => {}
                     }
-                    ctx.request_update();
-                    ctx.request_layout();
-                    ctx.request_paint();
                 }
 
             },

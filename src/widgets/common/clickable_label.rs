@@ -1,6 +1,6 @@
 use druid::{ArcStr, TextLayout, Widget, EventCtx, Event, Env, LifeCycleCtx, LifeCycle, UpdateCtx, LayoutCtx, BoxConstraints, Size, PaintCtx, Color, Data, RenderContext};
 
-use crate::{core::commands::GO_TO_POS, appstate::IndexedText};
+use crate::{core::constants::commands::{INTERNAL_COMMAND, InternalUICommand}, appstate::IndexedText};
 
 pub struct ClickableLabel {
     layout: TextLayout<ArcStr>,
@@ -17,7 +17,7 @@ impl Widget<IndexedText> for ClickableLabel {
         match event {
             Event::MouseDown(mouse) => {
                 if mouse.button.is_left() {
-                    ctx.submit_command(GO_TO_POS.with((*data.value).clone()));
+                    ctx.submit_command(INTERNAL_COMMAND.with(InternalUICommand::EpubGoToPos((*data.value).clone())))
                 }
             }
             Event::MouseMove(_) => {

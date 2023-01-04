@@ -1,7 +1,7 @@
 use druid::{
-    widget::TextBox, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
+    widget::{TextBox, Controller, Flex}, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
     LifeCycleCtx, PaintCtx, Point, RenderContext, Size, UpdateCtx, Widget, WidgetExt, WidgetPod,
-    WindowId, WindowSizePolicy,
+    WindowId, WindowSizePolicy, Code,
 };
 use druid_material_icons::IconPaths;
 
@@ -346,3 +346,58 @@ impl ButtonTrait for ToolbarButton {
         }
     }
 }
+
+
+
+
+
+pub struct EditWindowController;
+
+
+
+
+
+impl Controller<EpubData, Flex<EpubData>> for EditWindowController {
+    fn event(
+        &mut self,
+        child: &mut Flex<EpubData>,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut EpubData,
+        env: &Env,
+    ) {
+        match event {
+            Event::KeyDown(k) => {
+                match k.code {
+                    Code::Escape => {
+                        println!("Exiting");
+                        //ctx.submit_command(commands::CLOSE_WINDOW.to(data.window_id));
+                    }
+                    // If crtl + s is pressed, save the file
+                    Code::KeyS => {
+                        if k.mods.ctrl() {
+                            ctx.submit_command(INTERNAL_COMMAND.with(
+                                InternalUICommand::SaveModification(
+                                        data.visualized_chapter.clone(),
+                                    )
+                                ).to(druid::Target::Global)
+                            );
+                            ctx.request_update();
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            Event::WindowCloseRequested => {
+                println!("Exiting");
+                //ctx.submit_command(commands::CLOSE_WINDOW.to(data.window_id));
+            }
+            _ => {}
+        }
+        child.event(ctx, event, data, env);
+    }
+}
+
+
+

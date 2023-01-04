@@ -14,7 +14,6 @@ use druid::Widget;
 mod appstate;
 mod core;
 mod data;
-mod epub_page;
 mod widgets;
 
 mod dom;

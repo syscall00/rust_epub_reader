@@ -87,7 +87,7 @@ pub fn search_with_ocr_input(full_text : Vector<Vector<String>>, image_path: &st
 
 
         if top_docs.len() > 0 {
-            let (score, doc_address) = top_docs[0];
+            let (_score, doc_address) = top_docs[0];
             let retrieved_doc = searcher.doc(doc_address).unwrap();
             let chapter = retrieved_doc.get_first(chapter).unwrap();
             let position = retrieved_doc.get_first(position).unwrap();
@@ -106,22 +106,30 @@ pub fn search_with_ocr_input(full_text : Vector<Vector<String>>, image_path: &st
 }
 
 
-pub fn reverse_search_with_ocr_input(full_text : Vector<Vector<String>>, image_1: &str, image_2: &str) -> PagePosition {
+pub fn reverse_search_with_ocr_input(full_text : Vector<Vector<String>>, image_1: &str, image_2: &str, current_position: &PagePosition) -> PagePosition {
 
     let image_1_rec = search_with_ocr_input(full_text.clone(), image_1);
     let image_2_rec = search_with_ocr_input(full_text.clone(), image_2);
     // extract image 1 text with leptonica
-    let mut lt = leptess::LepTess::new(None, "eng").unwrap();
-    lt.set_image(image_1).unwrap();
+    //let mut lt = leptess::LepTess::new(None, "ita").unwrap();
+    //lt.set_image(image_1).unwrap();
     
-    println!("image 1 text: {:?}", &lt.get_utf8_text().unwrap());
-    lt.set_image(image_2).unwrap();
+    //println!("image 1 text: {:?}", &lt.get_utf8_text().unwrap());
+    //lt.set_image(image_2).unwrap()//;
 
-    println!("\n\n\n\n\n\n\n\n\n\n\n\n");
-    println!("image 1 text: {:?}",&lt.get_utf8_text().unwrap());
+    //println!("\n\n\n\n\n\n\n\n\n\n\n\n");
+    //println!("image 1 text: {:?}",&lt.get_utf8_text().unwrap());
 
     println!("image 1 rec: {:?}", image_1_rec);
     println!("image 2 rec: {:?}", image_2_rec);
 
+    let image_1_page = 25;
+    let image_2_page = 18;
+
+    // given that image 1 is on page 25 and image 2 is on page 18 AND image 1 is on the right of image 2 AND image 1 is at 
+    // chapter 8 and position 0 while image 2 is at chapter 7 and position 0, we can deduce the current_position page through this calculation:
+
+    let current_page = (current_position.chapter() as isize * 25) + current_position.richtext_number() as isize - (image_1_page * 8) - (image_2_page * 7);
+    println!("current page: {:?}", current_page);
     PagePosition::new(0, 0)
 }

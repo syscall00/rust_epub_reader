@@ -1,6 +1,6 @@
 use druid::{widget::{Controller, Flex}, EventCtx, Event, Env, Widget, WidgetExt, im::Vector};
 
-use crate::{appstate::{AppState, EpubData}, core::{constants::commands::{INTERNAL_COMMAND, InternalUICommand}, commands::NAVIGATE_TO}, PageType, widgets::{EditWidget}};
+use crate::{appstate::{AppState, EpubData, PagePosition}, core::{constants::commands::{INTERNAL_COMMAND, InternalUICommand}, commands::NAVIGATE_TO}, PageType, widgets::{EditWidget}};
 
 
 pub struct EpubPageController;
@@ -72,7 +72,7 @@ impl Controller<AppState, Flex<AppState>> for EpubPageController {
                         },
                         InternalUICommand::RequestReverseOCR((img1, img2)) => {
                             let strings = data.epub_data.get_only_strings();
-                            start_reverse_ocr_search_in_thread(ctx.get_external_handle(), img1.to_owned(), img2.to_owned(), strings.to_owned());
+                            start_reverse_ocr_search_in_thread(ctx.get_external_handle(), img1.to_owned(), img2.to_owned(), strings.to_owned(), data.epub_data.page_position.clone());
                             ctx.request_update();
                             ctx.set_handled();
                         },
@@ -114,11 +114,12 @@ fn start_reverse_ocr_search_in_thread(
     image_1: String,
     image_2: String,
     strings: Vector<Vector<String>>,
+    current_position: PagePosition,
     
 ) {
     std::thread::spawn(move || {
         
-        let res = crate::ocr::reverse_search_with_ocr_input(strings, &image_1, &image_2);
+        let res = crate::ocr::reverse_search_with_ocr_input(strings, &image_1, &image_2, &current_position);
         sink.submit_command(
             INTERNAL_COMMAND,
             InternalUICommand::ReverseOCRCompleted(res),

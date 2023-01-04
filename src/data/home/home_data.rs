@@ -1,6 +1,5 @@
 use druid::{Data, Lens, im::Vector};
-
-use crate::appstate::*;
+use super::recent::Recent;
 
 
 
