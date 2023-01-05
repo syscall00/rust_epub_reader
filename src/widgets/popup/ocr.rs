@@ -3,16 +3,15 @@ use druid::{
 };
 
 use crate::{
-    appstate::{OcrData, OcrMode, PagePosition},
+    
     core::{
         constants::commands::{
             InternalUICommand, INTERNAL_COMMAND, OPEN_OCR_FILE, OPEN_REVERSE_OCR_1, OPEN_REVERSE_OCR_2,
         },
         style,
-    },
+    }, widgets::RoundButton, data::{epub::ocr_data::{OcrData, OcrMode, EMPTY_STRING}, PagePosition},
 };
 
-use super::RoundButton;
 
 
 pub struct OcrController;
@@ -83,10 +82,8 @@ pub fn build_ocr_ui() -> impl Widget<OcrData> {
 }
 
 fn open_choose_dialog(ctx: &mut druid::EventCtx, data: &mut OcrData, _env: &druid::Env) {
-    let accept_command = match data.mode {
-        OcrMode::FindByPhoto => OPEN_OCR_FILE,
-        OcrMode::FindByVirtual => OPEN_OCR_FILE,
-    };
+    let accept_command = OPEN_OCR_FILE;
+      
     let filedialog = druid::FileDialogOptions::new().accept_command(accept_command);
 
     ctx.submit_command(druid::commands::SHOW_OPEN_PANEL.with(
@@ -123,7 +120,7 @@ fn find_by_photo() -> impl Widget<OcrData> {
             data.processing = true;
             ctx.request_update();
         })
-        .disabled_if(|data: &OcrData, _| data.image_to_pos == crate::appstate::EMPTY_STRING).fix_size(100., 35.)
+        .disabled_if(|data: &OcrData, _| data.image_to_pos == EMPTY_STRING).fix_size(100., 35.)
         .padding(Insets::new(0., 0., 0., 10.));
     
     
@@ -233,7 +230,7 @@ fn find_by_virtual() -> impl Widget<OcrData> {
         data.processing = true;
         ctx.request_update();
     })
-    .disabled_if(|data: &OcrData, _| data.image_for_pos_1 == crate::appstate::EMPTY_STRING || data.image_for_pos_2 == crate::appstate::EMPTY_STRING).fix_size(120., 35.)
+    .disabled_if(|data: &OcrData, _| data.image_for_pos_1 == EMPTY_STRING || data.image_for_pos_2 == EMPTY_STRING).fix_size(120., 35.)
     .padding(Insets::new(0., 0., 0., 10.));
 
     let result = Flex::row()

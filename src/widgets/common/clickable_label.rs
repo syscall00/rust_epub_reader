@@ -1,6 +1,6 @@
 use druid::{ArcStr, TextLayout, Widget, EventCtx, Event, Env, LifeCycleCtx, LifeCycle, UpdateCtx, LayoutCtx, BoxConstraints, Size, PaintCtx, Color, Data, RenderContext};
 
-use crate::{core::constants::commands::{INTERNAL_COMMAND, InternalUICommand}, appstate::IndexedText};
+use crate::{core::constants::commands::{INTERNAL_COMMAND, InternalUICommand}, data::IndexedText};
 
 pub struct ClickableLabel {
     layout: TextLayout<ArcStr>,

@@ -1,6 +1,7 @@
-use druid::{widget::{Controller, Flex}, EventCtx, Event, Env, Widget, WidgetExt, im::Vector};
+use druid::{widget::{Controller, Flex}, EventCtx, Event, Env, Widget, WidgetExt, im::Vector, LensExt};
 
-use crate::{appstate::{AppState, EpubData, PagePosition}, core::{constants::commands::{INTERNAL_COMMAND, InternalUICommand}, commands::NAVIGATE_TO}, PageType, widgets::{EditWidget}};
+use crate::{core::{constants::commands::{INTERNAL_COMMAND, InternalUICommand}}, PageType, widgets::EditWidget, data::{epub::epub_data::EpubData, AppState, PagePosition}};
+
 
 
 pub struct EpubPageController;
@@ -37,19 +38,19 @@ impl Controller<AppState, Flex<AppState>> for EpubPageController {
                             // save position in the book
                             ctx.submit_command(INTERNAL_COMMAND.with(InternalUICommand::UpdateBookInfo(data.epub_data.book_path.clone())));
                             
-                            
-                            ctx.submit_command(NAVIGATE_TO.with(PageType::Home));
+                            ctx.submit_command(INTERNAL_COMMAND.with(InternalUICommand::UINavigate(PageType::Home)));
+
                             ctx.set_handled();
 
                         }
                         InternalUICommand::OpenEditDialog => {
-                            if !data.epub_data.edit_mode {
-                                data.epub_data.edit_mode = true;
+                            if !data.epub_data.edit_data.is_editing() {
+                                data.epub_data.edit_data.set_editing(true);
                                 let window_config = druid::WindowConfig::default();
 
                                 ctx.new_sub_window(
                                     window_config,
-                                    EditWidget::new().lens(AppState::epub_data),
+                                    EditWidget::new().lens(AppState::epub_data.then(EpubData::edit_data)),
                                     data.clone(),
                                     env.clone(),
                                 );

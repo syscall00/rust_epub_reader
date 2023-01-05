@@ -6,24 +6,33 @@ use druid::{
 use druid_material_icons::IconPaths;
 
 use crate::{
-    appstate::EpubData,
-    core::constants::commands::{InternalUICommand, INTERNAL_COMMAND, MODIFY_EPUB_PATH},
+    core::{constants::commands::{InternalUICommand, INTERNAL_COMMAND, MODIFY_EPUB_PATH}, style}, data::epub::edit_data::EditData,
 };
 
-use super::epub_page::{icon_button::{IconButton, ButtonTrait}};
+use crate::widgets::common::icon_button::{IconButton, ButtonTrait};
+
 
 pub struct EditWidget {
     dirty: bool,
     new_path: String,
 
-    text: WidgetPod<EpubData, Box<dyn Widget<EpubData>>>,
-    toolbar: WidgetPod<EpubData, Box<dyn Widget<EpubData>>>,
+    text: WidgetPod<EditData, Box<dyn Widget<EditData>>>,
+    toolbar: WidgetPod<EditData, Box<dyn Widget<EditData>>>,
+}
+
+fn toolbar() ->  impl Widget<EditData> {
+
+    Flex::row()
+    .with_child(IconButton::new(ToolbarButton::Save))
+    .with_child(IconButton::new(ToolbarButton::SaveAs))
+    .with_child(IconButton::new(ToolbarButton::Exit))
+    
 }
 
 impl EditWidget {
     pub fn new() -> Self {
         let text = TextBox::multiline()
-            .lens(EpubData::visualized_chapter)
+            .lens(EditData::visualized_chapter)
             .boxed();
 
         EditWidget {
@@ -31,7 +40,7 @@ impl EditWidget {
             new_path: String::new(),
 
             text: WidgetPod::new(text),
-            toolbar: WidgetPod::new(Toolbar::new().boxed()),
+            toolbar: WidgetPod::new(toolbar().boxed()),
         }
     }
 
@@ -89,14 +98,16 @@ impl PromptOption {
     }
 }
 
-fn dialog_ui(parent_id: WindowId) -> impl Widget<()> {
+fn dialog_ui(message: String, parent_id: WindowId) -> impl Widget<()> {
     let chooses = vec![PromptOption::Yes, PromptOption::No];
 
     let mut widget = druid::widget::Flex::column().with_child(druid::widget::Label::new(
-        "Do you want to save the changes?",
+        message,
     ));
+    let mut row = druid::widget::Flex::row();
+
     chooses.into_iter().for_each(|c| {
-        widget.add_child(druid::widget::Button::new(c.to_string()).on_click(
+        row.add_child(druid::widget::Button::new(c.to_string()).on_click(
             move |ctx, &mut (), _| {
                 ctx.submit_command(
                     INTERNAL_COMMAND
@@ -108,17 +119,18 @@ fn dialog_ui(parent_id: WindowId) -> impl Widget<()> {
                 ctx.submit_command(druid::commands::CLOSE_WINDOW.to(ctx.window_id()));
             },
         ));
-        widget.add_default_spacer()
+        row.add_default_spacer()
     });
+    widget = widget.with_default_spacer().with_child(row);
     widget
 }
 
-impl Widget<EpubData> for EditWidget {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
+impl Widget<EditData> for EditWidget {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EditData, env: &Env) {
         match event {
             // if window is closing, save the if it's dirty
             Event::WindowCloseRequested => {
-                data.edit_mode = false;
+                data.set_editing(false);
                 if self.dirty {
                     // position of the window at the center of the current window
                     let window_pos = ctx.window().get_position();
@@ -129,14 +141,13 @@ impl Widget<EpubData> for EditWidget {
                     );
                     let window_config = druid::WindowConfig::default()
                         .window_size_policy(WindowSizePolicy::Content)
-                        //.set_level(WindowLevel::Tooltip(ctx.window().clone()))
                         .set_position(dialog_pos);
 
-                    let widget = dialog_ui(ctx.window_id());
+                    let widget = dialog_ui("Do you want to save the changes?".to_string(), ctx.window_id());
                     ctx.new_sub_window(window_config, widget, (), env.clone());
                     ctx.set_handled();
                 } else {
-                    data.edit_mode = false;
+                    data.set_editing(false);
                 }
             }
 
@@ -199,7 +210,7 @@ impl Widget<EpubData> for EditWidget {
         self.toolbar.event(ctx, event, data, env);
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EditData, env: &Env) {
         match event {
             LifeCycle::WidgetAdded => {
                 //ctx.request_focus();
@@ -210,7 +221,7 @@ impl Widget<EpubData> for EditWidget {
         self.toolbar.lifecycle(ctx, event, data, env);
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &EpubData, data: &EpubData, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &EditData, data: &EditData, env: &Env) {
         ctx.request_paint();
         self.text.update(ctx, data, env);
         self.toolbar.update(ctx, data, env);
@@ -220,15 +231,14 @@ impl Widget<EpubData> for EditWidget {
         &mut self,
         ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        data: &EpubData,
+        data: &EditData,
         env: &Env,
     ) -> Size {
         let mut size = bc.max();
-        ctx.set_paint_insets((0.0, 0.0, 0.0, 0.0));
 
         let toolbar_size = self
             .toolbar
-            .layout(ctx, &BoxConstraints::tight(size), data, env);
+            .layout(ctx, &BoxConstraints::tight(Size::new(bc.max().width, 30.)), data, env);
 
         size.height -= toolbar_size.height;
         self.toolbar.set_origin(ctx, data, env, Point::ORIGIN);
@@ -241,79 +251,16 @@ impl Widget<EpubData> for EditWidget {
         size
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &EditData, env: &Env) {
         let size = ctx.size();
         let rect = size.to_rect();
-        ctx.fill(rect, &Color::rgb8(0x00, 0x00, 0x00));
-        self.text.paint(ctx, data, env);
+        ctx.fill(rect, &style::get_color_unchecked(style::PRIMARY_LIGHT));
         self.toolbar.paint(ctx, data, env);
+        self.text.paint(ctx, data, env);
+
     }
 }
 
-// toolbar widget
-pub struct Toolbar {
-    pub buttons: Vec<WidgetPod<EpubData, Box<dyn Widget<EpubData>>>>,
-}
-
-impl Toolbar {
-    pub fn new() -> Self {
-        let mut buttons = Vec::new();
-        for kind in vec![
-            ToolbarButton::Save,
-            ToolbarButton::SaveAs,
-            ToolbarButton::Exit,
-        ] {
-            buttons.push(WidgetPod::new(IconButton::new(kind).boxed()));
-        }
-
-        Toolbar { buttons }
-    }
-}
-
-impl Widget<EpubData> for Toolbar {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
-        for button in self.buttons.iter_mut() {
-            button.event(ctx, event, data, env);
-        }
-    }
-
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, env: &Env) {
-        for button in self.buttons.iter_mut() {
-            button.lifecycle(ctx, event, data, env);
-        }
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &EpubData, data: &EpubData, env: &Env) {
-        for button in self.buttons.iter_mut() {
-            button.update(ctx, data, env);
-        }
-    }
-
-    fn layout(
-        &mut self,
-        ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &EpubData,
-        env: &Env,
-    ) -> Size {
-        let mut size = Size::ZERO;
-        for button in self.buttons.iter_mut() {
-            let button_size = button.layout(ctx, bc, data, env);
-            button.set_origin(ctx, data, env, Point::ORIGIN + (size.width, 0.0));
-            size.width += button_size.width;
-            size.height = button_size.height;
-        }
-
-        println!("Toolbar size: {:?}", size);
-        Size::new(bc.max().width, size.height)
-    }
-
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
-        for button in self.buttons.iter_mut() {
-            button.paint(ctx, data, env);
-        }
-    }
-}
 
 pub enum ToolbarButton {
     Save,
@@ -348,22 +295,16 @@ impl ButtonTrait for ToolbarButton {
 }
 
 
-
-
-
 pub struct EditWindowController;
 
 
-
-
-
-impl Controller<EpubData, Flex<EpubData>> for EditWindowController {
+impl Controller<EditData, Flex<EditData>> for EditWindowController {
     fn event(
         &mut self,
-        child: &mut Flex<EpubData>,
+        child: &mut Flex<EditData>,
         ctx: &mut EventCtx,
         event: &Event,
-        data: &mut EpubData,
+        data: &mut EditData,
         env: &Env,
     ) {
         match event {

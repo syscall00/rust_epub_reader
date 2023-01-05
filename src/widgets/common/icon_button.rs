@@ -1,7 +1,9 @@
-use druid::{WidgetPod, Widget, widget::ControllerHost, EventCtx, Event, Env, UpdateCtx, LifeCycle, LifeCycleCtx, LayoutCtx, BoxConstraints, Size, PaintCtx, Point, WidgetExt};
+use druid::{WidgetPod, Widget, widget::ControllerHost, EventCtx, Event, Env, UpdateCtx, LifeCycle, LifeCycleCtx, LayoutCtx, BoxConstraints, Size, PaintCtx, Point, WidgetExt, Data};
 use druid_material_icons::IconPaths;
 
-use crate::{appstate::EpubData, widgets::{Icon, TooltipController}, core::constants::commands::{INTERNAL_COMMAND, InternalUICommand}};
+use crate::{widgets::{Icon}, core::constants::commands::{INTERNAL_COMMAND, InternalUICommand}};
+
+use super::TooltipController;
 
 
 pub trait ButtonTrait {
@@ -44,15 +46,15 @@ impl ButtonTrait for ActionButton {
 
 
 
-pub struct IconButton<T: ButtonTrait> {
+pub struct IconButton<T: ButtonTrait, D: Data> {
     kind: T,
-    icon: WidgetPod<EpubData, Box<dyn Widget<EpubData>>>,
+    icon: WidgetPod<D, Box<dyn Widget<D>>>,
     open: bool,
     clickable: bool,
 }
 const ICON_SIZE: f64 = 32.;
 
-impl<T: ButtonTrait> IconButton<T> {
+impl<T: ButtonTrait, D: Data> IconButton<T, D> {
     pub fn new(kind: T) -> Self {
         let hint = kind.hint();
         let icon_data = kind.icon();
@@ -67,8 +69,8 @@ impl<T: ButtonTrait> IconButton<T> {
     }
 }
 
-impl<T: ButtonTrait> Widget<EpubData> for IconButton<T> {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
+impl<T: ButtonTrait, D: Data> Widget<D> for IconButton<T, D> {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut D, env: &Env) {
         match event {
             Event::MouseDown(_) => {
                 if self.clickable {
@@ -89,17 +91,17 @@ impl<T: ButtonTrait> Widget<EpubData> for IconButton<T> {
         ctx.request_paint();
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &D, env: &Env) {
         self.icon.lifecycle(ctx, event, data, env);
     }
 
-    fn update(&mut self, _: &mut UpdateCtx, _: &EpubData, _: &EpubData, _: &Env) {}
+    fn update(&mut self, _: &mut UpdateCtx, _: &D, _: &D, _: &Env) {}
 
     fn layout(
         &mut self,
         ctx: &mut LayoutCtx,
         _: &BoxConstraints,
-        data: &EpubData,
+        data: &D,
         env: &Env,
     ) -> Size {
         self.icon.layout(
@@ -112,16 +114,8 @@ impl<T: ButtonTrait> Widget<EpubData> for IconButton<T> {
         Size::new(ICON_SIZE, ICON_SIZE)
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, env: &Env) {
-        // with save, rotate context, paint icon and restore context
-        ctx.with_save(|ctx| {
-            // rotate of 180 degree
-
-            //ctx.transform(druid::Affine::rotate((180. as f64).sin()));
-            self.icon.paint(ctx, data, env);
-        });
-        //self.icon.paint(ctx, data, env);
-        // rotate icon
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &D, env: &Env) {
+        self.icon.paint(ctx, data, env);
     }
 }
 

@@ -1,7 +1,7 @@
 use druid::{Data, Lens, ImageBuf, ArcStr};
 use serde::{Serialize, Deserialize};
 
-use crate::{appstate::PagePosition, data::epub::settings::EpubSettings};
+use crate::data::{epub::settings::EpubSettings, PagePosition};
 
 
 #[derive(Clone, Data, Lens, Debug)]

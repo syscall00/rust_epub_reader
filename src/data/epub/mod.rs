@@ -1,5 +1,5 @@
 pub mod settings;
-mod epub_page;
-
-
-pub use epub_page::EpubPageController;
+pub mod epub_data;
+pub mod ocr_data;
+pub mod edit_data;
+pub mod sidebar;

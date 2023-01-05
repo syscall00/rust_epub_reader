@@ -90,7 +90,7 @@ impl HtmlTag {
 }
 
 
-// Create an enum both for render images or text
+// Create an enum for render both images or text
 #[derive(Debug, Data, Clone)]
 pub enum Renderable {
     Image(ArcStr),
@@ -185,17 +185,11 @@ pub fn generate_renderable_tree(text: &str, font_size: f64) -> Vector<Renderable
             }
             xmlparser::Token::Attribute {
                 prefix: _,
-                local,
-                value,
+                local: _,
+                value: _,
                 span : _,
             } => {
-                // check if tag is image
-                let (_, inner_tag) = token_stack.last().unwrap_or(&(0, HtmlTag::Unhandled));
-                if matches!(HtmlTag::Image, inner_tag) && local.as_str() == "src"  {
-                    println!("Attribute: {:?} {:?} ", local, value);
-                    //renderables.push_back(Renderable::Image(ArcStr::from(value.as_str())));
-
-                }
+                // TODO: Handle Images
             }
 
             _ => continue,

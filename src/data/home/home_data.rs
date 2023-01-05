@@ -14,7 +14,10 @@ pub struct HomePageData {
 impl HomePageData {
     const RECENTS_PATH: &'static str = ".recents";
     pub fn new() -> Self {
-        let recents = HomePageData::load_from_state_file();
+        
+        let mut recents = HomePageData::load_from_state_file();
+        recents.retain(|recent|  epub::doc::EpubDoc::new(recent.path.clone()).is_ok());
+
         HomePageData { recents }
     }
 
@@ -29,6 +32,7 @@ impl HomePageData {
           std::fs::read_to_string(HomePageData::RECENTS_PATH).unwrap()
 
         };
+
         let recents : Vec<Recent> = serde_json::from_str(&recents_string).unwrap();
         recents.into()
     }

@@ -1,9 +1,10 @@
+use crate::core::constants::commands::{InternalUICommand, INTERNAL_COMMAND};
 
-use crate::core::commands::NAVIGATE_TO;
 use crate::core::style;
 
-use appstate::AppState;
-use data::{home::HomePageData, epub::EpubPageController};
+use data::AppState;
+use data::appstate::Delegate;
+use data::{home::HomePageData};
 use druid::{
     widget::{Controller, Flex, List, Scroll, ViewSwitcher},
     AppLauncher, Color, Data, Env, Event, EventCtx, WidgetExt, WindowDesc,
@@ -11,7 +12,6 @@ use druid::{
 
 use druid::Widget;
 
-mod appstate;
 mod core;
 mod data;
 mod widgets;
@@ -19,11 +19,11 @@ mod widgets;
 mod dom;
 mod ocr;
 
-use widgets::{recent_item::RecentWidget, epub_page::sidebar::Sidebar};
 use widgets::RoundButton;
+use widgets::epub_page::epub_controller::EpubPageController;
+use widgets::{epub_page::sidebar::Sidebar, recent_item::RecentWidget};
 
-
-#[derive(Data, PartialEq, Clone, Copy)]
+#[derive(Data, PartialEq, Clone, Copy, Debug)]
 pub enum PageType {
     Home,
     Reader,
@@ -37,17 +37,16 @@ fn main() {
 
     AppLauncher::with_window(window)
         .log_to_console()
-        .delegate(appstate::Delegate)
+        .delegate(Delegate)
         .launch(data)
         .unwrap();
 }
 
 // UI Builder functions
 pub fn navigator() -> impl Widget<AppState> {
-
     ViewSwitcher::new(
         |data: &AppState, _env| data.active_page,
-        move |active_page, _, _ | match active_page {
+        move |active_page, _, _| match active_page {
             PageType::Home => home_page().lens(AppState::home_page_data).boxed(),
             PageType::Reader => read_ebook().boxed(),
         },
@@ -59,9 +58,11 @@ pub fn navigator() -> impl Widget<AppState> {
 }
 
 pub fn home_page() -> impl Widget<HomePageData> {
-    let list = Scroll::new(List::new(|| RecentWidget::new().padding(5.0).expand_width()))
-        .vertical()
-        .lens(HomePageData::recents);
+    let list = Scroll::new(List::new(|| {
+        RecentWidget::new().padding(5.0).expand_width()
+    }))
+    .vertical()
+    .lens(HomePageData::recents);
 
     let title = druid::widget::Label::new("Rust Ebook Reader")
         .with_text_size(26.0)
@@ -100,9 +101,6 @@ pub fn read_ebook() -> impl Widget<AppState> {
     flex.controller(EpubPageController {})
 }
 
-
-
-
 struct MainController;
 impl Controller<AppState, ViewSwitcher<AppState, PageType>> for MainController {
     fn event(
@@ -114,16 +112,21 @@ impl Controller<AppState, ViewSwitcher<AppState, PageType>> for MainController {
         env: &Env,
     ) {
         match event {
-            Event::Command(cmd) if cmd.is(NAVIGATE_TO) => {
-                let page = cmd.get_unchecked(NAVIGATE_TO);
-                data.active_page = page.to_owned();
+            Event::Command(cmd) => {
+                if let Some(internal) = cmd.get(INTERNAL_COMMAND) {
+                    match internal {
+                        InternalUICommand::UINavigate(page) => {
+                            data.active_page = *page;
+                            ctx.request_layout();
+                        }
+                        _ => {}
+                    }
 
-                ctx.request_layout();
+                    ctx.request_layout();
+                }
             }
             _ => {}
         }
         child.event(ctx, event, data, env);
     }
 }
-
-
