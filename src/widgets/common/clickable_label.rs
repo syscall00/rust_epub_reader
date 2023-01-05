@@ -1,7 +1,18 @@
-use druid::{ArcStr, TextLayout, Widget, EventCtx, Event, Env, LifeCycleCtx, LifeCycle, UpdateCtx, LayoutCtx, BoxConstraints, Size, PaintCtx, Color, Data, RenderContext};
+use druid::{
+    ArcStr, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
+    PaintCtx, RenderContext, Size, TextLayout, UpdateCtx, Widget,
+};
 
-use crate::{core::constants::commands::{INTERNAL_COMMAND, InternalUICommand}, data::IndexedText};
+use crate::{
+    core::constants::commands::{InternalUICommand, INTERNAL_COMMAND},
+    data::IndexedText,
+};
 
+const CLICKABLE_LABEL_BACKGROUND : Color = Color::rgba8(190, 190, 190, 60);
+
+/**
+ * A clickable label is a widget that can be used to navigate to a specific position in the ebook.
+ */
 pub struct ClickableLabel {
     layout: TextLayout<ArcStr>,
 }
@@ -17,7 +28,9 @@ impl Widget<IndexedText> for ClickableLabel {
         match event {
             Event::MouseDown(mouse) => {
                 if mouse.button.is_left() {
-                    ctx.submit_command(INTERNAL_COMMAND.with(InternalUICommand::EpubGoToPos((*data.value).clone())))
+                    ctx.submit_command(INTERNAL_COMMAND.with(InternalUICommand::EpubGoToPos(
+                        data.value().as_ref().clone(),
+                    )))
                 }
             }
             Event::MouseMove(_) => {
@@ -36,7 +49,7 @@ impl Widget<IndexedText> for ClickableLabel {
     ) {
         match event {
             LifeCycle::WidgetAdded => {
-                self.layout.set_text(data.key.clone());
+                self.layout.set_text(data.key().clone());
                 self.layout.set_text_size(13.);
                 self.layout.rebuild_if_needed(ctx.text(), env);
             }
@@ -55,7 +68,7 @@ impl Widget<IndexedText> for ClickableLabel {
         env: &Env,
     ) {
         if !(old_data.same(data)) {
-            self.layout.set_text(data.key.clone());
+            self.layout.set_text(data.key().clone());
             self.layout.rebuild_if_needed(ctx.text(), env);
             ctx.request_layout();
         }
@@ -68,13 +81,10 @@ impl Widget<IndexedText> for ClickableLabel {
         _: &IndexedText,
         env: &Env,
     ) -> Size {
-        //self.layout.set_wrap_width(bc.max().width);
+
         self.layout.rebuild_if_needed(ctx.text(), env);
-        //self.layout.set_wrap_width(f64::INFINITY);
         let text_metrics = self.layout.layout_metrics();
         ctx.set_baseline_offset(text_metrics.size.height - text_metrics.first_baseline);
-        //bc.constrain(size)
-
         Size::new(bc.max().width, 23.)
     }
 
@@ -83,9 +93,8 @@ impl Widget<IndexedText> for ClickableLabel {
         if ctx.is_hot() {
             let rect = ctx.size().to_rect();
 
-            ctx.fill(rect, &Color::BLUE);
+            ctx.fill(rect, &CLICKABLE_LABEL_BACKGROUND);
         }
-        //println!("painting : {:?}", size);
         ctx.clip((size - Size::new(15., 0.)).to_rect());
 
         self.layout.draw(ctx, (5., 0.));

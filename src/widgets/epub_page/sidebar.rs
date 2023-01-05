@@ -1,164 +1,42 @@
-use druid::{WidgetPod, Widget, Event, BoxConstraints, Size, Point, RenderContext, Color, widget::{Scroll, List, Flex, Label, Slider, TextBox}, LifeCycleCtx, Env, LifeCycle, EventCtx, TextLayout, ArcStr, UpdateCtx, LayoutCtx, PaintCtx, LensExt, WidgetExt, Data};
+use druid::{
+    widget::{Flex, Label, List, Scroll, Slider, TextBox},
+    ArcStr, BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LensExt, LifeCycle,
+    LifeCycleCtx, PaintCtx, Point, RenderContext, Size, TextLayout, UpdateCtx, Widget, WidgetExt,
+    WidgetPod,
+};
 use druid_material_icons::IconPaths;
 
-use crate::{core::{constants::{commands::{InternalUICommand, INTERNAL_COMMAND}, epub_settings::{MIN_FONT_SIZE, MAX_FONT_SIZE, MIN_MARGIN, MAX_MARGIN, MIN_PARAGRAPH_SPACING, MAX_PARAGRAPH_SPACING}}, style::{self, PRIMARY_DARK}}, widgets::{common::{GroupButton, icon_button::{ButtonTrait, ActionButton, IconButton}}, RoundButton, ClickableLabel}, data::epub::{settings::{VisualizationMode, EpubSettings}, epub_data::EpubData, sidebar::SidebarData}};
-
-
+use crate::{
+    core::{
+        constants::{
+            commands::{InternalUICommand, INTERNAL_COMMAND},
+            epub_settings::{
+                MAX_FONT_SIZE, MAX_MARGIN, MAX_PARAGRAPH_SPACING, MIN_FONT_SIZE, MIN_MARGIN,
+                MIN_PARAGRAPH_SPACING,
+            },
+        },
+        style::{self, PRIMARY_DARK},
+    },
+    data::epub::{EpubData,
+        settings::{EpubSettings, VisualizationMode},
+        SidebarData,
+    },
+    widgets::{
+        common::{
+            icon_button::{ButtonTrait, IconButton},
+            GroupButton,
+        },
+        ClickableLabel, RoundButton,
+    },
+};
 
 const ICON_SIZE: f64 = 32.;
 
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum PanelButton {
-    Toc,
-    Search,
-    Settings,
-}
-impl PanelButton {
-    pub fn title(&self) -> String {
-        match self {
-            PanelButton::Toc => "Table of Contents".to_string(),
-            PanelButton::Search => "Search".to_string(),
-            //PanelButton::Highlights => "Highlights".to_string(),
-            PanelButton::Settings => "Settings".to_string(),
-        }
-    }
-
-    pub fn to_widget(&self) -> Box<dyn Widget<EpubData>> {
-        match self {
-            PanelButton::Toc => Scroll::new(
-                List::new(|| ClickableLabel::new())
-                    .lens(EpubData::sidebar_data.then(SidebarData::table_of_contents)),
-            )
-            .vertical()
-            .boxed(),
-            PanelButton::Search => Box::new(
-                Scroll::new(
-                    List::new(|| ClickableLabel::new())
-                        .lens(EpubData::sidebar_data.then(SidebarData::search_results)),
-                )
-                .vertical()
-                .boxed(),
-            ),
-
-            PanelButton::Settings => Scroll::new(
-                Flex::column()
-                    .with_child(
-                        GroupButton::new(vec![
-                            RoundButton::new(druid_material_icons::normal::content::AMP_STORIES)
-                                .with_click_handler(|ctx, data: &mut EpubData, _env| {
-                                    data.epub_settings.visualization_mode =
-                                        VisualizationMode::SinglePage;
-                                    ctx.request_paint();
-                                }).boxed(),
-                            //.with_tooltip("Dark Mode")
-                            //.with_command(InternalUICommand::ToggleDarkMode),
-                            RoundButton::new(druid_material_icons::normal::image::AUTO_STORIES)
-                                .with_click_handler(|ctx, data: &mut EpubData, _env| {
-                                    data.epub_settings.visualization_mode =
-                                        VisualizationMode::TwoPage;
-                                    ctx.request_paint();
-                                }).boxed(),
-                            //.with_command(InternalUICommand::ToggleLightMode),
-                        ]), // Create three button able to change visualization mode
-                            //Flex::row()
-                            //    .with_child(Button::new("Single").on_click(
-                            //        |ctx, data: &mut EpubData, _env| {
-                            //            data.epub_settings.visualization_mode =
-                            //                VisualizationMode::SinglePage;
-                            //            ctx.request_paint();
-                            //        },
-                            //    ))
-                            //    .with_child(Button::new("Two").on_click(
-                            //        |ctx, data: &mut EpubData, _env| {
-                            //            data.epub_settings.visualization_mode =
-                            //                VisualizationMode::TwoPage;
-                            //            ctx.request_paint();
-                            //        },
-                            //    )),
-                    )
-                    .with_spacer(20.)
-                    .with_child(
-                        Flex::column()
-                            .with_child(Label::new(|data: &EpubData, _env: &_| {
-                                format!(
-                                    "Font size: {number:.prec$}",
-                                    prec = 2,
-                                    number = data.epub_settings.font_size
-                                )
-                            }))
-                            .with_child(
-                                Slider::new()
-                                    .with_range(MIN_FONT_SIZE, MAX_FONT_SIZE)
-                                    .lens(EpubData::epub_settings.then(EpubSettings::font_size))
-                                    .expand_width(),
-                            ),
-                    )
-                    .with_spacer(10.)
-                    .with_child(
-                        Flex::column()
-                            .with_child(Label::new(|data: &EpubData, _env: &_| {
-                                format!(
-                                    "Text margin: {number:.prec$}",
-                                    prec = 2,
-                                    number = data.epub_settings.margin
-                                )
-                            }))
-                            .with_child(
-                                Slider::new()
-                                    .with_range(MIN_MARGIN, MAX_MARGIN)
-                                    .lens(EpubData::epub_settings.then(EpubSettings::margin))
-                                    .expand_width(),
-                            ),
-                    )
-                    .with_spacer(10.)
-                    .with_child(
-                        Flex::column()
-                            .with_child(Label::new(|data: &EpubData, _env: &_| {
-                                format!(
-                                    "Paragraph spacing: {number:.prec$}",
-                                    prec = 2,
-                                    number = data.epub_settings.paragraph_spacing
-                                )
-                            }))
-                            .with_child(
-                                Slider::new()
-                                    .with_range(MIN_PARAGRAPH_SPACING, MAX_PARAGRAPH_SPACING)
-                                    .lens(
-                                        EpubData::epub_settings
-                                            .then(EpubSettings::paragraph_spacing),
-                                    )
-                                    .expand_width(),
-                            ),
-                    ),
-            )
-            .vertical()
-            .boxed(),
-        }
-    }
-}
-impl ButtonTrait for PanelButton {
-    fn icon(&self) -> IconPaths {
-        match self {
-            PanelButton::Toc => druid_material_icons::normal::communication::LIST_ALT,
-            PanelButton::Search => druid_material_icons::normal::action::FIND_IN_PAGE,
-            PanelButton::Settings => druid_material_icons::normal::action::SETTINGS,
-        }
-    }
-    fn hint(&self) -> String {
-        match self {
-            PanelButton::Toc => "Table of Contents".to_string(),
-            PanelButton::Search => "Search".to_string(),
-            PanelButton::Settings => "Settings".to_string(),
-        }
-    }
-    fn command(&self) -> InternalUICommand {
-        InternalUICommand::SwitchTab(self.clone())
-    }
-}
-
-
-
+/**
+ * Panel represents a side widget displayed. 
+ * Contains a header and a widget.
+ * It can containts also an input widget, for search for example.
+ */
 pub struct Panel {
     header: TextLayout<ArcStr>,
     input_widget: Option<WidgetPod<EpubData, Box<dyn Widget<EpubData>>>>,
@@ -181,7 +59,6 @@ impl Panel {
         self
     }
 }
-
 impl Widget<EpubData> for Panel {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
         if self.input_widget.is_some() {
@@ -280,8 +157,11 @@ impl Widget<EpubData> for Panel {
 }
 
 
-
-
+/**
+ * Sidebar is the main widget handling the side panel.
+ * It has a list of buttons to open or to send actions.
+ * It also has a list of panels that can be using side_buttons.
+ */
 pub struct Sidebar {
     side_buttons: Vec<WidgetPod<EpubData, Box<dyn Widget<EpubData>>>>,
     action_buttons: Vec<WidgetPod<EpubData, Box<dyn Widget<EpubData>>>>,
@@ -297,11 +177,7 @@ impl Sidebar {
 
         let mut panels = Vec::new();
 
-        for kind in vec![
-            PanelButton::Toc,
-            PanelButton::Search,
-            PanelButton::Settings,
-        ] {
+        for kind in vec![PanelButton::Toc, PanelButton::Search, PanelButton::Settings] {
             if let PanelButton::Search = kind {
                 panels.push(WidgetPod::new(
                     (Panel::new(&&kind.title(), kind.to_widget()))
@@ -477,12 +353,9 @@ impl Widget<EpubData> for Sidebar {
         let rect = Size::new(40., ctx.size().height).to_rect();
         ctx.fill(rect, &style::get_color_unchecked(PRIMARY_DARK));
 
-        for button in self.side_buttons.iter_mut() {
-            button.paint(ctx, data, env);
-        }
-
-        for button in self.action_buttons.iter_mut() {
-            button.paint(ctx, data, env);
+        for (side, action) in self.side_buttons.iter_mut().zip(self.panels.iter_mut()) {
+            side.paint(ctx, data, env);
+            action.paint(ctx, data, env);
         }
 
         // Draw panel and side line if some is opened
@@ -498,3 +371,162 @@ impl Widget<EpubData> for Sidebar {
     }
 }
 
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum PanelButton {
+    Toc,
+    Search,
+    Settings,
+}
+impl PanelButton {
+    pub fn title(&self) -> String {
+        match self {
+            PanelButton::Toc => "Table of Contents".to_string(),
+            PanelButton::Search => "Search".to_string(),
+            PanelButton::Settings => "Settings".to_string(),
+        }
+    }
+
+    pub fn to_widget(&self) -> Box<dyn Widget<EpubData>> {
+        match self {
+            PanelButton::Toc => Scroll::new(
+                List::new(|| ClickableLabel::new())
+                    .lens(EpubData::sidebar_data.then(SidebarData::table_of_contents)),
+            )
+            .vertical()
+            .boxed(),
+            PanelButton::Search => Box::new(
+                Scroll::new(
+                    List::new(|| ClickableLabel::new())
+                        .lens(EpubData::sidebar_data.then(SidebarData::search_results)),
+                )
+                .vertical()
+                .boxed(),
+            ),
+
+            PanelButton::Settings => Scroll::new(
+                Flex::column()
+                    .with_child(GroupButton::new(vec![
+                        RoundButton::new(druid_material_icons::normal::content::AMP_STORIES)
+                            .with_click_handler(|ctx, data: &mut EpubData, _env| {
+                                data.epub_settings.visualization_mode =
+                                    VisualizationMode::SinglePage;
+                                ctx.request_paint();
+                            })
+                            .boxed(),
+                        RoundButton::new(druid_material_icons::normal::image::AUTO_STORIES)
+                            .with_click_handler(|ctx, data: &mut EpubData, _env| {
+                                data.epub_settings.visualization_mode = VisualizationMode::TwoPage;
+                                ctx.request_paint();
+                            })
+                            .boxed(),
+                    ]))
+                    .with_spacer(20.)
+                    .with_child(
+                        Flex::column()
+                            .with_child(Label::new(|data: &EpubData, _env: &_| {
+                                format!(
+                                    "Font size: {number:.prec$}",
+                                    prec = 2,
+                                    number = data.epub_settings.font_size
+                                )
+                            }))
+                            .with_child(
+                                Slider::new()
+                                    .with_range(MIN_FONT_SIZE, MAX_FONT_SIZE)
+                                    .lens(EpubData::epub_settings.then(EpubSettings::font_size))
+                                    .expand_width(),
+                            ),
+                    )
+                    .with_spacer(10.)
+                    .with_child(
+                        Flex::column()
+                            .with_child(Label::new(|data: &EpubData, _env: &_| {
+                                format!(
+                                    "Text margin: {number:.prec$}",
+                                    prec = 2,
+                                    number = data.epub_settings.margin
+                                )
+                            }))
+                            .with_child(
+                                Slider::new()
+                                    .with_range(MIN_MARGIN, MAX_MARGIN)
+                                    .lens(EpubData::epub_settings.then(EpubSettings::margin))
+                                    .expand_width(),
+                            ),
+                    )
+                    .with_spacer(10.)
+                    .with_child(
+                        Flex::column()
+                            .with_child(Label::new(|data: &EpubData, _env: &_| {
+                                format!(
+                                    "Paragraph spacing: {number:.prec$}",
+                                    prec = 2,
+                                    number = data.epub_settings.paragraph_spacing
+                                )
+                            }))
+                            .with_child(
+                                Slider::new()
+                                    .with_range(MIN_PARAGRAPH_SPACING, MAX_PARAGRAPH_SPACING)
+                                    .lens(
+                                        EpubData::epub_settings
+                                            .then(EpubSettings::paragraph_spacing),
+                                    )
+                                    .expand_width(),
+                            ),
+                    ),
+            )
+            .vertical()
+            .boxed(),
+        }
+    }
+}
+impl ButtonTrait for PanelButton {
+    fn icon(&self) -> IconPaths {
+        match self {
+            PanelButton::Toc => druid_material_icons::normal::communication::LIST_ALT,
+            PanelButton::Search => druid_material_icons::normal::action::FIND_IN_PAGE,
+            PanelButton::Settings => druid_material_icons::normal::action::SETTINGS,
+        }
+    }
+    fn hint(&self) -> String {
+        match self {
+            PanelButton::Toc => "Table of Contents".to_string(),
+            PanelButton::Search => "Search".to_string(),
+            PanelButton::Settings => "Settings".to_string(),
+        }
+    }
+    fn command(&self) -> InternalUICommand {
+        InternalUICommand::SwitchTab(self.clone())
+    }
+}
+
+pub enum ActionButton {
+    CloseBook,
+    EditBook,
+    OCROpen,
+}
+
+impl ButtonTrait for ActionButton {
+    fn icon(&self) -> IconPaths {
+        match self {
+            ActionButton::CloseBook => druid_material_icons::normal::action::EXIT_TO_APP,
+            ActionButton::EditBook => druid_material_icons::normal::editor::EDIT_NOTE,
+            ActionButton::OCROpen => druid_material_icons::normal::image::IMAGE_SEARCH,
+        }
+    }
+    fn hint(&self) -> String {
+        match self {
+            ActionButton::CloseBook => "Close Book".to_string(),
+            ActionButton::EditBook => "Edit Book".to_string(),
+            ActionButton::OCROpen => "Search using OCR".to_string(),
+        }
+    }
+    fn command(&self) -> InternalUICommand {
+        match self {
+            ActionButton::CloseBook => InternalUICommand::GoToMenu,
+            ActionButton::EditBook => InternalUICommand::OpenEditDialog,
+            ActionButton::OCROpen => InternalUICommand::OpenOCRDialog,
+        }
+    }
+}

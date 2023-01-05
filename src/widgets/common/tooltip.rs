@@ -1,7 +1,15 @@
 use std::time::{Duration, Instant};
 
-use druid::{WindowId, Widget, widget::{Controller, Label}, EventCtx, Event, Env, Size, WindowSizePolicy, WindowConfig, WindowLevel, commands::CLOSE_WINDOW, LifeCycleCtx, LifeCycle, TimerToken, Point};
+use druid::{
+    commands::CLOSE_WINDOW,
+    widget::{Controller, Label},
+    Env, Event, EventCtx, LifeCycle, LifeCycleCtx, Point, Size, TimerToken, Widget, WindowConfig,
+    WindowId, WindowLevel, WindowSizePolicy,
+};
 
+/**
+ * Tooltip is a ControllerHost that can be used to create a tooltip that can be shown on mouse hover.
+ */
 enum TooltipState {
     Showing(WindowId),
     Waiting {
@@ -67,7 +75,6 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
                     ctx.set_handled();
                     if deadline > now {
                         let wait_for = deadline - now;
-                        tracing::info!("Waiting another {:?}", wait_for);
                         Some(TooltipState::Waiting {
                             last_move: *last_move,
                             timer_expire: deadline,
@@ -93,22 +100,18 @@ impl<T, W: Widget<T>> Controller<T, W> for TooltipController {
                 }
                 _ => None,
             },
-            TooltipState::Showing(win_id) => {
-                match event {
-                    Event::MouseMove(me) if !ctx.is_hot() => {
-                        // TODO another timer on leaving
-                        tracing::info!("Sending close window for {:?}", win_id);
-                        ctx.submit_command(CLOSE_WINDOW.to(*win_id));
-                        Some(TooltipState::Waiting {
-                            last_move: now,
-                            timer_expire: now + wait_duration,
-                            token: ctx.request_timer(wait_duration),
-                            position_in_window_coordinates: me.window_pos,
-                        })
-                    }
-                    _ => None,
+            TooltipState::Showing(win_id) => match event {
+                Event::MouseMove(me) if !ctx.is_hot() => {
+                    ctx.submit_command(CLOSE_WINDOW.to(*win_id));
+                    Some(TooltipState::Waiting {
+                        last_move: now,
+                        timer_expire: now + wait_duration,
+                        token: ctx.request_timer(wait_duration),
+                        position_in_window_coordinates: me.window_pos,
+                    })
                 }
-            }
+                _ => None,
+            },
         };
 
         if let Some(state) = new_state {

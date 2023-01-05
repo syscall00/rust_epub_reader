@@ -1,16 +1,18 @@
 use druid::im::Vector;
-use druid::{
-    AppDelegate, ArcStr, Command, Data, DelegateCtx, Env, Handled, Lens, Target,
-};
+use druid::{AppDelegate, ArcStr, Command, Data, DelegateCtx, Env, Handled, Lens, Target};
 
-use crate::core::constants::commands::{INTERNAL_COMMAND, InternalUICommand};
-use crate::data::HomePageData;
-use crate::PageType;
-use crate::data::epub::epub_data::EpubData;
-use crate::data::home::Recent;
+use crate::{
+    core::constants::commands::{InternalUICommand, INTERNAL_COMMAND},
+    data::{epub::EpubData, home::Recent, HomePageData},
+    PageType,
+};
 use epub::doc::EpubDoc;
 
-
+/**
+ * Struct used for maintaining all the data that is displayed in the app.
+ * Contains the data for the home page and the reader page.
+ * Also contains the current active page.
+ */
 #[derive(Clone, Data, Lens)]
 pub struct AppState {
     pub epub_data: EpubData,
@@ -30,7 +32,6 @@ impl AppDelegate<AppState> for Delegate {
         _env: &Env,
     ) -> Handled {
         if let Some(file_info) = cmd.get(druid::commands::OPEN_FILE) {
-
             let recent = Recent::new(file_info.path().to_str().unwrap().to_string());
             // if recent already exists, do not add it again
             if !(data
@@ -44,8 +45,8 @@ impl AppDelegate<AppState> for Delegate {
                 data.active_page = PageType::Reader;
             }
             return Handled::Yes;
-        }
-        else if let Some(command) = cmd.get(INTERNAL_COMMAND) {
+
+        } else if let Some(command) = cmd.get(INTERNAL_COMMAND) {
             let ret = match command {
                 InternalUICommand::RemoveBook(book_path) => {
                     // remove book from recent
@@ -61,7 +62,6 @@ impl AppDelegate<AppState> for Delegate {
                     };
 
                     recent.reached_position = Some(data.epub_data.page_position.clone());
-                    println!("Reached position: {:?}", recent.reached_position);
                     recent.epub_settings = data.epub_data.epub_settings.clone();
                     data.home_page_data.update_recent(recent);
 
@@ -70,7 +70,7 @@ impl AppDelegate<AppState> for Delegate {
                 InternalUICommand::OpenRecent(recent) => {
                     data.open_file(recent);
                     return Handled::Yes;
-                    }
+                }
                 _ => Handled::No,
             };
             return ret;
@@ -120,5 +120,3 @@ impl AppState {
         }
     }
 }
-
-

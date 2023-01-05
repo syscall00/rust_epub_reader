@@ -3,7 +3,10 @@ use serde::{Serialize, Deserialize};
 
 use crate::data::{epub::settings::EpubSettings, PagePosition};
 
-
+/**
+ * RecentData represents the data that is displayed for a single book in the home page.
+ * It contains the image, title, creator, publisher and the position in the book.
+ */
 #[derive(Clone, Data, Lens, Debug)]
 pub struct RecentData {
     pub image_data: Option<ImageBuf>,

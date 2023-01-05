@@ -1,16 +1,20 @@
 use druid::{
-    widget::{TextBox, Controller, Flex}, BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LifeCycle,
-    LifeCycleCtx, PaintCtx, Point, RenderContext, Size, UpdateCtx, Widget, WidgetExt, WidgetPod,
-    WindowId, WindowSizePolicy, Code,
+    widget::{Controller, Flex, TextBox},
+    BoxConstraints, Code, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
+    PaintCtx, Point, RenderContext, Size, UpdateCtx, Widget, WidgetExt, WidgetPod, WindowId,
+    WindowSizePolicy,
 };
 use druid_material_icons::IconPaths;
 
 use crate::{
-    core::{constants::commands::{InternalUICommand, INTERNAL_COMMAND, MODIFY_EPUB_PATH}, style}, data::epub::edit_data::EditData,
+    core::{
+        constants::commands::{InternalUICommand, INTERNAL_COMMAND, MODIFY_EPUB_PATH},
+        style,
+    },
+    data::epub::edit_data::EditData,
 };
 
-use crate::widgets::common::icon_button::{IconButton, ButtonTrait};
-
+use crate::widgets::common::icon_button::{ButtonTrait, IconButton};
 
 pub struct EditWidget {
     dirty: bool,
@@ -19,14 +23,15 @@ pub struct EditWidget {
     text: WidgetPod<EditData, Box<dyn Widget<EditData>>>,
     toolbar: WidgetPod<EditData, Box<dyn Widget<EditData>>>,
 }
-
-fn toolbar() ->  impl Widget<EditData> {
-
+/**
+ * A widget to edit the content of a chapter.
+ * It is a textbox with a toolbar.
+ */
+fn toolbar() -> impl Widget<EditData> {
     Flex::row()
-    .with_child(IconButton::new(ToolbarButton::Save))
-    .with_child(IconButton::new(ToolbarButton::SaveAs))
-    .with_child(IconButton::new(ToolbarButton::Exit))
-    
+        .with_child(IconButton::new(ToolbarButton::Save))
+        .with_child(IconButton::new(ToolbarButton::SaveAs))
+        .with_child(IconButton::new(ToolbarButton::Exit))
 }
 
 impl EditWidget {
@@ -101,9 +106,7 @@ impl PromptOption {
 fn dialog_ui(message: String, parent_id: WindowId) -> impl Widget<()> {
     let chooses = vec![PromptOption::Yes, PromptOption::No];
 
-    let mut widget = druid::widget::Flex::column().with_child(druid::widget::Label::new(
-        message,
-    ));
+    let mut widget = druid::widget::Flex::column().with_child(druid::widget::Label::new(message));
     let mut row = druid::widget::Flex::row();
 
     chooses.into_iter().for_each(|c| {
@@ -143,7 +146,10 @@ impl Widget<EditData> for EditWidget {
                         .window_size_policy(WindowSizePolicy::Content)
                         .set_position(dialog_pos);
 
-                    let widget = dialog_ui("Do you want to save the changes?".to_string(), ctx.window_id());
+                    let widget = dialog_ui(
+                        "Do you want to save the changes?".to_string(),
+                        ctx.window_id(),
+                    );
                     ctx.new_sub_window(window_config, widget, (), env.clone());
                     ctx.set_handled();
                 } else {
@@ -211,12 +217,6 @@ impl Widget<EditData> for EditWidget {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EditData, env: &Env) {
-        match event {
-            LifeCycle::WidgetAdded => {
-                //ctx.request_focus();
-            }
-            _ => {}
-        }
         self.text.lifecycle(ctx, event, data, env);
         self.toolbar.lifecycle(ctx, event, data, env);
     }
@@ -236,9 +236,12 @@ impl Widget<EditData> for EditWidget {
     ) -> Size {
         let mut size = bc.max();
 
-        let toolbar_size = self
-            .toolbar
-            .layout(ctx, &BoxConstraints::tight(Size::new(bc.max().width, 30.)), data, env);
+        let toolbar_size = self.toolbar.layout(
+            ctx,
+            &BoxConstraints::tight(Size::new(bc.max().width, 30.)),
+            data,
+            env,
+        );
 
         size.height -= toolbar_size.height;
         self.toolbar.set_origin(ctx, data, env, Point::ORIGIN);
@@ -257,10 +260,8 @@ impl Widget<EditData> for EditWidget {
         ctx.fill(rect, &style::get_color_unchecked(style::PRIMARY_LIGHT));
         self.toolbar.paint(ctx, data, env);
         self.text.paint(ctx, data, env);
-
     }
 }
-
 
 pub enum ToolbarButton {
     Save,
@@ -294,9 +295,7 @@ impl ButtonTrait for ToolbarButton {
     }
 }
 
-
 pub struct EditWindowController;
-
 
 impl Controller<EditData, Flex<EditData>> for EditWindowController {
     fn event(
@@ -310,18 +309,15 @@ impl Controller<EditData, Flex<EditData>> for EditWindowController {
         match event {
             Event::KeyDown(k) => {
                 match k.code {
-                    Code::Escape => {
-                        println!("Exiting");
-                        //ctx.submit_command(commands::CLOSE_WINDOW.to(data.window_id));
-                    }
                     // If crtl + s is pressed, save the file
                     Code::KeyS => {
                         if k.mods.ctrl() {
-                            ctx.submit_command(INTERNAL_COMMAND.with(
-                                InternalUICommand::SaveModification(
-                                        data.visualized_chapter.clone(),
-                                    )
-                                ).to(druid::Target::Global)
+                            ctx.submit_command(
+                                INTERNAL_COMMAND
+                                    .with(InternalUICommand::SaveModification(
+                                        data.edited_chapter().clone(),
+                                    ))
+                                    .to(druid::Target::Global),
                             );
                             ctx.request_update();
                         }
@@ -339,6 +335,3 @@ impl Controller<EditData, Flex<EditData>> for EditWindowController {
         child.event(ctx, event, data, env);
     }
 }
-
-
-

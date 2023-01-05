@@ -8,7 +8,10 @@ use crate::{dom::{Renderable, generate_renderable_tree}, data::{PagePosition, In
 use super::{ocr_data::OcrData, edit_data::EditData, settings::EpubSettings, sidebar::SidebarData};
 
 
-
+/**
+ * EpubData is the main struct that contains all the data of the book.
+ * Based on the user's actions, a subset of this data is passed to the widgets.
+ */
 #[derive(Clone, Lens, Data)]
 pub struct EpubData {
 
@@ -23,8 +26,6 @@ pub struct EpubData {
 
     pub epub_settings: EpubSettings,
 
-
-    
     pub doc: Arc<std::sync::Mutex<EpubDoc<std::io::BufReader<File>>>>,
 }
 
@@ -38,7 +39,7 @@ impl EpubData {
             epub_settings: EpubSettings::default(),
 
             book_path: String::new(),
-            page_position: PagePosition::new(0, 0),
+            page_position: PagePosition::default(),
             ocr_data: OcrData::default(),
             edit_data: EditData::default(),
             // TODO: Are you fucking serious?
@@ -71,16 +72,14 @@ impl EpubData {
             renderable_chapters.push_back(renderable);
         }
 
-        let edit_data = EditData {
-            visualized_chapter: chapters[0].clone().to_string(),
-            ..Default::default()
-        };
+        let mut edit_data = EditData::default();
+        edit_data.set_edited_chapter(chapters[0].clone().to_string());
 
         EpubData {
 
             sidebar_data: SidebarData::new(toc),
             book_path : path,
-            page_position: PagePosition::new(0, 0),
+            page_position: PagePosition::default(),
             renderable_chapters,
             epub_settings,
             ocr_data: OcrData::default(),
@@ -100,9 +99,9 @@ impl EpubData {
             self.doc
                 .lock()
                 .unwrap()
-                .modify_file(&page_to_modify, &file, &self.edit_data.visualized_chapter);
+                .modify_file(&page_to_modify, &file, &self.edit_data.edited_chapter());
 
-        self.renderable_chapters[self.page_position.chapter()] = generate_renderable_tree(&self.edit_data.visualized_chapter, self.epub_settings.font_size);
+        self.renderable_chapters[self.page_position.chapter()] = generate_renderable_tree(&self.edit_data.edited_chapter(), self.epub_settings.font_size);
         match res {
             Ok(_) => println!("Success"),
             Err(e) => println!("Error: {}", e),
@@ -113,7 +112,7 @@ impl EpubData {
     pub fn get_current_chap(&self) -> Vector<Renderable> {
         
         //&self.renderable_chapters[self.page_position.chapter()]
-        generate_renderable_tree(&self.edit_data.visualized_chapter, self.epub_settings.font_size)
+        generate_renderable_tree(self.edit_data.edited_chapter(), self.epub_settings.font_size)
     }
 
     pub fn get_chap_len(&self, chap: usize) -> usize {
@@ -203,7 +202,7 @@ impl EpubData {
         self.page_position = page_position;
         let mut doc = self.doc.lock().unwrap();
         doc.set_current_page(self.page_position.chapter()).unwrap();
-        self.edit_data.visualized_chapter = doc.get_current_str().unwrap();
+        self.edit_data.set_edited_chapter(doc.get_current_str().unwrap());
 
 
     }

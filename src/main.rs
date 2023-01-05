@@ -1,10 +1,12 @@
+use crate::core::constants::APP_NAME;
+
 use crate::core::constants::commands::{InternalUICommand, INTERNAL_COMMAND};
 
 use crate::core::style;
 
-use data::AppState;
 use data::appstate::Delegate;
-use data::{home::HomePageData};
+use data::home::HomePageData;
+use data::AppState;
 use druid::{
     widget::{Controller, Flex, List, Scroll, ViewSwitcher},
     AppLauncher, Color, Data, Env, Event, EventCtx, WidgetExt, WindowDesc,
@@ -19,9 +21,11 @@ mod widgets;
 mod dom;
 mod ocr;
 
-use widgets::RoundButton;
-use widgets::epub_page::epub_controller::EpubPageController;
-use widgets::{epub_page::sidebar::Sidebar, recent_item::RecentWidget};
+use widgets::{
+    epub_page::{epub_controller::EpubPageController, sidebar::Sidebar},
+    recent_item::RecentWidget,
+    RoundButton,
+};
 
 #[derive(Data, PartialEq, Clone, Copy, Debug)]
 pub enum PageType {
@@ -32,7 +36,7 @@ pub enum PageType {
 fn main() {
     let data = AppState::new();
     let window = WindowDesc::new(navigator())
-        .title("Epub Rust Reader")
+        .title(APP_NAME)
         .window_size((1000.0, 800.0));
 
     AppLauncher::with_window(window)
@@ -52,9 +56,6 @@ pub fn navigator() -> impl Widget<AppState> {
         },
     )
     .controller(MainController {})
-    .env_scope(|env, _: &AppState| {
-        style::add_to_env(env);
-    })
 }
 
 pub fn home_page() -> impl Widget<HomePageData> {
@@ -64,7 +65,7 @@ pub fn home_page() -> impl Widget<HomePageData> {
     .vertical()
     .lens(HomePageData::recents);
 
-    let title = druid::widget::Label::new("Rust Ebook Reader")
+    let title = druid::widget::Label::new(APP_NAME)
         .with_text_size(26.0)
         .with_text_color(Color::WHITE)
         .center();
@@ -101,6 +102,9 @@ pub fn read_ebook() -> impl Widget<AppState> {
     flex.controller(EpubPageController {})
 }
 
+/**
+ * Main Controller handles the navigation between UI pages.
+ */
 struct MainController;
 impl Controller<AppState, ViewSwitcher<AppState, PageType>> for MainController {
     fn event(

@@ -2,7 +2,10 @@ use druid::{Lens, Data, im::Vector};
 
 use crate::data::IndexedText;
 
-
+/**
+ * Struct used for maintaining all the data that is displayed in the sidebar.
+ * Contains the table of contents and the search results.
+ */
 
 #[derive(Clone, Lens, Data)]
 pub struct SidebarData {

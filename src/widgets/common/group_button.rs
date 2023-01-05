@@ -1,14 +1,18 @@
-use druid::{WidgetPod, Data, Widget, EventCtx, Event, Env, Point, LifeCycleCtx, LifeCycle, UpdateCtx, LayoutCtx, BoxConstraints, Size, PaintCtx, Color, RenderContext};
+use druid::{
+    BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
+    PaintCtx, Point, RenderContext, Size, UpdateCtx, Widget, WidgetPod,
+};
 
-
-// Create GroupButton; a group of buttons that can be toggled on and off
+/**
+ * GroupButton is a widget that can be used to create a group of buttons that can be toggled on and off.
+ */
 pub struct GroupButton<T> {
-    buttons: Vec<WidgetPod<T, Box< dyn Widget<T>>>>,
+    buttons: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
     active: usize,
 }
 
 impl<T: Data> GroupButton<T> {
-    pub fn new(buttons: Vec<Box< dyn Widget<T>>>) -> Self {
+    pub fn new(buttons: Vec<Box<dyn Widget<T>>>) -> Self {
         Self {
             buttons: buttons
                 .into_iter()
@@ -84,7 +88,7 @@ impl<T: Data> Widget<T> for GroupButton<T> {
                 let shadow = ctx
                     .render_ctx
                     .solid_brush(Color::rgb8(0, 0, 0).with_alpha(0.2));
-                    
+
                 ctx.render_ctx.fill(button.layout_rect(), &shadow);
             }
 

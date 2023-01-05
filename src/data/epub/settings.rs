@@ -1,9 +1,13 @@
 use druid::{Lens, Data};
 use serde::{Serialize, Deserialize};
 
-use crate::core::{constants};
+use crate::core::constants;
 
 
+/**
+ * EpubSettings contains all the settings that can be changed by the user.
+ * The settings are saved in a file and loaded at startup.
+ */
 
 #[derive(druid::Data, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum VisualizationMode {

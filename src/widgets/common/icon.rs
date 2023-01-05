@@ -1,5 +1,5 @@
-use druid_material_icons::IconPaths;
 pub use druid_material_icons::normal;
+use druid_material_icons::IconPaths;
 
 use druid::{kurbo::Affine, Color};
 
@@ -10,16 +10,17 @@ pub struct Icon {
     paths: IconPaths,
     color: Color,
 }
-
+/**
+ * A widget that displays an icon from the druid_material_icons crate.
+ */
 impl Icon {
     #[inline]
     pub fn new(paths: IconPaths) -> Self {
         Self {
             paths,
-            color: Color::WHITE
+            color: Color::WHITE,
         }
     }
-
 
     pub fn set_color(&mut self, color: &Color) {
         self.color = color.clone();

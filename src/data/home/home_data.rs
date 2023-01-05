@@ -2,12 +2,12 @@ use druid::{Data, Lens, im::Vector};
 use super::recent::Recent;
 
 
-
-
+/**
+ * Struct used for maintaining all the data that is displayed in the home page.
+ * Contains the list of recently opened books.
+ */
 #[derive(Clone, Data, Lens)]
 pub struct HomePageData {
-    // Use a string for save paths in order to make
-    // data more easy
     pub recents: Vector<Recent>,
 }
 

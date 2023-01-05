@@ -1,8 +1,22 @@
-use druid::{TextLayout, WidgetPod, Widget, widget::Flex, WidgetExt, EventCtx, Color, BoxConstraints, Point, Size, RenderContext, Data};
+use druid::{
+    widget::Flex, BoxConstraints, Color, Data, EventCtx, Point, RenderContext, Size, TextLayout,
+    Widget, WidgetExt, WidgetPod,
+};
 use epub::doc::EpubDoc;
 
-use crate::{widgets::RoundButton, core::{constants::commands::{INTERNAL_COMMAND, InternalUICommand}, style}, PageType, data::home::Recent};
-
+use crate::{
+    core::{
+        constants::commands::{InternalUICommand, INTERNAL_COMMAND},
+        style,
+    },
+    data::home::Recent,
+    widgets::RoundButton,
+    PageType,
+};
+/**
+ * Recent item widget. It display one recent item in the home page.
+ * It contains the book cover, title, author, publisher and position in book.
+ */
 pub struct RecentWidget {
     title_label: druid::TextLayout<String>,
     creator_label: TextLayout<String>,
@@ -77,7 +91,9 @@ impl Widget<Recent> for RecentWidget {
                         InternalUICommand::OpenRecent(data.clone()),
                         druid::Target::Auto,
                     ));
-                    ctx.submit_command(INTERNAL_COMMAND.with(InternalUICommand::UINavigate(PageType::Reader)));
+                    ctx.submit_command(
+                        INTERNAL_COMMAND.with(InternalUICommand::UINavigate(PageType::Reader)),
+                    );
                 }
             }
             druid::Event::MouseMove(mouse_event) => {
@@ -150,12 +166,12 @@ impl Widget<Recent> for RecentWidget {
                 self.publisher_label.set_text_size(14.);
                 self.publisher_label.set_text_color(Color::WHITE);
 
-                
-                self.position_in_book_label.set_text(if let Some(pos) = &data.reached_position {
-                    pos.to_string()
-                } else {
-                    "Never opened".to_string()
-                });
+                self.position_in_book_label
+                    .set_text(if let Some(pos) = &data.reached_position {
+                        pos.to_string()
+                    } else {
+                        "Never opened".to_string()
+                    });
                 self.position_in_book_label.set_text_size(14.);
                 self.position_in_book_label.set_text_color(Color::WHITE);
             }

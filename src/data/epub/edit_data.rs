@@ -1,10 +1,14 @@
 use druid::{Lens, Data};
 
-
+/**
+ * Struct used during the editing of a book.
+ * Contains a T/F flag to indicate if the book is being edited and
+ * the text of the chapter that is being edited.
+ */
 #[derive(Clone, Lens, Data)]
 pub struct EditData {
-    pub edit_mode: bool,
-    pub visualized_chapter: String,
+    edit_mode: bool,
+    visualized_chapter: String,
 }
 
 impl EditData {
@@ -14,6 +18,14 @@ impl EditData {
 
     pub fn set_editing(&mut self, edit_mode: bool) {
         self.edit_mode = edit_mode;
+    }
+
+    pub fn edited_chapter(&self) -> &String {
+        &self.visualized_chapter
+    }
+
+    pub fn set_edited_chapter(&mut self, edited_chapter: String) {
+        self.visualized_chapter = edited_chapter;
     }
 }
 

@@ -1,15 +1,17 @@
 use druid::Data;
 use serde::{Serialize, Deserialize};
 
-
+/**
+ * This struct is used to store the a position in the book.
+ * It can also represent a range of text 
+ * 
+ */
 #[derive(Clone, Debug, Data, Serialize, Deserialize, PartialEq)]
 pub struct PagePosition {
     chapter: usize,
     richtext_number: usize,
     #[serde(skip)]
     range: Option<std::ops::Range<usize>>,
-    #[serde(skip)]
-    dirty: bool,
 }
 
 impl ToString for PagePosition {
@@ -26,7 +28,6 @@ impl PagePosition {
             chapter,
             richtext_number,
             range: None,
-            dirty: false,
         }
     }
 
@@ -39,7 +40,7 @@ impl PagePosition {
             chapter,
             richtext_number,
             range: Some(range),
-            dirty: false,
+            //dirty: false,
         }
     }
 
@@ -60,10 +61,13 @@ impl PagePosition {
     }
     pub fn set_richtext_number(&mut self, richtext_number: usize) {
         self.richtext_number = richtext_number;
-        self.invert_dirty()
-    }
-    pub fn invert_dirty(&mut self) {
-        self.dirty = !self.dirty;
     }
 }
 
+
+
+impl Default for PagePosition {
+    fn default() -> Self {
+        PagePosition::new(usize::MAX, usize::MAX)
+    }
+}

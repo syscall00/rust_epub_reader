@@ -59,3 +59,6 @@ pub(crate) mod commands {
         UINavigate(PageType),
     }
 }
+
+
+pub const APP_NAME: &str = "Rust Epub Reader";

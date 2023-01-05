@@ -1,6 +1,19 @@
-use druid::{im::Vector, text::RichText, Data, ArcStr};
+use druid::{im::Vector, text::RichText, ArcStr, Data};
 
 use crate::core::style::LINK_COLOR;
+/**
+ * Module for parsing HTML and generating a tree of renderable objects for 
+ * druid GUI framework.
+ * 
+ * This module define a list of HTML tags that are supported.
+ * This module also define Renderable objects that can be used to render the
+ * HTML content. It can be an Image or a RichText.
+ * 
+ * generate_renderable_tree is the main function of this module. It takes a
+ * string of HTML and returns a vector of Renderable objects.
+ * 
+ * The mechanism is based on the xmlparser crate.
+ */
 
 
 #[derive(Debug, PartialEq, Data, Clone)]
@@ -89,7 +102,6 @@ impl HtmlTag {
     }
 }
 
-
 // Create an enum for render both images or text
 #[derive(Debug, Data, Clone)]
 pub enum Renderable {
@@ -97,7 +109,14 @@ pub enum Renderable {
     Text(RichText),
 }
 
-
+/**
+ * Generate a vector of Renderable objects from a string of HTML.
+ * 
+ * @param text: the HTML string
+ * @param font_size: the font size to use for the text
+ * 
+ * @return a vector of Renderable objects
+ */
 pub fn generate_renderable_tree(text: &str, font_size: f64) -> Vector<Renderable> {
     let mut renderables: Vector<Renderable> = Vector::new();
     let mut current_pos = 0;
@@ -112,13 +131,13 @@ pub fn generate_renderable_tree(text: &str, font_size: f64) -> Vector<Renderable
         let token = tok_result.unwrap();
         match token {
             xmlparser::Token::ElementStart {
-                prefix : _,
+                prefix: _,
                 local,
                 span: _,
             } => {
                 token_stack.push((current_pos, HtmlTag::from(local.as_str())));
             }
-            xmlparser::Token::ElementEnd { end, span : _} => {
+            xmlparser::Token::ElementEnd { end, span: _ } => {
                 match end {
                     xmlparser::ElementEnd::Open => {
                         continue;
@@ -162,7 +181,6 @@ pub fn generate_renderable_tree(text: &str, font_size: f64) -> Vector<Renderable
                             builder = druid::text::RichTextBuilder::new();
                             current_pos = 0;
                         }
-
                     }
                     xmlparser::ElementEnd::Empty => {
                         token_stack.pop().expect("No token on stack");
@@ -187,13 +205,12 @@ pub fn generate_renderable_tree(text: &str, font_size: f64) -> Vector<Renderable
                 prefix: _,
                 local: _,
                 value: _,
-                span : _,
+                span: _,
             } => {
                 // TODO: Handle Images
             }
 
             _ => continue,
-
         }
     }
 

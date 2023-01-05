@@ -1,50 +1,26 @@
-use druid::{WidgetPod, Widget, widget::ControllerHost, EventCtx, Event, Env, UpdateCtx, LifeCycle, LifeCycleCtx, LayoutCtx, BoxConstraints, Size, PaintCtx, Point, WidgetExt, Data};
+use druid::{
+    widget::ControllerHost, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle,
+    LifeCycleCtx, PaintCtx, Point, Size, UpdateCtx, Widget, WidgetExt, WidgetPod,
+};
 use druid_material_icons::IconPaths;
 
-use crate::{widgets::{Icon}, core::constants::commands::{INTERNAL_COMMAND, InternalUICommand}};
+use crate::{
+    core::constants::commands::{InternalUICommand, INTERNAL_COMMAND},
+    widgets::Icon,
+};
 
 use super::TooltipController;
-
-
+/**
+ * A widget used in sidebar and toolbar to display an icon and trigger
+ * a specific command when clicked.
+ *
+ * Text, tooltip and icon are defined implementing the ButtonTrait trait.
+ */
 pub trait ButtonTrait {
     fn icon(&self) -> IconPaths;
     fn hint(&self) -> String;
     fn command(&self) -> InternalUICommand;
 }
-pub enum ActionButton {
-    CloseBook,
-    EditBook,
-    OCROpen,
-}
-
-impl ButtonTrait for ActionButton {
-    fn icon(&self) -> IconPaths {
-        match self {
-            // Check if can rotate
-            ActionButton::CloseBook => druid_material_icons::normal::action::EXIT_TO_APP,
-            ActionButton::EditBook => druid_material_icons::normal::editor::EDIT_NOTE,
-            ActionButton::OCROpen => druid_material_icons::normal::image::IMAGE_SEARCH,
-        }
-    }
-    fn hint(&self) -> String {
-        match self {
-            ActionButton::CloseBook => "Close Book".to_string(),
-            ActionButton::EditBook => "Edit Book".to_string(),
-            ActionButton::OCROpen => "Search using OCR".to_string(),
-        }
-    }
-    fn command(&self) -> InternalUICommand {
-        match self {
-            ActionButton::CloseBook => InternalUICommand::GoToMenu,
-            ActionButton::EditBook => InternalUICommand::OpenEditDialog,
-            ActionButton::OCROpen => InternalUICommand::OpenOCRDialog,
-        }
-    }
-}
-
-
-
-
 
 pub struct IconButton<T: ButtonTrait, D: Data> {
     kind: T,
@@ -97,13 +73,7 @@ impl<T: ButtonTrait, D: Data> Widget<D> for IconButton<T, D> {
 
     fn update(&mut self, _: &mut UpdateCtx, _: &D, _: &D, _: &Env) {}
 
-    fn layout(
-        &mut self,
-        ctx: &mut LayoutCtx,
-        _: &BoxConstraints,
-        data: &D,
-        env: &Env,
-    ) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, _: &BoxConstraints, data: &D, env: &Env) -> Size {
         self.icon.layout(
             ctx,
             &BoxConstraints::tight(Size::new(ICON_SIZE, ICON_SIZE)),
@@ -118,4 +88,3 @@ impl<T: ButtonTrait, D: Data> Widget<D> for IconButton<T, D> {
         self.icon.paint(ctx, data, env);
     }
 }
-
