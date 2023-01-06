@@ -9,7 +9,11 @@ use druid::{
 pub struct GroupButton<T> {
     buttons: Vec<WidgetPod<T, Box<dyn Widget<T>>>>,
     active: usize,
+
+    active_closure: Option<Box<dyn Fn(&T, &Env) -> usize>>,
+
 }
+
 
 impl<T: Data> GroupButton<T> {
     pub fn new(buttons: Vec<Box<dyn Widget<T>>>) -> Self {
@@ -19,13 +23,19 @@ impl<T: Data> GroupButton<T> {
                 .map(|button| WidgetPod::new(button))
                 .collect(),
             active: 0,
+            active_closure: None,
         }
     }
-    #[allow(dead_code)]
-    pub fn with_active(mut self, active: usize) -> Self {
-        self.active = active;
+
+    pub fn with_active_closure<F>(mut self, closure: F) -> Self
+    where
+        F: Fn(&T, &Env) -> usize + 'static,
+    {
+        self.active_closure = Some(Box::new(closure));
         self
     }
+
+
 }
 
 impl<T: Data> Widget<T> for GroupButton<T> {
@@ -55,6 +65,14 @@ impl<T: Data> Widget<T> for GroupButton<T> {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
+        match event {
+            LifeCycle::WidgetAdded => {
+                if let Some(closure) = &self.active_closure {
+                    self.active = closure(data, env);
+                }
+            }
+            _ => {}
+        }
         for button in &mut self.buttons {
             button.lifecycle(ctx, event, data, env);
         }
@@ -68,7 +86,6 @@ impl<T: Data> Widget<T> for GroupButton<T> {
 
     fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
         const PADDING_BETWEEN_BUTTONS: f64 = 8.;
-        // positionate buttons consecutively
         let mut x = 0.;
         let y = 0.;
         let mut max_height: f64 = 0.;

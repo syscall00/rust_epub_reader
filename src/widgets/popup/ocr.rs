@@ -35,7 +35,7 @@ pub fn build_ocr_ui() -> impl Widget<OcrData> {
     main_tabs.controller(OcrController)
 }
 
-fn open_choose_dialog(ctx: &mut druid::EventCtx, data: &mut OcrData, _env: &druid::Env) {
+fn open_choose_dialog(ctx: &mut druid::EventCtx, _: &mut OcrData, _env: &druid::Env) {
     let accept_command = OPEN_OCR_FILE;
 
     let filedialog = druid::FileDialogOptions::new().accept_command(accept_command);
@@ -129,7 +129,7 @@ fn find_by_virtual() -> impl Widget<OcrData> {
             (RoundButton::new(druid_material_icons::normal::image::ADD_PHOTO_ALTERNATE)
                 .with_radius(15.)
                 .with_border_color(druid::Color::RED))
-            .on_click(|ctx, data: &mut OcrData, _| {
+            .on_click(|ctx, _: &mut OcrData, _| {
                 let filedialog = druid::FileDialogOptions::new().accept_command(OPEN_REVERSE_OCR_1);
 
                 ctx.submit_command(druid::commands::SHOW_OPEN_PANEL.with(
@@ -150,7 +150,7 @@ fn find_by_virtual() -> impl Widget<OcrData> {
             (RoundButton::new(druid_material_icons::normal::image::ADD_PHOTO_ALTERNATE)
                 .with_radius(15.)
                 .with_border_color(druid::Color::RED))
-            .on_click(|ctx, data: &mut OcrData, _| {
+            .on_click(|ctx, _: &mut OcrData, _| {
                 let filedialog = druid::FileDialogOptions::new().accept_command(OPEN_REVERSE_OCR_2);
 
                 ctx.submit_command(druid::commands::SHOW_OPEN_PANEL.with(

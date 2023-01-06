@@ -8,8 +8,9 @@ use druid::{
 
 use crate::{
     core::constants::commands::{InternalUICommand, INTERNAL_COMMAND},
-    data::epub::{EpubData,
+    data::epub::{
         settings::{EpubSettings, VisualizationMode},
+        EpubData,
     },
     dom::Renderable,
     widgets::RoundButton,
@@ -298,70 +299,33 @@ impl PageSplitter {
 
 impl Widget<EpubData> for PageSplitter {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, _: &Env) {
-        // why cannot get key down?
         match event {
             Event::Command(cmd) => {
                 if let Some(internal) = cmd.get(INTERNAL_COMMAND) {
                     match internal {
                         InternalUICommand::EpubNavigate(direction) => {
-                            let mut page_position = data.page_position.clone();
-
                             if *direction {
-                                let next =
+                                let can_get_next_page =
                                     self.next_page(ctx.size().height - 50., &data.epub_settings);
-                                if !next {
-                                    if data.has_next_chapter() {
-                                        println!("Going forward");
-                                        page_position.set_chapter(data.page_position.chapter() + 1);
-                                        page_position.set_richtext_number(0);
+                                if !can_get_next_page && data.next_chapter() {
                                         self.visualized_range = PageSplitterRanges::OnePage(0..0);
                                     }
-                                }
                             } else {
-                                let prev =
+                                let can_get_prev_page =
                                     self.prev_page(ctx.size().height - 50., &data.epub_settings);
-                                if !prev {
-                                    if data.has_prev_chapter() {
-                                        println!("Going backward");
-                                        page_position.set_chapter(data.page_position.chapter() - 1);
-                                        page_position.set_richtext_number(
-                                            data.get_chap_len(data.page_position.chapter() - 1) - 1,
-                                        );
-                                        // TODO: set the visualized range to the last page of the previous chapter
-                                        self.visualized_range = PageSplitterRanges::OnePage(
-                                            page_position.richtext_number()
-                                                ..page_position.richtext_number(),
-                                        );
+                                if !can_get_prev_page && data.prev_chapter() {
+                                    let last_pos = data.get_current_chap().len() - 1;
+                                    self.visualized_range =
+                                        PageSplitterRanges::OnePage(last_pos..last_pos);
                                     }
                                 }
-                            }
-                            //if direction {
-                            //    if (data.get_current_chap().len() == 0 || (self.visualized_range.end() >= data.get_current_chap().len()-1)) && data.has_next_chapter() {
-                            //        page_position.set_chapter(data.epub_metrics.current_chapter+1);
-                            //        page_position.set_richtext_number(0);
-                            //        //data.change_position(PagePosition::new(data.epub_metrics.current_chapter+1, 0))
-                            //    }
-                            //    else {
-                            //        page_position.set_richtext_number(self.visualized_range.end());
-                            //        //data.page_position.set_richtext_number(self.visualized_range.end());
-                            //    }
-                            //}
-                            //else {
-                            //    if (self.visualized_range.start() == 0) && data.has_prev_chapter() {
-                            //        //data.change_position(PagePosition::new(data.epub_metrics.current_chapter-1, data.get_chap_len(data.epub_metrics.current_chapter-1)-1));
-                            //        page_position.set_chapter(data.epub_metrics.current_chapter-1);
-                            //        page_position.set_richtext_number(data.get_chap_len(data.epub_metrics.current_chapter-1)-1);
-                            //    }
-                            //    else {
-                            //        //data.page_position.set_richtext_number(self.visualized_range.start());
-                            //        page_position.set_richtext_number(self.visualized_range.start());
-                            //    }
-                            //}
-                            data.change_position(page_position);
+                            data.set_position_in_page(self.visualized_range.start());
                             ctx.request_update();
                             ctx.request_layout();
                             ctx.request_paint();
                         }
+
+
 
                         InternalUICommand::EpubGoToPos(pos) => {
                             if data.page_position.chapter() != pos.chapter()
@@ -387,8 +351,7 @@ impl Widget<EpubData> for PageSplitter {
             // when the window is going to be closed, save the current position
             Event::WindowDisconnected => {
                 ctx.submit_command(
-                    INTERNAL_COMMAND
-                        .with(InternalUICommand::UpdateBookInfo(data.get_epub_path())),
+                    INTERNAL_COMMAND.with(InternalUICommand::UpdateBookInfo(data.get_epub_path())),
                 );
             }
 
@@ -402,12 +365,7 @@ impl Widget<EpubData> for PageSplitter {
                 self.generate_text(&data.get_current_chap(), data.epub_settings.font_size);
                 self.wrap_label_size(&ctx.size(), ctx.text(), data.epub_settings.margin, env);
             }
-            LifeCycle::Size(new_size) => {
-
-                //self.visualized_range =
-                //    self.get_current_range(new_size.height, true, data.page_position.richtext_number(), &data.epub_settings);
-                //
-            }
+            LifeCycle::Size(new_size) => {}
             _ => {}
         }
     }
@@ -420,7 +378,7 @@ impl Widget<EpubData> for PageSplitter {
                 .edited_chapter()
                 .same(&old_data.edit_data.edited_chapter())
             {
-                println!("Updating chapter");
+                println!("Updating chapter1");
                 self.generate_text(
                     &crate::dom::generate_renderable_tree(
                         data.edit_data.edited_chapter(),
@@ -435,65 +393,12 @@ impl Widget<EpubData> for PageSplitter {
                 .chapter()
                 .same(&old_data.page_position.chapter())
             {
-                println!("Updating chapter");
+                println!("Updating chapter2");
                 self.generate_text(&data.get_current_chap(), data.epub_settings.font_size);
-                //self.text.clear();
-                //let renderable = crate::dom::generate_renderable_tree(&data.edit_data.visualized_chapter, data.epub_settings.font_size);
-                //
-                //for label in renderable.iter() {
-                //
-                //    match label {
-                //        Renderable::Image(_) => todo!(),
-                //        Renderable::Text(text) => {
-                //            let mut text_layout = TextLayout::new();
-                //            text_layout.set_text(text.clone());
-                //            text_layout.set_font(FontDescriptor::new(FontFamily::SERIF) );
-                //            text_layout.set_text_size(data.epub_settings.font_size);
-                //            text_layout.set_text_color(Color::BLACK);
-                //            self.text.push(text_layout);
-                //        }
-                //    }
-                //}
-
-                //self.wrap_label_size(&ctx.size(), ctx.text(), data.epub_settings.margin, env);
-                //self.visualized_range =
-                //    self.get_current_range(ctx.size().height, true, data.page_position.richtext_number(), &data.epub_settings);
-                //
             }
-
-            // if text changed, update the text
-
-            // I have to regenerate the text only if the font size has changed
-            // Could be possible to change the font size without regenerating the text
-            // but using the set_font_size method of TextLayout, but Header have fixed font size
-            // calculated from the starting font size of Paragraph elements
-
-            // must regenerate text if font size has changed or if the chapter has changed
-            //if data.epub_metrics.current_chapter != old_data.epub_metrics.current_chapter ||
-            //    data.epub_settings.font_size != old_data.epub_settings.font_size {
-            //    self.generate_text(data.get_current_chap(), data.epub_settings.font_size);
-            //}
 
             //if !data.epub_settings.same(&old_data.epub_settings) {
             self.wrap_label_size(&ctx.size(), ctx.text(), data.epub_settings.margin, env);
-            ////}
-            //
-            //
-            //if !(data.page_position.same(&old_data.page_position)) {
-            //    // if true, going forward; if false, going backward
-            //    let direction = data.page_position.richtext_number() > old_data.page_position.richtext_number() || data.page_position.chapter() > old_data.page_position.chapter();
-            //    //println!("Direction is {:?}", direction);
-            //    //
-            //    //self.visualized_range = self.get_current_range(ctx.size().height, direction, data.page_position.richtext_number(), &data.epub_settings);
-            //    //
-            //    if direction {
-            //        self.next_page(0, ctx.size().height, &data.epub_settings)
-            //    }
-            //    else {
-            //        println!("Going backward");
-            //        self.prev_page(0, ctx.size().height, &data.epub_settings)
-            //    }
-            //}//
         }
     }
 
@@ -505,7 +410,7 @@ impl Widget<EpubData> for PageSplitter {
         env: &Env,
     ) -> Size {
         //
-        println!("Layout");
+       // println!("Layout");
         self.wrap_label_size(&bc.max(), ctx.text(), data.epub_settings.margin, env);
         bc.max()
     }

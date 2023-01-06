@@ -1,5 +1,3 @@
-use druid::im::Vector;
-
 use crate::data::PagePosition;
 /**
  * OCR is a module that contains functions to search for text from a page image using OCR.
@@ -29,10 +27,15 @@ fn text_preparation(text: &str) -> String {
  * 
  * @return PagePosition: The position of the text in the page.
  */
-pub fn search_with_ocr_input(full_text: Vector<Vector<String>>, image_path: &str) -> PagePosition {
-    let mut lt = leptess::LepTess::new(None, "eng").unwrap();
-    lt.set_image(image_path).unwrap();
+pub fn search_with_ocr_input(full_text: Vec<Vec<String>>, image_path: &str) -> PagePosition {
 
+    let mut lt = leptess::LepTess::new(None, "eng").unwrap();
+    let set_image = lt.set_image(image_path);
+
+    // check if image exists and is image
+    if !std::path::Path::new(image_path).exists() || set_image.is_err() {
+        return PagePosition::default();
+    }
     let mut schema_builder = tantivy::schema::Schema::builder();
 
     let title =
@@ -122,7 +125,7 @@ pub fn search_with_ocr_input(full_text: Vector<Vector<String>>, image_path: &str
 
 
 pub fn reverse_search_with_ocr_input(
-    full_text: Vector<Vector<String>>,
+    full_text: Vec<Vec<String>>,
     image_1: &str,
     image_2: &str,
     current_position: &PagePosition,
@@ -154,4 +157,79 @@ pub fn reverse_search_with_ocr_input(
         - (image_2_page * 7);
     println!("current page: {:?}", current_page);
     PagePosition::default()
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn generate_sample_vector() -> Vec<Vec<String>> {
+        vec![
+            vec![
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nunc ut aliquam".to_owned(),
+                "tincidunt, nunc nisl aliquet nisl, ut aliquet nunc nisl eget nisl. Donec auctor, nunc".to_owned(),
+            ],
+            vec![
+                "MR Bennet was among the earliest of those who waited on Mr Bingley. He had 
+                always intended to visit him, toigh to the last always assuring his wife
+                that he should not go; and till the evening after the visit was paid, she had no 
+                knowledge of it. It was then disclosed in the following manner. Observing his second daughter
+                employed in trimming a hat, he suddendly addressed her with,".to_owned(),
+                "tincidunt, nunc nisl aliquet nisl, ut aliquet nunc nisl eget nisl. Donec auctor, nunc".to_owned(),
+            ],
+            vec![
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nunc ut aliquam".to_owned(),
+                "tincidunt, nunc nisl aliquet nisl, ut aliquet nunc nisl eget nisl. Donec auctor, nunc".to_owned(),
+            ]]
+    }
+
+    #[test]
+    fn test_search_with_ocr_input() {
+        let full_text = generate_sample_vector();
+        
+        let image_1 = "examples/assets/ocr_pride_and_prejudice.jpg";
+        let result = search_with_ocr_input(full_text, image_1);
+
+        assert_eq!(result, PagePosition::new(1, 0));
+    }
+
+    #[test]
+    fn test_search_with_ocr_input_with_wrong_result() {
+        let full_text = generate_sample_vector();
+        
+        let image_1 = "examples/assets/ocr_pride_and_prejudice.jpg";
+        let result = search_with_ocr_input(full_text, image_1);
+
+        assert_ne!(result, PagePosition::new(0, 0));
+    }
+
+    #[test]
+    fn test_search_with_ocr_input_with_wrong_image_or_non_existing_image() {
+        let full_text = generate_sample_vector();
+
+        let image_1 = "examples/assets/image_not_existing.jpg";
+        let image_2 = "examples/assets/not_an_image.jpg";
+
+        let result = search_with_ocr_input(full_text.clone(), image_1);
+
+        assert_eq!(result, PagePosition::new(usize::MAX, usize::MAX));
+        let result = search_with_ocr_input(full_text, image_2);
+        assert_eq!(result, PagePosition::new(usize::MAX, usize::MAX));
+        
+
+    }
+
+    #[test]
+    fn test_search_with_ocr_input_with_empty_text() {
+        let full_text = vec![];
+
+        let image_1 = "examples/assets/ocr_pride_and_prejudice.jpg";
+        let result = search_with_ocr_input(full_text, image_1);
+
+        assert_eq!(result, PagePosition::new(usize::MAX, usize::MAX));
+    }
+
+
 }

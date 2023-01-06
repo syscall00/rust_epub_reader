@@ -52,13 +52,6 @@ impl From<&str> for HtmlTag {
     }
 }
 impl HtmlTag {
-    pub fn add_newline_after_tag(&self) -> bool {
-        matches!(
-            self,
-            HtmlTag::Paragraph | HtmlTag::Header(_) | HtmlTag::Image(_) | HtmlTag::Link(_)
-        )
-    }
-
     pub fn should_tag_be_written(&self) -> bool {
         matches!(self, HtmlTag::Title)
     }
@@ -143,7 +136,7 @@ pub fn generate_renderable_tree(text: &str, font_size: f64) -> Vector<Renderable
                         continue;
                     }
 
-                    xmlparser::ElementEnd::Close(t, closed_token) => {
+                    xmlparser::ElementEnd::Close(_, closed_token) => {
                         let (pos, tk) = token_stack.pop().expect("No token on stack");
                         if tk != HtmlTag::from(closed_token.as_str()) {
                             println!(
@@ -159,11 +152,11 @@ pub fn generate_renderable_tree(text: &str, font_size: f64) -> Vector<Renderable
                             font_size,
                         );
 
-                        if tk != HtmlTag::Unhandled && tk.add_newline_after_tag() {
-                            //current_pos += 1;
-
-                            //builder.push("\n");
-                        }
+                        //if tk != HtmlTag::Unhandled && tk.add_newline_after_tag() {
+                        //    //current_pos += 1;
+//
+                        //    //builder.push("\n");
+                        //}
 
                         if matches!(
                             tk,
@@ -189,7 +182,6 @@ pub fn generate_renderable_tree(text: &str, font_size: f64) -> Vector<Renderable
             }
 
             xmlparser::Token::Text { text } => {
-                // TODO: Handle case of no tags, text only
                 let (_, inner_tag) = token_stack.last().unwrap();
 
                 if inner_tag.should_tag_be_written() || text.trim().is_empty() {
@@ -215,4 +207,86 @@ pub fn generate_renderable_tree(text: &str, font_size: f64) -> Vector<Renderable
     }
 
     renderables
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use druid::piet::TextStorage;
+
+    use super::*;
+
+    #[test]
+    fn test_generate_renderable_tree() {
+        let html = "
+        <html>
+            <body>
+                <h1>Dummy text</h1>
+                <p>Lorem ipsum</p>
+                <p><b>Dolor sit amet </b></p>
+            </body>
+        </html>";
+
+        let renderables = generate_renderable_tree(html, 10.0);
+
+        let mut rb = druid::text::RichTextBuilder::new();
+        rb.push("Dummy text");
+
+
+        assert_eq!(renderables.len(), 3);
+        let text = renderables[0].clone();
+        // get Text from Renderable
+        let text = match text {
+            Renderable::Text(t) => t,
+            _ => unreachable!("Renderable is not a Text"),
+        };
+
+        assert_eq!(text.as_str(), rb.build().as_str());
+            
+    }
+
+    #[test]
+    fn test_generate_renderable_tree_with_wrong_input() {
+        let html = "Lorem ipsum dolor sit amet. This will not contain any html tags";
+
+        let renderables = generate_renderable_tree(html, 12.0);
+
+        assert_eq!(renderables.len(), 0);
+    }
+
+    #[test]
+    fn test_generate_renderable_tree_with_empty_input() {
+        let html = "";
+
+        let renderables = generate_renderable_tree(html, 12.0);
+
+        assert_eq!(renderables.len(), 0);
+    }
+    #[test]
+    fn test_generate_renderable_tree_with_misplaced_tag() {
+        let html = "
+        <html>
+            <p>Test with wrong tag</h1>
+        </html>";
+
+        let renderables = generate_renderable_tree(html, 12.0);
+
+        assert_eq!(renderables.len(), 0);
+    }
+
+    #[test]
+    fn test_generate_renderable_tree_without_root() {
+        // Here we test if the parser can handle html without a root tag
+        // We expect that we get a single renderable (first one encountered)
+        let html = "
+        <h1>Dummy text</h1>
+        <p>Lorem ipsum</p>
+        <p><b>Dolor sit amet </b></p>";
+
+        let renderables = generate_renderable_tree(html, 12.0);
+
+        assert_eq!(renderables.len(), 1);
+    }
+
 }

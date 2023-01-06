@@ -405,7 +405,7 @@ impl PanelButton {
                 .vertical()
                 .boxed(),
             ),
-
+            
             PanelButton::Settings => Scroll::new(
                 Flex::column()
                     .with_child(GroupButton::new(vec![
@@ -422,7 +422,12 @@ impl PanelButton {
                                 ctx.request_paint();
                             })
                             .boxed(),
-                    ]))
+                    ]).with_active_closure(
+                        |data: &EpubData, _env: &_| match data.epub_settings.visualization_mode {
+                            VisualizationMode::SinglePage => 0,
+                            VisualizationMode::TwoPage => 1,
+                        },
+                    ))
                     .with_spacer(20.)
                     .with_child(
                         Flex::column()

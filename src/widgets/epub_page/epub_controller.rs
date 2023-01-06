@@ -1,5 +1,4 @@
 use druid::{
-    im::Vector,
     widget::{Controller, Flex},
     Env, Event, EventCtx, LensExt, Widget, WidgetExt,
 };
@@ -112,7 +111,7 @@ impl Controller<AppState, Flex<AppState>> for EpubPageController {
 fn start_ocr_search_in_thread(
     sink: druid::ExtEventSink,
     image_path: String,
-    strings: Vector<Vector<String>>,
+    strings: Vec<Vec<String>>,
 ) {
     std::thread::spawn(move || {
         let res = crate::ocr::search_with_ocr_input(strings, &image_path);
@@ -129,7 +128,7 @@ fn start_reverse_ocr_search_in_thread(
     sink: druid::ExtEventSink,
     image_1: String,
     image_2: String,
-    strings: Vector<Vector<String>>,
+    strings: Vec<Vec<String>>,
     current_position: PagePosition,
 ) {
     std::thread::spawn(move || {

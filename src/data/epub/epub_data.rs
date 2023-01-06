@@ -20,44 +20,43 @@ use super::{edit_data::EditData, ocr_data::OcrData, settings::EpubSettings, side
  */
 #[derive(Clone, Lens, Data, Default)]
 pub struct EpubData {
-    pub renderable_chapters: Vector<Vector<Renderable>>,
-    
+
     pub page_position: PagePosition,
 
-    pub sidebar_data: SidebarData,
+    sidebar_data: SidebarData,
     pub epub_settings: EpubSettings,
 
-    pub ocr_data: OcrData,
+    ocr_data: OcrData,
     pub edit_data: EditData,
 
-    pub doc: Option<Arc<Mutex<EpubDoc<BufReader<File>>>>>,
+    #[data(ignore)]
+    doc: Option<Arc<Mutex<EpubDoc<BufReader<File>>>>>,
+
+    #[data(ignore)]
+    cached_chapters: Option<Vec<Vec<String>>>,
 }
 
 impl EpubData {
-
-
-    pub fn new(chapters: Vector<ArcStr>, mut doc: EpubDoc<std::io::BufReader<File>>) -> Self {
+    pub fn new(chapters: Vector<ArcStr>, doc: EpubDoc<std::io::BufReader<File>>) -> Self {
         let epub_settings = EpubSettings::default();
-        let mut renderable_chapters: Vector<Vector<Renderable>> = Vector::new();
+
         let toc = doc
             .toc
             .iter()
             .map(|toc| {
-                println!("toc: {:?}, {:?}, {:?}", toc.label, toc.content, toc.play_order);
+                println!("toc:{:?}, {:?}", toc.content, toc.play_order);
                 let key = toc.label.clone();
-                let value = PagePosition::new(toc.play_order-1, 0);
+                let value = PagePosition::new(toc.play_order - 1, 0);
                 IndexedText::new(ArcStr::from(key), Arc::new(value))
             })
             .collect();
 
- 
-        renderable_chapters.push_back(generate_renderable_tree(&doc.get_current_str().unwrap(), epub_settings.font_size));
-
-        
-        while doc.go_next().is_ok() {
-            let renderable = generate_renderable_tree(&doc.get_current_str().unwrap(), epub_settings.font_size);
-            renderable_chapters.push_back(renderable);
-        }
+        //print spine
+        //let spine = doc.spine.clone();
+        //spine.iter().for_each(|spine| {
+        //    let res = String::from_utf8(doc.get_resource(spine).unwrap()).unwrap();
+        //    println!("spine: {:?} {:?}", spine, res);
+        //});
 
         let mut edit_data = EditData::default();
         edit_data.set_edited_chapter(chapters[0].clone().to_string());
@@ -65,12 +64,12 @@ impl EpubData {
         EpubData {
             sidebar_data: SidebarData::new(toc),
             page_position: PagePosition::default(),
-            renderable_chapters,
             epub_settings,
             ocr_data: OcrData::default(),
             edit_data,
 
             doc: Some(Arc::new(Mutex::new(doc))),
+            cached_chapters: None,
         }
     }
 
@@ -85,16 +84,20 @@ impl EpubData {
 
         let res = doc.modify_file(&page_to_modify, &file, &self.edit_data.edited_chapter());
 
-        //self.renderable_chapters[self.page_position.chapter()] = generate_renderable_tree(
-        //    &self.edit_data.edited_chapter(),
-        //    self.epub_settings.font_size,
-        //);
+        self.cached_chapters = None;
+
         match res {
             Ok(_) => println!("Success"),
             Err(e) => println!("Error: {}", e),
         }
     }
 
+
+    /**
+     * Get the current chapter as a vector of Renderable
+     * 
+     * @return the current epub path
+     */
     pub fn get_epub_path(&self) -> String {
         if self.doc.is_none() {
             return String::new();
@@ -107,9 +110,16 @@ impl EpubData {
             .unwrap()
     }
 
+    /**
+     * Get the current chapter as a vector of Renderable
+     * 
+     * @return the current chapter as a vector of Renderable
+     */
     pub fn get_current_chap(&self) -> Vector<Renderable> {
         if self.doc.is_none() {
-    }
+            return Vector::new();
+        }
+
         let mut doc = self.doc.as_ref().unwrap().lock().unwrap();
 
         generate_renderable_tree(
@@ -118,35 +128,48 @@ impl EpubData {
         )
     }
 
-    pub fn has_next_chapter(&self) -> bool {
+
+    /**
+     * Get rendered text of the entire book
+     * Useful for searching
+     * It uses cached_chapters to avoid re-rendering the entire book.
+     * 
+     * @return rendered text of the entire book
+     */
+    pub fn get_only_strings(&mut self) -> Vec<Vec<String>> {
         if self.doc.is_none() {
-            return false;
+            return Vec::new();
         }
-        let doc = self.doc.as_ref().unwrap().lock().unwrap();
-
-        return self.page_position.chapter() < doc.get_num_pages() - 1;
-    }
-
-    pub fn has_prev_chapter(&self) -> bool {
-        return self.page_position.chapter() > 0;
-    }
-
-    pub fn get_only_strings(&self) -> Vector<Vector<String>> {
-        self.renderable_chapters
-            .iter()
-            .map(|r| {
-                r.iter()
+        let mut doc = self.doc.as_ref().unwrap().lock().unwrap();
+        if self.cached_chapters.is_none() {
+            let mut cached_chapters = Vec::new();
+            let spine = doc.spine.clone();
+            // calculate self.cached_chapters
+            spine.iter().for_each(|spine| {
+                let res = String::from_utf8(doc.get_resource(spine).unwrap()).unwrap();
+                let renderable = generate_renderable_tree(&res, self.epub_settings.font_size)
+                    .iter()
                     .filter_map(|r| match r {
                         Renderable::Text(r) => Some(String::from(r.as_str().clone())),
                         _ => None,
                     })
-                    .collect::<Vector<String>>()
-            })
-            .collect::<Vector<Vector<String>>>()
-    }
-    // Search the match in all text and
-    // return a tuple with a string containing 5 words near match result referring to the match
+                    .collect::<Vec<String>>();
 
+                cached_chapters.push(renderable);
+            });
+            self.cached_chapters = Some(cached_chapters);
+        }
+
+        return self.cached_chapters.clone().unwrap().clone();
+    }
+    
+    
+    
+    /**
+     * Search the current chapter for the search input
+     * and set the results in the sidebar_data
+     * // TODO: Comment more
+     */
     pub fn search_string_in_book(&mut self) {
         const MAX_SEARCH_RESULTS: usize = 100;
         const BEFORE_MATCH: usize = 13;
@@ -154,11 +177,10 @@ impl EpubData {
 
         if !self.sidebar_data.search_input.is_empty() {
             let search_lenght = self.sidebar_data.search_input.len();
-            
+
             'outer: for (i, chapter) in self.get_only_strings().iter().enumerate() {
                 for (j, richtext) in chapter.iter().enumerate() {
                     let matches: Vec<usize> = richtext
-                        //.as_str()
                         .match_indices(&self.sidebar_data.search_input)
                         .map(|(i, _)| i)
                         .collect();
@@ -166,7 +188,6 @@ impl EpubData {
                         let range_position =
                             PagePosition::with_range(i, j, occ_match..occ_match + search_lenght);
 
-                        //let page_position = PagePosition::new(i, start, end);
                         let start = if occ_match > BEFORE_MATCH {
                             occ_match - BEFORE_MATCH
                         } else {
@@ -195,11 +216,12 @@ impl EpubData {
                 }
             }
         }
-
-        println!("Search results: {:?}", results.len());
         self.sidebar_data.search_results = results
     }
 
+
+
+    
     pub fn change_position(&mut self, page_position: PagePosition) {
         if self.doc.is_none() {
             return;
@@ -207,18 +229,17 @@ impl EpubData {
         let mut doc = self.doc.as_ref().unwrap().lock().unwrap();
 
         if doc.set_current_page(page_position.chapter()).is_err() {
-            println!("Error setting current page to {}", page_position.chapter());
             return;
         }
-        
 
         self.page_position = page_position;
         self.edit_data
             .set_edited_chapter(doc.get_current_str().unwrap());
     }
 
-    pub fn set_page_position(&mut self, page_position: PagePosition) {
-        self.page_position = page_position;
+
+    pub fn set_position_in_page(&mut self, position_in_page: usize) {
+        self.page_position.set_richtext_number(position_in_page);
     }
 
     pub fn next_chapter(&mut self) -> bool {
@@ -233,6 +254,8 @@ impl EpubData {
         }
         self.edit_data
             .set_edited_chapter(doc.get_current_str().unwrap());
+
+        self.page_position.set_chapter(doc.get_current_page());
         return true;
     }
 
@@ -242,7 +265,6 @@ impl EpubData {
         }
         let mut doc = self.doc.as_ref().unwrap().lock().unwrap();
 
-        
         let prev = doc.go_prev();
         if prev.is_err() {
             return false;
@@ -250,13 +272,8 @@ impl EpubData {
         self.edit_data
             .set_edited_chapter(doc.get_current_str().unwrap());
 
-
-        //page_position.set_chapter(self.page_position.chapter() - 1);
-        //page_position.set_richtext_number(
-        //    data.get_chap_len(page_position.chapter()) - 1,
-        //);
+        self.page_position.set_chapter(doc.get_current_page());
 
         return true;
     }
 }
-
