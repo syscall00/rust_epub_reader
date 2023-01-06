@@ -84,7 +84,7 @@ impl AppState {
     pub fn new() -> Self {
         AppState {
             home_page_data: HomePageData::new(),
-            epub_data: EpubData::empty_epub_data(),
+            epub_data: EpubData::default(),
             active_page: PageType::Home,
         }
     }
@@ -112,7 +112,7 @@ impl AppState {
         assert!(doc.is_ok());
         let doc = doc.unwrap();
 
-        self.epub_data = EpubData::new(pages, file_info.path.to_owned(), doc);
+        self.epub_data = EpubData::new(pages, doc);
         self.epub_data.epub_settings = file_info.epub_settings.to_owned();
         if let Some(page_index) = &file_info.reached_position {
             self.epub_data.page_position = page_index.to_owned();

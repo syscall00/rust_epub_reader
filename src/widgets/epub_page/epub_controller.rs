@@ -33,7 +33,7 @@ impl Controller<AppState, Flex<AppState>> for EpubPageController {
                         // Go back to home page
                         InternalUICommand::GoToMenu => {
                             ctx.submit_command(INTERNAL_COMMAND.with(
-                                InternalUICommand::UpdateBookInfo(data.epub_data.book_path.clone()),
+                                InternalUICommand::UpdateBookInfo(data.epub_data.get_epub_path()),
                             ));
                             ctx.submit_command(
                                 INTERNAL_COMMAND

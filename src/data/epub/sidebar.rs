@@ -24,3 +24,10 @@ impl SidebarData {
         }
     }
 }
+
+
+impl Default for SidebarData {
+    fn default() -> Self {
+        SidebarData::new(Vector::new())
+    }
+}

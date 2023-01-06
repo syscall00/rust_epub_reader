@@ -353,11 +353,13 @@ impl Widget<EpubData> for Sidebar {
         let rect = Size::new(40., ctx.size().height).to_rect();
         ctx.fill(rect, &style::get_color_unchecked(PRIMARY_DARK));
 
-        for (side, action) in self.side_buttons.iter_mut().zip(self.panels.iter_mut()) {
+        for side in self.side_buttons.iter_mut() {
             side.paint(ctx, data, env);
-            action.paint(ctx, data, env);
         }
 
+        for button in self.action_buttons.iter_mut() {
+            button.paint(ctx, data, env);
+        }
         // Draw panel and side line if some is opened
         if self.opened_tab.is_some() {
             self.get_active_panel().paint(ctx, data, env);

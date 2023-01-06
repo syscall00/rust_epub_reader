@@ -1,55 +1,42 @@
-use std::{sync::{Arc, Mutex}, fs::File};
+use std::{
+    fs::File,
+    io::BufReader,
+    sync::{Arc, Mutex},
+};
 
-use druid::{Lens, Data, im::Vector, ArcStr, piet::TextStorage};
+use druid::{im::Vector, piet::TextStorage, ArcStr, Data, Lens};
 use epub::doc::EpubDoc;
 
-use crate::{dom::{Renderable, generate_renderable_tree}, data::{PagePosition, IndexedText}};
+use crate::{
+    data::{IndexedText, PagePosition},
+    dom::{generate_renderable_tree, Renderable},
+};
 
-use super::{ocr_data::OcrData, edit_data::EditData, settings::EpubSettings, sidebar::SidebarData};
-
+use super::{edit_data::EditData, ocr_data::OcrData, settings::EpubSettings, sidebar::SidebarData};
 
 /**
  * EpubData is the main struct that contains all the data of the book.
  * Based on the user's actions, a subset of this data is passed to the widgets.
  */
-#[derive(Clone, Lens, Data)]
+#[derive(Clone, Lens, Data, Default)]
 pub struct EpubData {
-
     pub renderable_chapters: Vector<Vector<Renderable>>,
-    pub book_path: String,
     
     pub page_position: PagePosition,
+
     pub sidebar_data: SidebarData,
+    pub epub_settings: EpubSettings,
 
     pub ocr_data: OcrData,
     pub edit_data: EditData,
 
-    pub epub_settings: EpubSettings,
-
-    pub doc: Arc<std::sync::Mutex<EpubDoc<std::io::BufReader<File>>>>,
+    pub doc: Option<Arc<Mutex<EpubDoc<BufReader<File>>>>>,
 }
 
-
-
 impl EpubData {
-    pub fn empty_epub_data() -> Self {
-        EpubData {
-            renderable_chapters: Vector::new(),
-            sidebar_data: SidebarData::new(Vector::new()),
-            epub_settings: EpubSettings::default(),
 
-            book_path: String::new(),
-            page_position: PagePosition::default(),
-            ocr_data: OcrData::default(),
-            edit_data: EditData::default(),
-            // TODO: Are you fucking serious?
-            doc: Arc::new(Mutex::new(
-                EpubDoc::new("examples/1.epub").unwrap(),
-            )),
-        }
-    }
 
-    pub fn new(chapters: Vector<ArcStr>, path: String,  mut doc: EpubDoc<std::io::BufReader<File>>) -> Self {
+    pub fn new(chapters: Vector<ArcStr>, mut doc: EpubDoc<std::io::BufReader<File>>) -> Self {
         let epub_settings = EpubSettings::default();
         let mut renderable_chapters: Vector<Vector<Renderable>> = Vector::new();
         let toc = doc
@@ -76,51 +63,68 @@ impl EpubData {
         edit_data.set_edited_chapter(chapters[0].clone().to_string());
 
         EpubData {
-
             sidebar_data: SidebarData::new(toc),
-            book_path : path,
             page_position: PagePosition::default(),
             renderable_chapters,
             epub_settings,
             ocr_data: OcrData::default(),
             edit_data,
 
-
-            doc: Arc::new(Mutex::new(doc)),
+            doc: Some(Arc::new(Mutex::new(doc))),
         }
     }
 
     pub fn save_new_epub(&mut self, file_path: &str) {
-        let page_to_modify = self.doc.lock().unwrap().get_current_path().unwrap();
+        if self.doc.is_none() {
+            return;
+        }
+        let mut doc = self.doc.as_ref().unwrap().lock().unwrap();
+        let page_to_modify = doc.get_current_path().unwrap();
 
         let file = File::create(file_path).unwrap();
 
-        let res =
-            self.doc
-                .lock()
-                .unwrap()
-                .modify_file(&page_to_modify, &file, &self.edit_data.edited_chapter());
+        let res = doc.modify_file(&page_to_modify, &file, &self.edit_data.edited_chapter());
 
-        self.renderable_chapters[self.page_position.chapter()] = generate_renderable_tree(&self.edit_data.edited_chapter(), self.epub_settings.font_size);
+        //self.renderable_chapters[self.page_position.chapter()] = generate_renderable_tree(
+        //    &self.edit_data.edited_chapter(),
+        //    self.epub_settings.font_size,
+        //);
         match res {
             Ok(_) => println!("Success"),
             Err(e) => println!("Error: {}", e),
         }
+    }
 
+    pub fn get_epub_path(&self) -> String {
+        if self.doc.is_none() {
+            return String::new();
+        }
+        let doc = self.doc.as_ref().unwrap().lock().unwrap();
+        doc.get_epub_path()
+            .clone()
+            .into_os_string()
+            .into_string()
+            .unwrap()
     }
 
     pub fn get_current_chap(&self) -> Vector<Renderable> {
-        
-        //&self.renderable_chapters[self.page_position.chapter()]
-        generate_renderable_tree(self.edit_data.edited_chapter(), self.epub_settings.font_size)
+        if self.doc.is_none() {
     }
+        let mut doc = self.doc.as_ref().unwrap().lock().unwrap();
 
-    pub fn get_chap_len(&self, chap: usize) -> usize {
-        self.renderable_chapters[chap].len()
+        generate_renderable_tree(
+            doc.get_current_str().as_ref().unwrap(),
+            self.epub_settings.font_size,
+        )
     }
 
     pub fn has_next_chapter(&self) -> bool {
-        return self.page_position.chapter() < self.doc.lock().unwrap().get_num_pages() - 1;
+        if self.doc.is_none() {
+            return false;
+        }
+        let doc = self.doc.as_ref().unwrap().lock().unwrap();
+
+        return self.page_position.chapter() < doc.get_num_pages() - 1;
     }
 
     pub fn has_prev_chapter(&self) -> bool {
@@ -197,14 +201,62 @@ impl EpubData {
     }
 
     pub fn change_position(&mut self, page_position: PagePosition) {
+        if self.doc.is_none() {
+            return;
+        }
+        let mut doc = self.doc.as_ref().unwrap().lock().unwrap();
 
-        // TODO: Remove this
+        if doc.set_current_page(page_position.chapter()).is_err() {
+            println!("Error setting current page to {}", page_position.chapter());
+            return;
+        }
+        
+
         self.page_position = page_position;
-        let mut doc = self.doc.lock().unwrap();
-        doc.set_current_page(self.page_position.chapter()).unwrap();
-        self.edit_data.set_edited_chapter(doc.get_current_str().unwrap());
+        self.edit_data
+            .set_edited_chapter(doc.get_current_str().unwrap());
+    }
+
+    pub fn set_page_position(&mut self, page_position: PagePosition) {
+        self.page_position = page_position;
+    }
+
+    pub fn next_chapter(&mut self) -> bool {
+        if self.doc.is_none() {
+            return false;
+        }
+        let mut doc = self.doc.as_ref().unwrap().lock().unwrap();
+
+        let next = doc.go_next();
+        if next.is_err() {
+            return false;
+        }
+        self.edit_data
+            .set_edited_chapter(doc.get_current_str().unwrap());
+        return true;
+    }
+
+    pub fn prev_chapter(&mut self) -> bool {
+        if self.doc.is_none() {
+            return false;
+        }
+        let mut doc = self.doc.as_ref().unwrap().lock().unwrap();
+
+        
+        let prev = doc.go_prev();
+        if prev.is_err() {
+            return false;
+        }
+        self.edit_data
+            .set_edited_chapter(doc.get_current_str().unwrap());
 
 
+        //page_position.set_chapter(self.page_position.chapter() - 1);
+        //page_position.set_richtext_number(
+        //    data.get_chap_len(page_position.chapter()) - 1,
+        //);
+
+        return true;
     }
 }
 

@@ -388,7 +388,7 @@ impl Widget<EpubData> for PageSplitter {
             Event::WindowDisconnected => {
                 ctx.submit_command(
                     INTERNAL_COMMAND
-                        .with(InternalUICommand::UpdateBookInfo(data.book_path.clone())),
+                        .with(InternalUICommand::UpdateBookInfo(data.get_epub_path())),
                 );
             }
 
@@ -674,7 +674,7 @@ impl TextContainer {
                 RoundButton::new(ARROW_CIRCLE_RIGHT)
                     .with_click_handler(|ctx, _, _| {
                         ctx.submit_command(
-                            INTERNAL_COMMAND.with(InternalUICommand::EpubNavigate(false)),
+                            INTERNAL_COMMAND.with(InternalUICommand::EpubNavigate(true)),
                         );
                     })
                     .with_color(crate::core::style::get_color_unchecked(
