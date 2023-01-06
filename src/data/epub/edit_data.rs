@@ -1,4 +1,4 @@
-use druid::{Lens, Data};
+use druid::{Data, Lens};
 
 /**
  * Struct used during the editing of a book.

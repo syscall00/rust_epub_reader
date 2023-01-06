@@ -152,11 +152,6 @@ pub fn generate_renderable_tree(text: &str, font_size: f64) -> Vector<Renderable
                             font_size,
                         );
 
-                        //if tk != HtmlTag::Unhandled && tk.add_newline_after_tag() {
-                        //    //current_pos += 1;
-//
-                        //    //builder.push("\n");
-                        //}
 
                         if matches!(
                             tk,

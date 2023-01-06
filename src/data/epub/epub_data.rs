@@ -5,7 +5,7 @@ use std::{
 };
 
 use druid::{im::Vector, piet::TextStorage, ArcStr, Data, Lens};
-use epub::doc::EpubDoc;
+use epub::doc::{EpubDoc, NavPoint};
 
 use crate::{
     data::{IndexedText, PagePosition},
@@ -20,7 +20,6 @@ use super::{edit_data::EditData, ocr_data::OcrData, settings::EpubSettings, side
  */
 #[derive(Clone, Lens, Data, Default)]
 pub struct EpubData {
-
     pub page_position: PagePosition,
 
     sidebar_data: SidebarData,
@@ -37,26 +36,50 @@ pub struct EpubData {
 }
 
 impl EpubData {
+    fn toc_recursive_parser(
+        toc: &Vec<NavPoint>,
+        chapters: &mut Vector<IndexedText>,
+        epub_doc: &mut EpubDoc<BufReader<File>>,
+    ) {
+        toc.iter().for_each(|toc_elem| {
+            let toc_content = toc_elem
+                .content
+                .clone()
+                .into_os_string()
+                .into_string()
+                .unwrap();
+
+            let pos = toc_content.find('#').unwrap_or(toc_content.len());
+            let (toc_content, _) = toc_content.split_at(pos);
+            epub_doc.set_current_page(0).unwrap();
+
+            while epub_doc.get_current_page() < epub_doc.get_num_pages()
+                && epub_doc
+                    .get_current_path()
+                    .unwrap()
+                    .into_os_string()
+                    .into_string()
+                    .unwrap()
+                    != toc_content
+            {
+                epub_doc.go_next().unwrap();
+            }
+
+            chapters.push_back(IndexedText::new(
+                ArcStr::from(toc_elem.label.clone()),
+                Arc::new(PagePosition::new(epub_doc.get_current_page(), 0)),
+            ));
+            Self::toc_recursive_parser(&toc_elem.children, chapters, epub_doc);
+        });
+    }
+
     pub fn new(chapters: Vector<ArcStr>, doc: EpubDoc<std::io::BufReader<File>>) -> Self {
-        let epub_settings = EpubSettings::default();
+        let epub = doc.get_epub_path();
+        let mut other_doc = EpubDoc::new(epub).unwrap();
 
-        let toc = doc
-            .toc
-            .iter()
-            .map(|toc| {
-                println!("toc:{:?}, {:?}", toc.content, toc.play_order);
-                let key = toc.label.clone();
-                let value = PagePosition::new(toc.play_order - 1, 0);
-                IndexedText::new(ArcStr::from(key), Arc::new(value))
-            })
-            .collect();
+        let mut toc = Vector::new();
 
-        //print spine
-        //let spine = doc.spine.clone();
-        //spine.iter().for_each(|spine| {
-        //    let res = String::from_utf8(doc.get_resource(spine).unwrap()).unwrap();
-        //    println!("spine: {:?} {:?}", spine, res);
-        //});
+        Self::toc_recursive_parser(&doc.toc, &mut toc, &mut other_doc);
 
         let mut edit_data = EditData::default();
         edit_data.set_edited_chapter(chapters[0].clone().to_string());
@@ -64,7 +87,7 @@ impl EpubData {
         EpubData {
             sidebar_data: SidebarData::new(toc),
             page_position: PagePosition::default(),
-            epub_settings,
+            epub_settings: EpubSettings::default(),
             ocr_data: OcrData::default(),
             edit_data,
 
@@ -92,10 +115,9 @@ impl EpubData {
         }
     }
 
-
     /**
      * Get the current chapter as a vector of Renderable
-     * 
+     *
      * @return the current epub path
      */
     pub fn get_epub_path(&self) -> String {
@@ -112,7 +134,7 @@ impl EpubData {
 
     /**
      * Get the current chapter as a vector of Renderable
-     * 
+     *
      * @return the current chapter as a vector of Renderable
      */
     pub fn get_current_chap(&self) -> Vector<Renderable> {
@@ -128,12 +150,11 @@ impl EpubData {
         )
     }
 
-
     /**
      * Get rendered text of the entire book
      * Useful for searching
      * It uses cached_chapters to avoid re-rendering the entire book.
-     * 
+     *
      * @return rendered text of the entire book
      */
     pub fn get_only_strings(&mut self) -> Vec<Vec<String>> {
@@ -162,9 +183,7 @@ impl EpubData {
 
         return self.cached_chapters.clone().unwrap().clone();
     }
-    
-    
-    
+
     /**
      * Search the current chapter for the search input
      * and set the results in the sidebar_data
@@ -219,9 +238,6 @@ impl EpubData {
         self.sidebar_data.search_results = results
     }
 
-
-
-    
     pub fn change_position(&mut self, page_position: PagePosition) {
         if self.doc.is_none() {
             return;
@@ -236,7 +252,6 @@ impl EpubData {
         self.edit_data
             .set_edited_chapter(doc.get_current_str().unwrap());
     }
-
 
     pub fn set_position_in_page(&mut self, position_in_page: usize) {
         self.page_position.set_richtext_number(position_in_page);

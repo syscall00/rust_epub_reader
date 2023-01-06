@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use druid::im::Vector;
 use druid::piet::{CairoText, Text, TextLayoutBuilder};
 use druid::{
@@ -18,14 +20,9 @@ use crate::{
 
 use druid::text::{RichText, Selection};
 
-#[derive(Debug, Clone)]
-enum PageSplitterRanges {
-    OnePage(std::ops::Range<usize>),
-    TwoPages(std::ops::Range<usize>, std::ops::Range<usize>),
-}
+
 
 const TEXT_Y_PADDING: f64 = 15.0;
-//const TEXT_BOTTOM_PADDING: f64 = 30.;
 
 // constants for Page Label in PageSplitter
 const PAGE_LABEL_DISTANCE_FROM_CENTER: f64 = 15.;
@@ -33,60 +30,11 @@ const PAGE_LABEL_Y_PADDING: f64 = 20.;
 
 use druid_material_icons::normal::action::{ARROW_CIRCLE_LEFT, ARROW_CIRCLE_RIGHT};
 
-impl PageSplitterRanges {
-    pub fn is_empty(&self) -> bool {
-        match self {
-            PageSplitterRanges::OnePage(range) => range.is_empty(),
-            PageSplitterRanges::TwoPages(range1, _) => range1.is_empty(),
-        }
-    }
-
-    pub fn get_page(&self, page: usize) -> std::ops::Range<usize> {
-        match self {
-            PageSplitterRanges::OnePage(range) => range.clone(),
-            PageSplitterRanges::TwoPages(range1, range2) => {
-                if page == 0 {
-                    range1.clone()
-                } else {
-                    range2.clone()
-                }
-            }
-        }
-    }
-
-    pub fn start(&self) -> usize {
-        match self {
-            PageSplitterRanges::OnePage(range) => range.start,
-            PageSplitterRanges::TwoPages(range1, _) => range1.start,
-        }
-    }
-
-    pub fn end(&self) -> usize {
-        match self {
-            PageSplitterRanges::OnePage(range) => range.end,
-            PageSplitterRanges::TwoPages(_, range2) => range2.end,
-        }
-    }
-
-    pub fn contains(&self, index: usize) -> bool {
-        match self {
-            PageSplitterRanges::OnePage(range) => range.contains(&index),
-            PageSplitterRanges::TwoPages(range1, range2) => {
-                range1.contains(&index) || range2.contains(&index)
-            }
-        }
-    }
-}
-impl Default for PageSplitterRanges {
-    fn default() -> Self {
-        PageSplitterRanges::OnePage(0..0)
-    }
-}
 
 pub struct PageSplitter {
     text: Vec<TextLayout<RichText>>,
     //text_pos: Vec<f64>,
-    visualized_range: PageSplitterRanges,
+    visualized_range: Range<usize>,
     search_selection: Option<(usize, Selection)>,
 }
 
@@ -95,7 +43,7 @@ impl PageSplitter {
         Self {
             text: Vec::new(),
             //text_pos: Vec::new(),
-            visualized_range: PageSplitterRanges::default(),
+            visualized_range: Range::default(),
             //selection : None,
             search_selection: None,
         }
@@ -139,82 +87,9 @@ impl PageSplitter {
         ret_size
     }
 
-    fn range(
-        &mut self,
-        mut current_height: f64,
-        direction: bool,
-        starting_point: usize,
-        paragraph_spacing: f64,
-    ) -> std::ops::Range<usize> {
-        let mut count = starting_point;
-
-        // if going forward, get all texts starting from starting_point to the end
-        let it: Box<dyn Iterator<Item = (usize, &TextLayout<RichText>)>> = if direction {
-            Box::new(self.text.iter().enumerate().skip(starting_point))
-        }
-        // otherwise, get all texts starting from starting_point to the beginning
-        else {
-            let value_to_skip = if (self.text.len() as isize) - starting_point as isize > 0 {
-                self.text.len() - starting_point
-            } else {
-                0
-            };
-            Box::new(self.text.iter().enumerate().rev().skip(value_to_skip))
-        };
-
-        for (i, label) in it {
-            current_height -= label.size().height + paragraph_spacing;
-            if current_height <= 0. {
-                break;
-            }
-            count = i;
-        }
-
-        if direction {
-            starting_point..count
-        } else {
-            count..starting_point
-        }
-    }
-    fn get_current_range(
-        &mut self,
-        current_height: f64,
-        direction: bool,
-        starting_point: usize,
-        epub_settings: &EpubSettings,
-    ) -> PageSplitterRanges {
-        //current_height-= TEXT_BOTTOM_PADDING+TEXT_Y_PADDING;
-        let page_1 = self.range(
-            current_height,
-            direction,
-            starting_point,
-            epub_settings.paragraph_spacing,
-        );
-
-        if !direction && page_1.start == 0 {
-            return self.get_current_range(current_height, true, 0, epub_settings);
-        }
-
-        if epub_settings.visualization_mode == VisualizationMode::TwoPage {
-            let stg = if direction { page_1.end } else { page_1.start };
-            let page_2 = self.range(
-                current_height,
-                direction,
-                stg,
-                epub_settings.paragraph_spacing,
-            );
-            if direction {
-                return PageSplitterRanges::TwoPages(page_1, page_2);
-            } else {
-                return PageSplitterRanges::TwoPages(page_2, page_1);
-            }
-        }
-
-        PageSplitterRanges::OnePage(page_1)
-    }
 
     fn next_page(&mut self, mut current_height: f64, epub_settings: &EpubSettings) -> bool {
-        let mut i = self.visualized_range.start();
+        let mut i = self.visualized_range.start;
         current_height = if epub_settings.visualization_mode == VisualizationMode::TwoPage {
             current_height * 2.
         } else {
@@ -232,12 +107,12 @@ impl PageSplitter {
             return false;
         }
         // Update the start_range to the next page
-        self.visualized_range = PageSplitterRanges::OnePage(i..i);
+        self.visualized_range = i..i;
         true
     }
 
     fn prev_page(&mut self, mut current_height: f64, epub_settings: &EpubSettings) -> bool {
-        if self.visualized_range.start() == 0 {
+        if self.visualized_range.start == 0 {
             return false;
         }
         current_height = if epub_settings.visualization_mode == VisualizationMode::TwoPage {
@@ -246,7 +121,7 @@ impl PageSplitter {
             current_height
         };
         // Calculate the total size of the text elements starting from the current start_range
-        let mut i = self.visualized_range.start();
+        let mut i = self.visualized_range.start;
         while i > 0
             && current_height - self.text[i].size().height + epub_settings.paragraph_spacing > 0.
         {
@@ -255,7 +130,7 @@ impl PageSplitter {
         }
 
         // Update the start_range to the previous page
-        self.visualized_range = PageSplitterRanges::OnePage(i..i);
+        self.visualized_range = i..i;
         return true;
     }
 
@@ -267,8 +142,8 @@ impl PageSplitter {
         let mut visible_elements = Vec::new();
         let mut second_page = Vec::new();
         let mut total_size = 0.0;
-        let mut i = self.visualized_range.start();
-        for element in self.text[self.visualized_range.start()..].iter() {
+        let mut i = self.visualized_range.start;
+        for element in self.text[self.visualized_range.start..].iter() {
             if total_size + element.size().height + epub_settings.paragraph_spacing > window_size {
                 break;
             }
@@ -291,7 +166,7 @@ impl PageSplitter {
             }
         }
 
-        self.visualized_range = PageSplitterRanges::OnePage(self.visualized_range.start()..i);
+        self.visualized_range = self.visualized_range.start..i;
 
         (visible_elements, second_page)
     }
@@ -308,28 +183,25 @@ impl Widget<EpubData> for PageSplitter {
                                 let can_get_next_page =
                                     self.next_page(ctx.size().height - 50., &data.epub_settings);
                                 if !can_get_next_page && data.next_chapter() {
-                                        self.visualized_range = PageSplitterRanges::OnePage(0..0);
+                                        self.visualized_range = 0..0;
                                     }
                             } else {
                                 let can_get_prev_page =
                                     self.prev_page(ctx.size().height - 50., &data.epub_settings);
                                 if !can_get_prev_page && data.prev_chapter() {
                                     let last_pos = data.get_current_chap().len() - 1;
-                                    self.visualized_range =
-                                        PageSplitterRanges::OnePage(last_pos..last_pos);
+                                    self.visualized_range = last_pos..last_pos;
                                     }
                                 }
-                            data.set_position_in_page(self.visualized_range.start());
+                            data.set_position_in_page(self.visualized_range.start);
                             ctx.request_update();
                             ctx.request_layout();
                             ctx.request_paint();
                         }
 
-
-
                         InternalUICommand::EpubGoToPos(pos) => {
                             if data.page_position.chapter() != pos.chapter()
-                                || !self.visualized_range.contains(pos.richtext_number())
+                                || !self.visualized_range.contains(&pos.richtext_number())
                             {
                                 data.change_position(pos.clone());
                             }
@@ -365,7 +237,6 @@ impl Widget<EpubData> for PageSplitter {
                 self.generate_text(&data.get_current_chap(), data.epub_settings.font_size);
                 self.wrap_label_size(&ctx.size(), ctx.text(), data.epub_settings.margin, env);
             }
-            LifeCycle::Size(new_size) => {}
             _ => {}
         }
     }
@@ -655,7 +526,7 @@ impl Widget<EpubData> for TextContainer {
         }
         let label_text = self.label_text_lines.widget_mut();
         let number_of_labels = label_text.text.len() as isize - 1;
-        let range = label_text.visualized_range.get_page(0);
+        let range = &label_text.visualized_range;
         let text = range.start.to_string()
             + "-"
             + &range.end.to_string()
@@ -673,7 +544,7 @@ impl Widget<EpubData> for TextContainer {
             origin.x = size.width / 2. - size.width / 4. - PAGE_LABEL_DISTANCE_FROM_CENTER;
             ctx.draw_text(&layout, origin);
 
-            let range = label_text.visualized_range.get_page(1);
+            let range = &label_text.visualized_range;
             let text = range.start.to_string()
                 + "-"
                 + &range.end.to_string()
