@@ -235,6 +235,7 @@ impl EpubData {
                 }
             }
         }
+        results.iter().for_each(|r| println!("{:?}", r.value()));
         self.sidebar_data.search_results = results
     }
 

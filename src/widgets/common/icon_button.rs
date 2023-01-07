@@ -28,7 +28,7 @@ pub struct IconButton<T: ButtonTrait, D: Data> {
     open: bool,
     clickable: bool,
 }
-const ICON_SIZE: f64 = 32.;
+pub const ICON_SIZE: f64 = 32.;
 
 impl<T: ButtonTrait, D: Data> IconButton<T, D> {
     pub fn new(kind: T) -> Self {

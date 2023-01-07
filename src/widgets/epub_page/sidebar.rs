@@ -23,14 +23,13 @@ use crate::{
     },
     widgets::{
         common::{
-            icon_button::{ButtonTrait, IconButton},
+            icon_button::{ButtonTrait, IconButton, ICON_SIZE},
             GroupButton,
         },
         ClickableLabel, RoundButton,
     },
 };
 
-const ICON_SIZE: f64 = 32.;
 
 /**
  * Panel represents a side widget displayed. 

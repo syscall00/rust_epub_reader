@@ -115,7 +115,7 @@ impl AppState {
         self.epub_data = EpubData::new(pages, doc);
         self.epub_data.epub_settings = file_info.epub_settings.to_owned();
         if let Some(page_index) = &file_info.reached_position {
-            self.epub_data.page_position = page_index.to_owned();
+            //self.epub_data.page_position = page_index.to_owned();
             self.epub_data.change_position(page_index.clone());
         }
     }
