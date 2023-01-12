@@ -2,12 +2,12 @@ use crate::data::PagePosition;
 /**
  * OCR is a module that contains functions to search for text from a page image using OCR.
  * It uses Tantivy module as a search engine and Leptess module to perform OCR.
- * 
+ *
  */
 
 /**
  * Utility function to remove all non-alphanumeric characters from a string.
- * 
+ *
  * @param text: The text to be cleaned.
  *  
  * @return String: The cleaned text.
@@ -21,14 +21,14 @@ fn text_preparation(text: &str) -> String {
 
 /**
  * Search for text in a page image using OCR.
- * 
+ *
  * @param full_text: Vector of Vector of String. Each Vector of String is a chapter.
  * @param image_path: Path to the page image.
- * 
+ *
  * @return PagePosition: The position of the text in the page.
  */
 pub fn search_with_ocr_input(full_text: Vec<Vec<String>>, image_path: &str) -> PagePosition {
-
+    
     let mut lt = leptess::LepTess::new(None, "eng").unwrap();
     let set_image = lt.set_image(image_path);
 
@@ -44,7 +44,7 @@ pub fn search_with_ocr_input(full_text: Vec<Vec<String>>, image_path: &str) -> P
         schema_builder.add_u64_field("chapter", tantivy::schema::FAST | tantivy::schema::STORED);
     let position =
         schema_builder.add_u64_field("start_pos", tantivy::schema::FAST | tantivy::schema::STORED);
-
+    
     let schema = schema_builder.build();
 
     let index = tantivy::Index::create_in_ram(schema);
@@ -121,9 +121,23 @@ pub fn search_with_ocr_input(full_text: Vec<Vec<String>>, image_path: &str) -> P
     PagePosition::default()
 }
 
-
-
-
+/**
+ *
+ * metrics:
+ * - posizione inizio pagina in epub;
+ * - num medio di caratteri su libro fisico per pagina ( num char tra le due pagine / num di pagine fisiche (assumption) )
+ * - posizione target page in epub;
+ *
+ * distanza inizio pagina e target page in num char
+ *
+ *
+ * num_target_pagina_libro_fisico = posizione_prima_pagina_fotografata
+ *
+ * range_epub = num di pagine digitali tra le due pagine fisiche (media) in epub
+ *                                         
+ * target_physical_page =  mean_physical_page_character(v) / mean_epub_page_character * (range_epub)
+ *              = 18 + 1082 / 858 *   (81159 / 858 = 87.2)
+ */
 pub fn reverse_search_with_ocr_input(
     full_text: Vec<Vec<String>>,
     image_1: &str,
@@ -132,34 +146,99 @@ pub fn reverse_search_with_ocr_input(
 ) -> PagePosition {
     let image_1_rec = search_with_ocr_input(full_text.clone(), image_1);
     let image_2_rec = search_with_ocr_input(full_text.clone(), image_2);
-    // extract image 1 text with leptonica
-    //let mut lt = leptess::LepTess::new(None, "ita").unwrap();
-    //lt.set_image(image_1).unwrap();
+    let mut lt = leptess::LepTess::new(None, "eng").unwrap();
+    lt.set_image(image_1).unwrap();
+    let image_1_text = text_preparation(&lt.get_utf8_text().unwrap());
+    lt.set_image(image_2).unwrap();
+    let image_2_text = text_preparation(&lt.get_utf8_text().unwrap());
+    // count all character in book
+    let mut full_count = 0;
+    for chapter in &full_text {
+        for line in chapter {
+            full_count += line.len();
+        }
+    }
+    let mean_book_page_character = (image_2_text.len() + image_1_text.len()) / 2;
+    println!("Mean Book page character: {}", mean_book_page_character);
+    
+    let distance_from_character = if current_position < &image_1_rec {
+        get_distance_in_character(&full_text, &current_position, &image_1_rec)
+    }
+    else {
+        get_distance_in_character(&full_text, &image_1_rec, &current_position)
+    };
 
-    //println!("image 1 text: {:?}", &lt.get_utf8_text().unwrap());
-    //lt.set_image(image_2).unwrap()//;
+    let page_1_distance_from_0 =
+        get_distance_in_character(&full_text, &PagePosition::new(0, 0), &image_1_rec);
 
-    //println!("\n\n\n\n\n\n\n\n\n\n\n\n");
-    //println!("image 1 text: {:?}",&lt.get_utf8_text().unwrap());
+    let page_1 = (page_1_distance_from_0 as f64 / mean_book_page_character as f64).round() as usize;
+    let percentage_of_page1 = (page_1_distance_from_0 as f64 / full_count as f64) * 100.0;
+    let page_number_distance_1 = (distance_from_character as f64 / mean_book_page_character as f64).round() as usize;
 
-    println!("image 1 rec: {:?}", image_1_rec);
-    println!("image 2 rec: {:?}", image_2_rec);
+    println!("---------- Page 1 stats ----------");
+    println!("Distance from 0: {}", page_1_distance_from_0);
+    println!("Distance from current: {}", distance_from_character);
+    println!("Percentage of page 1 in epub: {}", percentage_of_page1);
+    println!("Mean page 1: {}", page_1); 
+    println!("Page number distance from current {}", page_number_distance_1); 
+    println!("Should be {} ", if current_position < &image_1_rec {page_1-page_number_distance_1} else {page_1+page_number_distance_1});
+    println!("----------------------------------\n");
 
-    let image_1_page = 25;
-    let image_2_page = 18;
+    let distance_from_character2 =
+        get_distance_in_character(&full_text, &current_position, &image_2_rec);
+    
+    let page_2_distance_from_0 =
+        get_distance_in_character(&full_text, &PagePosition::new(0, 0), &image_2_rec);
 
-    // given that image 1 is on page 25 and image 2 is on page 18 AND image 1 is on the right of image 2 AND image 1 is at
-    // chapter 8 and position 0 while image 2 is at chapter 7 and position 0, we can deduce the current_position page through this calculation:
+    let page_2 = (page_2_distance_from_0 as f64 / mean_book_page_character as f64).round() as usize;
+    let percentage_of_page2 = (page_2_distance_from_0 as f64 / full_count as f64) * 100.0;
+    let page_number_distance_2 = (distance_from_character2 as f64 / mean_book_page_character as f64).round() as usize;
 
-    let current_page = (current_position.chapter() as isize * 25)
-        + current_position.richtext_number() as isize
-        - (image_1_page * 8)
-        - (image_2_page * 7);
-    println!("current page: {:?}", current_page);
+    println!("---------- Page 2 stats ----------");
+    println!("Distance from 0: {}", page_2_distance_from_0);
+    println!("Distance from current: {}", distance_from_character2);
+    println!("Percentage of page 2 in epub: {}", percentage_of_page2);
+    println!("Mean page 2: {}", page_2); // 198
+    println!("Page number distance from current {}", page_number_distance_2); 
+    println!("Should be {} ", if current_position < &image_2_rec {page_2-page_number_distance_2} else {page_2+page_number_distance_2});
+    println!("----------------------------------\n");
+
+    let char_read_until_now =
+        get_distance_in_character(&full_text, &PagePosition::new(0, 0), &current_position);
+
+    println!("Should be, using current pos: {}", char_read_until_now / mean_book_page_character);
+
+    println!("Read until now {}\n", char_read_until_now);
     PagePosition::default()
 }
 
+fn get_distance_in_character(
+    full_text: &Vec<Vec<String>>,
+    start_position: &PagePosition,
+    end_position: &PagePosition,
+) -> usize {
+    let mut count = 0;
+    
+    for (i, chapter) in full_text.iter().enumerate() {
+        if i < start_position.chapter() {
+            continue;
+        }
+        if i > end_position.chapter() {
+            break;
+        }
+        if i == end_position.chapter() {
+            count += end_position.richtext_number();
+            break;
+        }
 
+        // sum all the characters of the chapter
+        for line in chapter {
+            count += line.len();
+        }
+    }
+
+    return count;
+}
 
 #[cfg(test)]
 mod tests {
@@ -188,7 +267,7 @@ mod tests {
     #[test]
     fn test_search_with_ocr_input() {
         let full_text = generate_sample_vector();
-        
+
         let image_1 = "examples/assets/ocr_pride_and_prejudice.jpg";
         let result = search_with_ocr_input(full_text, image_1);
 
@@ -198,7 +277,7 @@ mod tests {
     #[test]
     fn test_search_with_ocr_input_with_wrong_result() {
         let full_text = generate_sample_vector();
-        
+
         let image_1 = "examples/assets/ocr_pride_and_prejudice.jpg";
         let result = search_with_ocr_input(full_text, image_1);
 
@@ -217,8 +296,8 @@ mod tests {
         assert_eq!(result, PagePosition::new(usize::MAX, usize::MAX));
         let result = search_with_ocr_input(full_text, image_2);
         assert_eq!(result, PagePosition::new(usize::MAX, usize::MAX));
-        
 
+        
     }
 
     #[test]

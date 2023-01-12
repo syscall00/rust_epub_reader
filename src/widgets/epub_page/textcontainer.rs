@@ -30,7 +30,6 @@ use druid_material_icons::normal::action::{ARROW_CIRCLE_LEFT, ARROW_CIRCLE_RIGHT
 
 pub struct PageSplitter {
     text: Vec<TextLayout<RichText>>,
-    //text_pos: Vec<f64>,
     visualized_range: Range<usize>,
     search_selection: Option<(usize, Selection)>,
 }
@@ -39,16 +38,12 @@ impl PageSplitter {
     pub fn new() -> Self {
         Self {
             text: Vec::new(),
-            //text_pos: Vec::new(),
-            visualized_range: Range::default(),
-            //selection : None,
+            visualized_range: 0..0,
             search_selection: None,
         }
     }
     fn generate_text(&mut self, chapter: &Vector<Renderable>, font_size: f64) {
         self.text.clear();
-
-        //self.text_pos.clear();
 
         for renderable in chapter.iter() {
             match renderable {
@@ -272,7 +267,7 @@ impl Widget<EpubData> for PageSplitter {
                 ),
                 data.epub_settings.font_size,
             );
-            self.wrap_label_size(&ctx.size(), ctx.text(), data.epub_settings.margin, env);
+        self.wrap_label_size(&ctx.size(), ctx.text(), data.epub_settings.margin, env);
         }
     }
 

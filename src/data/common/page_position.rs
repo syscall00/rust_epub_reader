@@ -6,7 +6,7 @@ use serde::{Serialize, Deserialize};
  * It can also represent a range of text 
  * 
  */
-#[derive(Clone, Debug, Data, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Data, Serialize, Deserialize)]
 pub struct PagePosition {
     chapter: usize,
     richtext_number: usize,
@@ -23,7 +23,9 @@ impl ToString for PagePosition {
     }
 }
 impl PagePosition {
-    pub fn new(chapter: usize, richtext_number: usize) -> Self {
+    pub const ZERO: PagePosition = PagePosition::new(0, 0);
+
+    pub const fn new(chapter: usize, richtext_number: usize) -> Self {
         PagePosition {
             chapter,
             richtext_number,
@@ -40,7 +42,6 @@ impl PagePosition {
             chapter,
             richtext_number,
             range: Some(range),
-            //dirty: false,
         }
     }
 
@@ -69,5 +70,22 @@ impl PagePosition {
 impl Default for PagePosition {
     fn default() -> Self {
         PagePosition::new(usize::MAX, usize::MAX)
+    }
+}
+
+
+impl PartialEq for PagePosition {
+    fn eq(&self, other: &Self) -> bool {
+        self.chapter == other.chapter && self.richtext_number == other.richtext_number
+    }
+}
+
+impl PartialOrd for PagePosition {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        if self.chapter == other.chapter {
+            self.richtext_number.partial_cmp(&other.richtext_number)
+        } else {
+            self.chapter.partial_cmp(&other.chapter)
+        }
     }
 }

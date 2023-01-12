@@ -86,7 +86,7 @@ impl EpubData {
 
         EpubData {
             sidebar_data: SidebarData::new(toc),
-            page_position: PagePosition::default(),
+            page_position: PagePosition::ZERO,
             epub_settings: EpubSettings::default(),
             ocr_data: OcrData::default(),
             edit_data,
