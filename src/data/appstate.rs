@@ -1,5 +1,4 @@
-use druid::im::Vector;
-use druid::{AppDelegate, ArcStr, Command, Data, DelegateCtx, Env, Handled, Lens, Target};
+use druid::{AppDelegate, Command, Data, DelegateCtx, Env, Handled, Lens, Target};
 
 use crate::{
     core::constants::commands::{InternalUICommand, INTERNAL_COMMAND},
@@ -89,33 +88,21 @@ impl AppState {
         }
     }
 
-    fn load_file(file_path: &str) -> Vector<ArcStr> {
-        let mut pages = Vector::new();
-        let doc = EpubDoc::new(&file_path);
-
-        assert!(doc.is_ok());
-        let mut doc = doc.unwrap();
-        let _m = 0;
-        loop {
-            pages.push_back(ArcStr::from(doc.get_current_str().unwrap().clone()));
-            if !doc.go_next().is_ok() {
-                break;
-            };
-        }
-        pages
-    }
-
+    /**
+     * Opens a file and sets the epub_data to the new file.
+     * 
+     * @param file_info - The file to open
+     * 
+     */
     pub fn open_file(&mut self, file_info: &Recent) {
-        let pages = AppState::load_file(&file_info.path);
         let doc = EpubDoc::new(&file_info.path);
 
         assert!(doc.is_ok());
         let doc = doc.unwrap();
 
-        self.epub_data = EpubData::new(pages, doc);
+        self.epub_data = EpubData::new(doc);
         self.epub_data.epub_settings = file_info.epub_settings.to_owned();
         if let Some(page_index) = &file_info.reached_position {
-            //self.epub_data.page_position = page_index.to_owned();
             self.epub_data.change_position(page_index.clone());
         }
     }

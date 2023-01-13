@@ -21,22 +21,31 @@ impl HomePageData {
         HomePageData { recents }
     }
 
+    /**
+     * Loads the recents from the state file.
+     * If the state file does not exist, it creates a new one.
+     * 
+     * @return The list of recents
+     */
     fn load_from_state_file() -> Vector<Recent> {
         let md = std::fs::metadata(HomePageData::RECENTS_PATH);
-        // file does not exists!!!
+
         let recents_string = if md.is_err() {
             std::fs::File::create(HomePageData::RECENTS_PATH).unwrap();
             return Vector::default();
 
         } else {
           std::fs::read_to_string(HomePageData::RECENTS_PATH).unwrap()
-
         };
 
         let recents : Vec<Recent> = serde_json::from_str(&recents_string).unwrap();
         recents.into()
     }
 
+    /**
+     * Writes the recents to the state file.
+     * 
+     */
     fn write_to_state_file(&self) {
         let t : Vec<Recent> = self.recents.clone().into_iter().collect();
         let recents_string = serde_json::to_string(&t).unwrap();

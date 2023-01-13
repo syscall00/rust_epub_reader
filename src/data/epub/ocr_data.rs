@@ -17,7 +17,7 @@ pub struct OcrData {
     pub image_for_pos_2 : String,
 
     pub ocr_result: PagePosition,
-    pub reverse_ocr_result: PagePosition,
+    pub reverse_ocr_result: usize,
 
     pub mode: OcrMode,
 
@@ -38,7 +38,7 @@ impl Default for OcrData {
             image_for_pos_1: EMPTY_STRING.to_owned(),
             image_for_pos_2: EMPTY_STRING.to_owned(),
             ocr_result: PagePosition::default(),
-            reverse_ocr_result: PagePosition::default(),
+            reverse_ocr_result: usize::MAX,
             mode: OcrMode::FindByPhoto,
             processing: false,
         }

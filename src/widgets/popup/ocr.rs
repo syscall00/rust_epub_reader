@@ -61,8 +61,6 @@ fn find_by_photo() -> impl Widget<OcrData> {
 
     let confirm_button = druid::widget::Button::new("Start OCR")
         .on_click(|ctx, data: &mut OcrData, _| {
-            //data.ocr_result = "Starting OCR".to_string();
-
             ctx.submit_command(
                 INTERNAL_COMMAND
                     .with(InternalUICommand::RequestOCRSearch(
@@ -187,9 +185,9 @@ fn find_by_virtual() -> impl Widget<OcrData> {
 
     let result = Flex::row()
         .with_child(druid::widget::Label::new(
-            |data: &OcrData, _env: &druid::Env| data.reverse_ocr_result.to_string(),
+            |data: &OcrData, _env: &druid::Env| format!("Current virtual page is at physical page {} ", data.reverse_ocr_result)
         ))
-        .expand_width();
+        .center();
 
     let either = druid::widget::Either::new(
         |data: &OcrData, _env: &druid::Env| data.processing,
@@ -202,7 +200,7 @@ fn find_by_virtual() -> impl Widget<OcrData> {
 
     let either_result = druid::widget::Either::new(
         |data: &OcrData, _env: &druid::Env| {
-            data.reverse_ocr_result != PagePosition::default() || data.processing
+            data.reverse_ocr_result != usize::MAX || data.processing
         },
         either,
         druid::widget::Label::new(""),
@@ -251,7 +249,7 @@ impl Controller<OcrData, Container<OcrData>> for OcrController {
                             data.processing = false;
                         }
                         InternalUICommand::ReverseOCRCompleted(pos) => {
-                            data.reverse_ocr_result = pos.to_owned();
+                            data.reverse_ocr_result = *pos;
                             data.processing = false;
                         }
                         _ => {}

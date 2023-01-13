@@ -107,10 +107,6 @@ pub fn search_with_ocr_input(full_text: Vec<Vec<String>>, image_path: &str) -> P
         let retrieved_doc = searcher.doc(doc_address).unwrap();
         let chapter = retrieved_doc.get_first(chapter).unwrap();
         let position = retrieved_doc.get_first(position).unwrap();
-        //println!(
-        //    "Document: {:?} in chapter {:?} position {:?} with score {}",
-        //    retrieved_doc, chapter, position, score
-        //);
 
         return PagePosition::new(
             chapter.as_u64().unwrap() as usize,
@@ -121,29 +117,24 @@ pub fn search_with_ocr_input(full_text: Vec<Vec<String>>, image_path: &str) -> P
     PagePosition::default()
 }
 
-/**
- *
- * metrics:
- * - posizione inizio pagina in epub;
- * - num medio di caratteri su libro fisico per pagina ( num char tra le due pagine / num di pagine fisiche (assumption) )
- * - posizione target page in epub;
- *
- * distanza inizio pagina e target page in num char
- *
- *
- * num_target_pagina_libro_fisico = posizione_prima_pagina_fotografata
- *
- * range_epub = num di pagine digitali tra le due pagine fisiche (media) in epub
- *                                         
- * target_physical_page =  mean_physical_page_character(v) / mean_epub_page_character * (range_epub)
- *              = 18 + 1082 / 858 *   (81159 / 858 = 87.2)
- */
+
+ /**
+  * Given in input two images, estimate the position of the current page of epub reader in
+  * the physical book.
+  *
+  * @param full_text: the full text of the book
+  * @param image_1: the first image of the book
+  * @param image_2: the second image of the book
+  * @param current_position: the current position of the epub reader
+  *
+  * @return the estimated position of the current page of epub reader in the the physical book
+  */
 pub fn reverse_search_with_ocr_input(
     full_text: Vec<Vec<String>>,
     image_1: &str,
     image_2: &str,
     current_position: &PagePosition,
-) -> PagePosition {
+) -> usize {
     let image_1_rec = search_with_ocr_input(full_text.clone(), image_1);
     let image_2_rec = search_with_ocr_input(full_text.clone(), image_2);
     let mut lt = leptess::LepTess::new(None, "eng").unwrap();
@@ -181,7 +172,6 @@ pub fn reverse_search_with_ocr_input(
     println!("Percentage of page 1 in epub: {}", percentage_of_page1);
     println!("Mean page 1: {}", page_1); 
     println!("Page number distance from current {}", page_number_distance_1); 
-    println!("Should be {} ", if current_position < &image_1_rec {page_1-page_number_distance_1} else {page_1+page_number_distance_1});
     println!("----------------------------------\n");
 
     let distance_from_character2 =
@@ -200,16 +190,12 @@ pub fn reverse_search_with_ocr_input(
     println!("Percentage of page 2 in epub: {}", percentage_of_page2);
     println!("Mean page 2: {}", page_2); // 198
     println!("Page number distance from current {}", page_number_distance_2); 
-    println!("Should be {} ", if current_position < &image_2_rec {page_2-page_number_distance_2} else {page_2+page_number_distance_2});
     println!("----------------------------------\n");
 
     let char_read_until_now =
         get_distance_in_character(&full_text, &PagePosition::new(0, 0), &current_position);
 
-    println!("Should be, using current pos: {}", char_read_until_now / mean_book_page_character);
-
-    println!("Read until now {}\n", char_read_until_now);
-    PagePosition::default()
+    char_read_until_now / mean_book_page_character
 }
 
 fn get_distance_in_character(
@@ -293,9 +279,9 @@ mod tests {
 
         let result = search_with_ocr_input(full_text.clone(), image_1);
 
-        assert_eq!(result, PagePosition::new(usize::MAX, usize::MAX));
+        assert_eq!(result, PagePosition::default());
         let result = search_with_ocr_input(full_text, image_2);
-        assert_eq!(result, PagePosition::new(usize::MAX, usize::MAX));
+        assert_eq!(result, PagePosition::default());
 
         
     }
@@ -307,8 +293,8 @@ mod tests {
         let image_1 = "examples/assets/ocr_pride_and_prejudice.jpg";
         let result = search_with_ocr_input(full_text, image_1);
 
-        assert_eq!(result, PagePosition::new(usize::MAX, usize::MAX));
+        assert_eq!(result, PagePosition::default());
     }
 
-
+    
 }

@@ -71,14 +71,12 @@ impl<T: Data> Widget<T> for RoundButton<T> {
                 }
             }
             Event::MouseMove(mouse_event) => {
-                //if ctx.is_hot() {
                 let rect = ctx.size().to_rect();
                 if rect.contains(mouse_event.pos) {
                     ctx.set_cursor(&Cursor::Pointer);
                 } else {
                     ctx.set_cursor(&Cursor::Arrow);
                 }
-                //}
             }
             _ => {}
         }

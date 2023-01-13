@@ -146,7 +146,7 @@ impl Widget<EpubData> for Panel {
         ctx.fill(
             size.to_rect(),
             &style::get_color_unchecked(style::PRIMARY_LIGHT),
-        ); //&COMPLEMENTARY_DARK.unwrap());
+        ); 
         self.header.draw(ctx, (5., 5.));
         if self.input_widget.is_some() {
             self.input_widget.as_mut().unwrap().paint(ctx, data, env);

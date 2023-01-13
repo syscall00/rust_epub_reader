@@ -83,7 +83,7 @@ impl EpubData {
         });
     }
 
-    pub fn new(chapters: Vector<ArcStr>, doc: EpubDoc<std::io::BufReader<File>>) -> Self {
+    pub fn new(doc: EpubDoc<std::io::BufReader<File>>) -> Self {
         let epub = doc.get_epub_path();
         let mut other_doc = EpubDoc::new(epub).unwrap();
 
@@ -91,8 +91,7 @@ impl EpubData {
 
         Self::toc_recursive_parser(&doc.toc, &mut toc, &mut other_doc);
 
-        let mut edit_data = EditData::default();
-        edit_data.set_edited_chapter(chapters[0].clone().to_string());
+        let edit_data = EditData::default();
 
         EpubData {
             sidebar_data: SidebarData::new(toc),
@@ -220,8 +219,8 @@ impl EpubData {
 
             'outer: for (i, chapter) in self.get_only_strings().iter().enumerate() {
                 for (j, richtext) in chapter.iter().enumerate() {
-                    let matches: Vec<usize> = richtext
-                        .match_indices(&self.sidebar_data.search_input)
+                    let matches: Vec<usize> = richtext.to_lowercase()
+                        .match_indices(&self.sidebar_data.search_input.to_lowercase())
                         .map(|(i, _)| i)
                         .collect();
                     for occ_match in matches {
@@ -247,7 +246,6 @@ impl EpubData {
                 }
             }
         }
-        results.iter().for_each(|r| println!("{:?}", r.value()));
         self.sidebar_data.search_results = results
     }
 

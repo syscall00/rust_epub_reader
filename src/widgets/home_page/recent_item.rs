@@ -56,7 +56,6 @@ impl RecentWidget {
                     ctx.submit_command(
                         INTERNAL_COMMAND.with(InternalUICommand::RemoveBook(data.path.clone())),
                     );
-                    println!("Remove book: {:?}", data.path);
                 })
                 .padding(5.0)
                 .boxed(),
@@ -107,8 +106,15 @@ impl Widget<Recent> for RecentWidget {
             }
 
             druid::Event::Command(cmd) => {
-                if cmd.is(FINISH_SLOW_FUNCTION) {
-                    data.image_data = Some(cmd.get_unchecked(FINISH_SLOW_FUNCTION).clone());
+                if cmd.is(INTERNAL_COMMAND) {
+                    match cmd.get_unchecked(INTERNAL_COMMAND) {
+                        InternalUICommand::HomePageImageLoaded(img_data) => {
+                            data.image_data = Some(img_data.to_owned());
+                            ctx.request_paint();
+                        }
+                        _ => {}
+                    }
+                    
                 }
             }
             _ => {}
@@ -134,7 +140,7 @@ impl Widget<Recent> for RecentWidget {
                 if binding.is_ok() {
                     let img_data = binding.as_ref().unwrap();
                     // retrieve widget id
-                    wrapped_slow_function(
+                    render_image_slowly(
                         ctx.get_external_handle(),
                         img_data.to_owned(),
                         ctx.widget_id(),
@@ -191,12 +197,6 @@ impl Widget<Recent> for RecentWidget {
         use downcast_rs::Downcast;
 
         if !old_data.same(data) {
-            println!("Update data: {:?}", data.path);
-            //wrapped_slow_function(
-            //    ctx.get_external_handle(),
-            //    img_data.to_owned(),
-            //    ctx.widget_id(),
-            //);
 
             if !data.image_data.same(&old_data.image_data) {
                 self.image.update(ctx, data, env);
@@ -209,12 +209,10 @@ impl Widget<Recent> for RecentWidget {
                         .downcast_mut::<druid::widget::Image>();
                     if let Some(image_dataa) = image {
                         image_dataa.set_image_data(image_data.clone());
-                    } else {
-                        //println!("Image data is not an image");
-                    }
+                    } 
                 }
             }
-            //self.remove_button.update(ctx, data, env);
+
             ctx.request_layout();
             ctx.request_layout();
             ctx.request_paint();
@@ -296,23 +294,17 @@ impl Widget<Recent> for RecentWidget {
 // notice that this must return Box<dyn Widget<YourState>> instead of impl Widget<YourState>
 // navigator needs Boxed widgets in order to store the widgets
 
-const FINISH_SLOW_FUNCTION: druid::Selector<druid::ImageBuf> = druid::Selector::new("asd");
-fn wrapped_slow_function(
+fn render_image_slowly(
     sink: druid::ExtEventSink,
     img_data: Vec<u8>,
     widget_target: druid::WidgetId,
 ) {
     std::thread::spawn(move || {
-        //let number = 0;//slow_function(number);
         let img_buf = druid::ImageBuf::from_data(&img_data).unwrap();
 
-        // Once the slow function is done we can use the event sink (the external handle).
-        // This sends the `FINISH_SLOW_FUNCTION` command to the main thread and attach
-        // the number as payload.
-
         sink.submit_command(
-            FINISH_SLOW_FUNCTION,
-            img_buf,
+            INTERNAL_COMMAND,
+            InternalUICommand::HomePageImageLoaded(img_buf),
             druid::Target::Widget(widget_target),
         )
         .expect("command failed to submit");

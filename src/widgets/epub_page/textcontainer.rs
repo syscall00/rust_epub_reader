@@ -241,33 +241,26 @@ impl Widget<EpubData> for PageSplitter {
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, env: &Env) {
-        let mut should_update_chap = false;
         if !(data.same(&old_data)) {
-            println!("Updating settings");
-            should_update_chap = should_update_chap
-                || !data
-                    .edit_data
-                    .edited_chapter()
-                    .same(&old_data.edit_data.edited_chapter())
-                || !data
-                    .page_position
-                    .chapter()
+            let should_update_chap = !data
+                .edit_data
+                .edited_chapter()
+                .same(&old_data.edit_data.edited_chapter())
+                || !data.page_position.chapter()
                     .same(&old_data.page_position.chapter())
-                || data.epub_settings.font_size != old_data.epub_settings.font_size;
+                || !data.epub_settings.same(&old_data.epub_settings)
+                || data.edit_data.same(&old_data.edit_data);
 
-            //if !data.epub_settings.same(&old_data.epub_settings) {
-        }
-
-        if should_update_chap {
-            println!("Updating chapter1");
-            self.generate_text(
-                &crate::dom::generate_renderable_tree(
-                    data.edit_data.edited_chapter(),
+            if should_update_chap {
+                self.generate_text(
+                    &crate::dom::generate_renderable_tree(
+                        data.edit_data.edited_chapter(),
+                        data.epub_settings.font_size,
+                    ),
                     data.epub_settings.font_size,
-                ),
-                data.epub_settings.font_size,
-            );
-        self.wrap_label_size(&ctx.size(), ctx.text(), data.epub_settings.margin, env);
+                );
+                self.wrap_label_size(&ctx.size(), ctx.text(), data.epub_settings.margin, env);
+            }
         }
     }
 
@@ -278,8 +271,6 @@ impl Widget<EpubData> for PageSplitter {
         data: &EpubData,
         env: &Env,
     ) -> Size {
-        //
-        // println!("Layout");
         self.wrap_label_size(&bc.max(), ctx.text(), data.epub_settings.margin, env);
         bc.max()
     }
@@ -287,7 +278,6 @@ impl Widget<EpubData> for PageSplitter {
     fn paint(&mut self, ctx: &mut PaintCtx, data: &EpubData, _: &Env) {
         let size = ctx.size();
         let mut y = 0.0;
-        //self.text_pos.clear();
 
         // draw a white background
         if data.epub_settings.visualization_mode == VisualizationMode::TwoPage {
@@ -465,10 +455,6 @@ impl Widget<EpubData> for TextContainer {
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, env: &Env) {
-        match event {
-            //LifeCycle::BuildFocusChain => ctx.register_for_focus(),
-            _ => {}
-        }
         self.label_text_lines.lifecycle(ctx, event, data, env);
         for nav_button in self.navigation_buttons.iter_mut() {
             nav_button.lifecycle(ctx, event, data, env);

@@ -51,12 +51,14 @@ pub(crate) mod commands {
         RequestOCRSearch(String),
         RequestReverseOCR((String, String)),
         OCRSearchCompleted(PagePosition),
-        ReverseOCRCompleted(PagePosition),
+        ReverseOCRCompleted(usize),
 
         EpubGoToPos(PagePosition),
         EpubNavigate(bool),
 
         UINavigate(PageType),
+
+        HomePageImageLoaded(druid::ImageBuf),
     }
 }
 
