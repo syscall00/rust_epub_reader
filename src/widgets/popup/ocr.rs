@@ -239,8 +239,12 @@ impl Controller<OcrData, Container<OcrData>> for OcrController {
         match event {
             druid::Event::Command(cmd) => {
                 if let Some(file_info) = cmd.get(OPEN_OCR_FILE) {
-                    data.image_to_pos = file_info.path().to_str().unwrap().to_string();
-                    ctx.request_update();
+
+                    if let Some(path) = file_info.path().to_str() {
+                        data.image_to_pos = path.to_string();
+                        data.image_to_pos = file_info.path().to_str().unwrap().to_string();
+                        ctx.request_update();
+                    }
                     ctx.set_handled();
                 } else if let Some(internal) = cmd.get(INTERNAL_COMMAND) {
                     match internal {
@@ -256,12 +260,16 @@ impl Controller<OcrData, Container<OcrData>> for OcrController {
                     }
                     ctx.request_update();
                 } else if let Some(file_info) = cmd.get(OPEN_REVERSE_OCR_1) {
-                    data.image_for_pos_1 = file_info.path().to_str().unwrap().to_string();
-                    ctx.request_update();
+                    if let Some(path) = file_info.path().to_str() {
+                        data.image_for_pos_1 = path.to_string();
+                        ctx.request_update();
+                    }
                     ctx.set_handled();
                 } else if let Some(file_info) = cmd.get(OPEN_REVERSE_OCR_2) {
-                    data.image_for_pos_2 = file_info.path().to_str().unwrap().to_string();
-                    ctx.request_update();
+                    if let Some(path) = file_info.path().to_str() {
+                        data.image_for_pos_2 = path.to_string();
+                        ctx.request_update();
+                    }
                     ctx.set_handled();
                 }
             }

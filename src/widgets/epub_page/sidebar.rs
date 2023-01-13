@@ -60,7 +60,7 @@ impl Panel {
 }
 impl Widget<EpubData> for Panel {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut EpubData, env: &Env) {
-        if self.input_widget.is_some() {
+        if let Some(input_widget) = &mut self.input_widget {
             match event {
                 Event::KeyUp(key) => {
                     if key.code == druid::Code::Enter {
@@ -71,29 +71,23 @@ impl Widget<EpubData> for Panel {
                 }
                 _ => {}
             }
-            self.input_widget
-                .as_mut()
-                .unwrap()
-                .event(ctx, event, data, env);
+            input_widget.event(ctx, event, data, env);
         }
 
         self.widget.event(ctx, event, data, env);
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &EpubData, env: &Env) {
-        if self.input_widget.is_some() {
-            self.input_widget
-                .as_mut()
-                .unwrap()
-                .lifecycle(ctx, event, data, env);
+        if let Some(input_widget) = &mut self.input_widget {
+            input_widget.lifecycle(ctx, event, data, env);
         }
         self.widget.lifecycle(ctx, event, data, env);
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &EpubData, data: &EpubData, env: &Env) {
         if !old_data.same(data) {
-            if self.input_widget.is_some() {
-                self.input_widget.as_mut().unwrap().update(ctx, data, env);
+            if let Some(input_widget) = &mut self.input_widget {
+                input_widget.update(ctx, data, env);
             }
             self.widget.update(ctx, data, env);
         }
@@ -111,14 +105,14 @@ impl Widget<EpubData> for Panel {
         let mut widget_size =
             Size::new(size.width - PANEL_COMPONENT_PADDING * 2., size.height - 30.);
         let mut input_widget_size = Size::new(size.width, 0.);
-        if self.input_widget.is_some() {
-            input_widget_size = self.input_widget.as_mut().unwrap().layout(
+        if let Some(input_widget) = &mut self.input_widget {
+            input_widget_size = input_widget.layout(
                 ctx,
                 &BoxConstraints::tight(Size::new(size.width - 50., 25.)),
                 data,
                 env,
             );
-            self.input_widget.as_mut().unwrap().set_origin(
+            input_widget.set_origin(
                 ctx,
                 data,
                 env,
@@ -148,8 +142,8 @@ impl Widget<EpubData> for Panel {
             &style::get_color_unchecked(style::PRIMARY_LIGHT),
         ); 
         self.header.draw(ctx, (5., 5.));
-        if self.input_widget.is_some() {
-            self.input_widget.as_mut().unwrap().paint(ctx, data, env);
+        if let Some(input_widget) = &mut self.input_widget {
+            input_widget.paint(ctx, data, env);
         }
         self.widget.paint(ctx, data, env);
     }

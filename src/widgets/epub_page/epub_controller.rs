@@ -27,8 +27,8 @@ impl Controller<AppState, Flex<AppState>> for EpubPageController {
     ) {
         match event {
             Event::Command(cmd) => {
-                if let Some(_) = cmd.get(INTERNAL_COMMAND) {
-                    match cmd.get(INTERNAL_COMMAND).unwrap() {
+                if let Some(cmd) = cmd.get(INTERNAL_COMMAND) {
+                   match cmd {
                         // Go back to home page
                         InternalUICommand::GoToMenu => {
                             ctx.submit_command(INTERNAL_COMMAND.with(
@@ -115,12 +115,20 @@ fn start_ocr_search_in_thread(
 ) {
     std::thread::spawn(move || {
         let res = crate::ocr::search_with_ocr_input(strings, &image_path);
-        sink.submit_command(
-            INTERNAL_COMMAND,
-            InternalUICommand::OCRSearchCompleted(res),
-            druid::Target::Global,
-        )
-        .expect("command failed to submit");
+        //match res {
+            //Ok(position) => {
+                sink.submit_command(
+                    INTERNAL_COMMAND,
+                    InternalUICommand::OCRSearchCompleted(res),
+                    druid::Target::Global,
+                )
+                .expect("command failed to submit");
+            //}
+            //Err(e) => {
+            //    println!("Error: ");
+            //}
+       // }
+        
     });
 }
 

@@ -36,14 +36,13 @@ pub fn search_with_ocr_input(full_text: Vec<Vec<String>>, image_path: &str) -> P
     if !std::path::Path::new(image_path).exists() || set_image.is_err() {
         return PagePosition::default();
     }
+
+    // Generate schema and indexes
     let mut schema_builder = tantivy::schema::Schema::builder();
 
-    let title =
-        schema_builder.add_text_field("title", tantivy::schema::TEXT | tantivy::schema::STORED);
-    let chapter =
-        schema_builder.add_u64_field("chapter", tantivy::schema::FAST | tantivy::schema::STORED);
-    let position =
-        schema_builder.add_u64_field("start_pos", tantivy::schema::FAST | tantivy::schema::STORED);
+    let title = schema_builder.add_text_field("title", tantivy::schema::TEXT | tantivy::schema::STORED);
+    let chapter = schema_builder.add_u64_field("chapter", tantivy::schema::FAST | tantivy::schema::STORED);
+    let position = schema_builder.add_u64_field("start_pos", tantivy::schema::FAST | tantivy::schema::STORED);
     
     let schema = schema_builder.build();
 
@@ -52,42 +51,38 @@ pub fn search_with_ocr_input(full_text: Vec<Vec<String>>, image_path: &str) -> P
 
     let recognized_text = text_preparation(&lt.get_utf8_text().unwrap());
 
+    // Generate documents in which tantivy will search
+    // Each document is at most long as the recognized text length
     for i in 0..full_text.len() {
-        let mut texta = String::new();
-        // For each richtext in the chapter, when size is greater than 1000, create a new document
+        let mut text = String::new();
+        // For each richtext in the chapter, when size is greater than recognized_text.len(), create a new document
         for (j, richtext) in full_text[i].iter().enumerate() {
-            // texta should contain recognized_text.len() character, starting from j richtext and ending at most at j + 1 richtext
+
             let rich_text = richtext.as_str();
-            if rich_text.len() >= recognized_text.len() {
-                texta = utf8_slice::slice(rich_text, 0, recognized_text.len()).to_string();
+
+            if rich_text.len() + text.len() >= recognized_text.len() {
+                text = utf8_slice::slice(rich_text, 0, recognized_text.len()).to_string();
                 let mut doc = tantivy::Document::default();
-                doc.add_text(title, &texta);
+                doc.add_text(title, &text);
                 doc.add_u64(chapter, i as u64);
                 doc.add_u64(position, j as u64);
                 index_writer.add_document(doc).unwrap();
-                texta.clear();
-            } else if rich_text.len() + texta.len() >= recognized_text.len() {
-                texta = utf8_slice::slice(rich_text, 0, recognized_text.len()).to_string();
-                let mut doc = tantivy::Document::default();
-                doc.add_text(title, &texta);
-                doc.add_u64(chapter, i as u64);
-                doc.add_u64(position, j as u64);
-                index_writer.add_document(doc).unwrap();
-                texta.clear();
+                text.clear();
             } else {
-                texta.push_str(rich_text);
+                text.push_str(rich_text);
             }
         }
-        if texta.len() > 0 {
+        if text.len() > 0 {
             let mut doc = tantivy::Document::default();
-            doc.add_text(title, &texta);
+            doc.add_text(title, &text);
             doc.add_u64(chapter, i as u64);
             doc.add_u64(position, 0 as u64);
             index_writer.add_document(doc).unwrap();
-            texta.clear();
+            text.clear();
         }
     }
 
+    // Search for the recognized text in the documents
     index_writer.commit().unwrap();
     let reader = index.reader().unwrap();
     let searcher = reader.searcher();
@@ -296,5 +291,5 @@ mod tests {
         assert_eq!(result, PagePosition::default());
     }
 
-    
+
 }

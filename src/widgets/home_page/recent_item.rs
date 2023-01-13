@@ -37,8 +37,8 @@ impl RecentWidget {
         let image = WidgetPod::new(
             druid::widget::ViewSwitcher::new(
                 |data: &Recent, _env| data.image_data.is_some(),
-                |image, _data, _env| match image {
-                    true => druid::widget::Image::new(_data.image_data.clone().unwrap()).boxed(),
+                |image, data, _env| match image {
+                    true => druid::widget::Image::new(data.image_data.clone().unwrap()).boxed(),
                     false => Flex::column()
                         .with_child(
                             druid::widget::Label::new(String::from("Loading...")).padding(5.0),
@@ -114,7 +114,6 @@ impl Widget<Recent> for RecentWidget {
                         }
                         _ => {}
                     }
-                    
                 }
             }
             _ => {}
@@ -138,13 +137,14 @@ impl Widget<Recent> for RecentWidget {
                 let binding = ep.get_cover();
 
                 if binding.is_ok() {
-                    let img_data = binding.as_ref().unwrap();
-                    // retrieve widget id
-                    render_image_slowly(
-                        ctx.get_external_handle(),
-                        img_data.to_owned(),
-                        ctx.widget_id(),
-                    );
+                    if let Ok(img_data) = binding.as_ref() {
+                        // retrieve widget id
+                        render_image_slowly(
+                            ctx.get_external_handle(),
+                            img_data.to_owned(),
+                            ctx.widget_id(),
+                        );
+                    }
                 }
 
                 let title = ep
@@ -197,7 +197,6 @@ impl Widget<Recent> for RecentWidget {
         use downcast_rs::Downcast;
 
         if !old_data.same(data) {
-
             if !data.image_data.same(&old_data.image_data) {
                 self.image.update(ctx, data, env);
                 // get image and dereference it as druid::widget::Image
@@ -209,7 +208,7 @@ impl Widget<Recent> for RecentWidget {
                         .downcast_mut::<druid::widget::Image>();
                     if let Some(image_dataa) = image {
                         image_dataa.set_image_data(image_data.clone());
-                    } 
+                    }
                 }
             }
 
@@ -300,13 +299,13 @@ fn render_image_slowly(
     widget_target: druid::WidgetId,
 ) {
     std::thread::spawn(move || {
-        let img_buf = druid::ImageBuf::from_data(&img_data).unwrap();
-
-        sink.submit_command(
-            INTERNAL_COMMAND,
-            InternalUICommand::HomePageImageLoaded(img_buf),
-            druid::Target::Widget(widget_target),
-        )
-        .expect("command failed to submit");
+        if let Ok(img_buf) = druid::ImageBuf::from_data(&img_data) {
+            sink.submit_command(
+                INTERNAL_COMMAND,
+                InternalUICommand::HomePageImageLoaded(img_buf),
+                druid::Target::Widget(widget_target),
+            )
+            .expect("command failed to submit");
+        }
     });
 }

@@ -159,8 +159,13 @@ impl Widget<EditData> for EditWidget {
 
             Event::Command(cmd) => {
                 if let Some(file_info) = cmd.get(MODIFY_EPUB_PATH) {
-                    self.new_path = file_info.path().to_str().unwrap().to_owned();
-                    self.send_save_modification_command(ctx);
+                    match file_info.path().to_str() {
+                        Some(s) => {
+                            self.new_path = s.to_string();
+                            self.send_save_modification_command(ctx);
+                        }
+                        None => { self.dirty = false;}
+                    }
                 } else if let Some(cmd) = cmd.get(INTERNAL_COMMAND) {
                     match cmd {
                         InternalUICommand::RequestSaveEdit => {

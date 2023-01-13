@@ -31,20 +31,29 @@ impl AppDelegate<AppState> for Delegate {
         _env: &Env,
     ) -> Handled {
         if let Some(file_info) = cmd.get(druid::commands::OPEN_FILE) {
-            let recent = Recent::new(file_info.path().to_str().unwrap().to_string());
-            // if recent already exists, do not add it again
-            if !(data
-                .home_page_data
-                .recents
-                .iter()
-                .any(|r| r.path == recent.path))
-            {
-                data.open_file(&recent);
-                data.home_page_data.add_to_recents(recent);
-                data.active_page = PageType::Reader;
-            }
-            return Handled::Yes;
 
+            if let Some(path) = file_info.path().to_str() {
+                let recent = Recent::new(path.to_owned());
+                // if recent already exists, do not add it again
+                if !(data
+                    .home_page_data
+                    .recents
+                    .iter()
+                    .any(|r| r.path == recent.path))
+                {
+                    match data.open_file(&recent) {
+                        Ok(_) => {
+                            data.home_page_data.add_to_recents(recent);
+                            data.active_page = PageType::Reader;
+                        }
+                        Err(e) => {
+                            println!("Error opening file: {:?}", e);
+                        }
+                    }
+                }
+            }
+
+            return Handled::Yes;
         } else if let Some(command) = cmd.get(INTERNAL_COMMAND) {
             let ret = match command {
                 InternalUICommand::RemoveBook(book_path) => {
@@ -67,7 +76,10 @@ impl AppDelegate<AppState> for Delegate {
                     return Handled::Yes;
                 }
                 InternalUICommand::OpenRecent(recent) => {
-                    data.open_file(recent);
+                    match data.open_file(recent) {
+                        Err(e) => println!("Error: {:?}", e),
+                        _ => {}
+                    }
                     return Handled::Yes;
                 }
                 _ => Handled::No,
@@ -90,20 +102,26 @@ impl AppState {
 
     /**
      * Opens a file and sets the epub_data to the new file.
-     * 
+     *
      * @param file_info - The file to open
-     * 
+     *
      */
-    pub fn open_file(&mut self, file_info: &Recent) {
+    pub fn open_file(&mut self, file_info: &Recent) -> Result<(), Error> {
         let doc = EpubDoc::new(&file_info.path);
 
         assert!(doc.is_ok());
-        let doc = doc.unwrap();
+        let doc = doc.map_err(|e| Error::EpubError(e.to_string()))?;
 
         self.epub_data = EpubData::new(doc);
         self.epub_data.epub_settings = file_info.epub_settings.to_owned();
         if let Some(page_index) = &file_info.reached_position {
             self.epub_data.change_position(page_index.clone());
         }
+        Ok(())
     }
+}
+
+#[derive(PartialEq, Debug)]
+pub enum Error {
+    EpubError(String),
 }
