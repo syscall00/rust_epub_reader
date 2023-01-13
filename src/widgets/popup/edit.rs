@@ -325,11 +325,6 @@ impl Controller<EditData, Flex<EditData>> for EditWindowController {
                     _ => {}
                 }
             }
-
-            Event::WindowCloseRequested => {
-                println!("Exiting");
-                //ctx.submit_command(commands::CLOSE_WINDOW.to(data.window_id));
-            }
             _ => {}
         }
         child.event(ctx, event, data, env);

@@ -36,6 +36,16 @@ pub struct EpubData {
 }
 
 impl EpubData {
+    /**
+     * Recursive function that parses the table of contents of the book
+     * and adds the chapters to the sidebar.
+     * The function is called recursively for each subchapter.
+     *
+     * @param toc: the table of contents of the book
+     * @param chapters: the vector of chapters that will be added to the sidebar
+     * @param epub_doc: the document of the book
+     *
+     */
     fn toc_recursive_parser(
         toc: &Vec<NavPoint>,
         chapters: &mut Vector<IndexedText>,
@@ -96,9 +106,16 @@ impl EpubData {
         }
     }
 
-    pub fn save_new_epub(&mut self, file_path: &str) {
+    /**
+     * Save a new epub file with modifications
+     *
+     * @param file_path: the path of the new epub file
+     *
+     * @return true if the file was saved correctly, false otherwise
+     */
+    pub fn save_new_epub(&mut self, file_path: &str) -> bool {
         if self.doc.is_none() {
-            return;
+            return false;
         }
         let mut doc = self.doc.as_ref().unwrap().lock().unwrap();
         let page_to_modify = doc.get_current_path().unwrap();
@@ -110,8 +127,11 @@ impl EpubData {
         self.cached_chapters = None;
 
         match res {
-            Ok(_) => println!("Success"),
-            Err(e) => println!("Error: {}", e),
+            Ok(_) => return true,
+            Err(e) => {
+                println!("Error: {}", e);
+                return false;
+            }
         }
     }
 
@@ -187,7 +207,8 @@ impl EpubData {
     /**
      * Search the current chapter for the search input
      * and set the results in the sidebar_data
-     * // TODO: Comment more
+     *
+     * @param search_input: the string to search
      */
     pub fn search_string_in_book(&mut self) {
         const MAX_SEARCH_RESULTS: usize = 100;
@@ -207,24 +228,15 @@ impl EpubData {
                         let range_position =
                             PagePosition::with_range(i, j, occ_match..occ_match + search_lenght);
 
-                        let start = if occ_match > BEFORE_MATCH {
-                            occ_match - BEFORE_MATCH
-                        } else {
-                            0
-                        };
+                        let start = if occ_match > BEFORE_MATCH { occ_match - BEFORE_MATCH } 
+                                            else { 0 };
                         let end =
-                            if occ_match + search_lenght + BEFORE_MATCH < richtext.as_str().len() {
-                                occ_match + search_lenght + BEFORE_MATCH
-                            } else {
-                                richtext.as_str().len()
-                            };
-                        //
-
-                        // find end of word
+                            if occ_match + search_lenght + BEFORE_MATCH < richtext.as_str().len() { occ_match + search_lenght + BEFORE_MATCH } 
+                            else { richtext.as_str().len()};
+                        
+                            // find end of word
                         let text = ArcStr::from(utf8_slice::slice(&richtext.as_str(), start, end));
 
-                        //let text = ArcStr::from(richtext.as_str()[start..end].to_string());
-                        //let text = ArcStr::from(richtext.as_str().chars().skip(occ_match as usize).take((occ_match) as usize).collect::<String>());
                         let value = Arc::new(range_position);
                         let search_result = IndexedText::new(ArcStr::from(text.to_string()), value);
                         results.push_back(search_result);
@@ -239,25 +251,47 @@ impl EpubData {
         self.sidebar_data.search_results = results
     }
 
-    pub fn change_position(&mut self, page_position: PagePosition) {
+    /**
+     * Move the current position in the book
+     * to the given position
+     *
+     * @param page_position: the position to move to
+     *
+     * @return true if the position was changed
+     *         false if the position was not changed
+     */
+    pub fn change_position(&mut self, page_position: PagePosition) -> bool {
         if self.doc.is_none() {
-            return;
+            return false;
         }
         let mut doc = self.doc.as_ref().unwrap().lock().unwrap();
 
         if doc.set_current_page(page_position.chapter()).is_err() {
-            return;
+            return false;
         }
 
         self.page_position = page_position;
         self.edit_data
             .set_edited_chapter(doc.get_current_str().unwrap());
+
+        return true;
     }
 
+    /**
+     * Set the position in the current chapter
+     *
+     * @param position_in_page: the position in the current chapter
+     */
     pub fn set_position_in_page(&mut self, position_in_page: usize) {
         self.page_position.set_richtext_number(position_in_page);
     }
 
+    /**
+     * Go to the next chapter
+     *
+     * @return true if the position was changed
+     *
+     */
     pub fn next_chapter(&mut self) -> bool {
         if self.doc.is_none() {
             return false;
@@ -275,6 +309,11 @@ impl EpubData {
         return true;
     }
 
+    /**
+     * Go to the previous chapter
+     *
+     * @return true if the position was changed
+     */
     pub fn prev_chapter(&mut self) -> bool {
         if self.doc.is_none() {
             return false;
