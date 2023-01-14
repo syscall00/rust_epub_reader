@@ -10,8 +10,7 @@ druid = { git = "https://github.com/linebender/druid.git", rev="aed8892873d7a315
 open = "1.6"
 xmlparser = "0.13.3"
 tracing = "0.1.36"
-epub = {path = "../epub-rs" }
-#epub = "1.2.2"
+epub = {path = "./epub-rs" }
 strum = "0.24.1"
 
 
