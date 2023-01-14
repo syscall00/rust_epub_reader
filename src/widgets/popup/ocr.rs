@@ -242,7 +242,6 @@ impl Controller<OcrData, Container<OcrData>> for OcrController {
 
                     if let Some(path) = file_info.path().to_str() {
                         data.image_to_pos = path.to_string();
-                        data.image_to_pos = file_info.path().to_str().unwrap().to_string();
                         ctx.request_update();
                     }
                     ctx.set_handled();

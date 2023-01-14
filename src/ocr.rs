@@ -4,7 +4,7 @@ use crate::data::PagePosition;
  * It uses Tantivy module as a search engine and Leptess module to perform OCR.
  *
  */
-
+const VERBOSE : bool = false;
 /**
  * Utility function to remove all non-alphanumeric characters from a string.
  *
@@ -133,10 +133,16 @@ pub fn reverse_search_with_ocr_input(
     let image_1_rec = search_with_ocr_input(full_text.clone(), image_1);
     let image_2_rec = search_with_ocr_input(full_text.clone(), image_2);
     let mut lt = leptess::LepTess::new(None, "eng").unwrap();
-    lt.set_image(image_1).unwrap();
+    if !std::path::Path::new(image_1).exists() || lt.set_image(image_1).is_err() {
+        return usize::MAX;
+    }
     let image_1_text = text_preparation(&lt.get_utf8_text().unwrap());
-    lt.set_image(image_2).unwrap();
+
+    if !std::path::Path::new(image_2).exists() || lt.set_image(image_2).is_err() {
+        return usize::MAX;
+    }
     let image_2_text = text_preparation(&lt.get_utf8_text().unwrap());
+    
     // count all character in book
     let mut full_count = 0;
     for chapter in &full_text {
@@ -145,8 +151,9 @@ pub fn reverse_search_with_ocr_input(
         }
     }
     let mean_book_page_character = (image_2_text.len() + image_1_text.len()) / 2;
-    println!("Mean Book page character: {}", mean_book_page_character);
-    
+    if VERBOSE {
+        println!("Mean Book page character: {}", mean_book_page_character);
+    }
     let distance_from_character = if current_position < &image_1_rec {
         get_distance_in_character(&full_text, &current_position, &image_1_rec)
     }
@@ -161,14 +168,15 @@ pub fn reverse_search_with_ocr_input(
     let percentage_of_page1 = (page_1_distance_from_0 as f64 / full_count as f64) * 100.0;
     let page_number_distance_1 = (distance_from_character as f64 / mean_book_page_character as f64).round() as usize;
 
-    println!("---------- Page 1 stats ----------");
-    println!("Distance from 0: {}", page_1_distance_from_0);
-    println!("Distance from current: {}", distance_from_character);
-    println!("Percentage of page 1 in epub: {}", percentage_of_page1);
-    println!("Mean page 1: {}", page_1); 
-    println!("Page number distance from current {}", page_number_distance_1); 
-    println!("----------------------------------\n");
-
+    if VERBOSE {
+        println!("---------- Page 1 stats ----------");
+        println!("Distance from 0: {}", page_1_distance_from_0);
+        println!("Distance from current: {}", distance_from_character);
+        println!("Percentage of page 1 in epub: {}", percentage_of_page1);
+        println!("Mean page 1: {}", page_1); 
+        println!("Page number distance from current {}", page_number_distance_1); 
+        println!("----------------------------------\n");
+    }
     let distance_from_character2 =
         get_distance_in_character(&full_text, &current_position, &image_2_rec);
     
@@ -179,13 +187,15 @@ pub fn reverse_search_with_ocr_input(
     let percentage_of_page2 = (page_2_distance_from_0 as f64 / full_count as f64) * 100.0;
     let page_number_distance_2 = (distance_from_character2 as f64 / mean_book_page_character as f64).round() as usize;
 
-    println!("---------- Page 2 stats ----------");
-    println!("Distance from 0: {}", page_2_distance_from_0);
-    println!("Distance from current: {}", distance_from_character2);
-    println!("Percentage of page 2 in epub: {}", percentage_of_page2);
-    println!("Mean page 2: {}", page_2); // 198
-    println!("Page number distance from current {}", page_number_distance_2); 
-    println!("----------------------------------\n");
+    if VERBOSE {
+        println!("---------- Page 2 stats ----------");
+        println!("Distance from 0: {}", page_2_distance_from_0);
+        println!("Distance from current: {}", distance_from_character2);
+        println!("Percentage of page 2 in epub: {}", percentage_of_page2);
+        println!("Mean page 2: {}", page_2); // 198
+        println!("Page number distance from current {}", page_number_distance_2); 
+        println!("----------------------------------\n");
+    }
 
     let char_read_until_now =
         get_distance_in_character(&full_text, &PagePosition::new(0, 0), &current_position);
@@ -291,5 +301,45 @@ mod tests {
         assert_eq!(result, PagePosition::default());
     }
 
+
+    #[test]
+    fn test_reverse_search_with_ocr_input() {
+        // get ful text from pravese_full_book.json
+        let json_string = include_str!("../examples/assets/pavese_full_book.json");
+
+        let full_text = serde_json::from_str(json_string).unwrap();
+        let image_1 = "examples/assets/pavese_page_81.jpg";
+        let image_2 = "examples/assets/pavese_page_197.jpg";
+        let current_position = PagePosition::new(7, 14); // page 18
+
+        let result = reverse_search_with_ocr_input(full_text, image_1, image_2, &current_position);
+        let expected_range = 8..18;
+        assert!(expected_range.contains(&result));
+    }
+    
+
+    #[test]
+    fn test_reverse_search_with_ocr_input_with_wrong_image_or_non_existing_image() {
+        let full_text = Vec::new();
+        let image_1 = "examples/assets/image_not_existing.jpg";
+        let image_2 = "examples/assets/not_an_image.jpg";
+        let current_position = PagePosition::new(8, 0);
+
+        let result = reverse_search_with_ocr_input(full_text, image_1, image_2, &current_position);
+
+        assert_eq!(result, usize::MAX);
+    }
+
+    #[test]
+    fn test_reverse_search_with_ocr_input_with_empty_text() {
+        let full_text = Vec::new();
+        let image_1 = "examples/assets/pavese_page_81.jpg";
+        let image_2 = "examples/assets/pavese_page_197.jpg";
+        let current_position = PagePosition::new(8, 0);
+
+        let result = reverse_search_with_ocr_input(full_text, image_1, image_2, &current_position);
+
+        assert_eq!(result, 0);
+    }
 
 }
